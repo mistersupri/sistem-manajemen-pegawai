@@ -252,7 +252,7 @@ test('ekspor absensi (xlsx & csv) dan halaman-halaman utama', async () => {
   const c = db.prepare('SELECT id FROM clarifications LIMIT 1').get();
   const emp = db.prepare('SELECT id FROM employees LIMIT 1').get();
   for (const url of ['/admin', '/admin/pegawai', '/admin/pegawai/baru', `/admin/pegawai/${emp.id}/edit`, `/admin/pegawai/${emp.id}/wajah`,
-    '/admin/shift', '/admin/jadwal', '/admin/absensi', '/admin/rekap', '/admin/absensi/input', `/admin/absensi/input?employee_id=${emp.id}`,
+    '/admin/shift', '/admin/jadwal', '/admin/hari-libur', '/admin/absensi', '/admin/rekap', '/admin/absensi/input', `/admin/absensi/input?employee_id=${emp.id}`,
     `/admin/absensi/${rec.id}`, '/admin/klarifikasi', '/admin/klarifikasi?status=semua', `/admin/klarifikasi/${c.id}`, '/admin/pengaturan', '/kiosk',
     '/akun/password']) {
     res = await admin.get(url);

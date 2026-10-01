@@ -59,6 +59,7 @@ app.use(require('./src/routes/shifts'));
 app.use(require('./src/routes/attendance'));
 app.use(require('./src/routes/clarifications'));
 app.use(require('./src/routes/pegawai'));
+app.use(require('./src/routes/devices'));
 
 app.get('/', auth.requireLogin, (req, res) => {
   res.redirect(req.user.role === 'admin' ? '/admin' : '/pegawai');
@@ -89,6 +90,7 @@ if (require.main === module) {
     console.log(`Sistem Absensi Pegawai berjalan di http://localhost:${port}`);
   });
   setInterval(auth.cleanupSessions, 3600000).unref();
+  require('./src/devices').startScheduler();
 }
 
 module.exports = app;

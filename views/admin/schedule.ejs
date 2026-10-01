@@ -39,7 +39,7 @@
         <tr>
           <th class="name">Pegawai</th>
           <% days.forEach((d) => { const wd = T.parseDateTime(d).getDay(); %>
-            <th class="<%= wd === 0 || wd === 6 ? 'weekend' : '' %>"><div><%= +d.slice(8) %></div><div class="fw-normal text-muted"><%= T.HARI[wd].slice(0, 3) %></div></th>
+            <th class="<%= !workday[d] ? 'weekend' : '' %>" title="<%= libur[d] || '' %>"><div><%= +d.slice(8) %><%= libur[d] ? '*' : '' %></div><div class="fw-normal text-muted"><%= T.HARI[wd].slice(0, 3) %></div></th>
           <% }) %>
         </tr>
       </thead>
@@ -52,9 +52,11 @@
                const v = map[`${e.id}|${d}`];
                const wd = T.parseDateTime(d).getDay();
                const isDefault = v === undefined;
-               const s = isDefault ? shiftById[e.default_shift_id] : (v === 'L' ? null : shiftById[v]); %>
-            <td class="cell <%= wd === 0 || wd === 6 ? 'weekend' : '' %>" data-emp="<%= e.id %>" data-date="<%= d %>" data-value="<%= isDefault ? 'default' : v %>">
+               const offDay = isDefault && !workday[d];
+               const s = isDefault ? (offDay ? null : shiftById[e.default_shift_id]) : (v === 'L' ? null : shiftById[v]); %>
+            <td class="cell <%= !workday[d] ? 'weekend' : '' %>" data-emp="<%= e.id %>" data-date="<%= d %>" data-workday="<%= workday[d] ? 1 : 0 %>" data-value="<%= isDefault ? 'default' : v %>">
               <% if (v === 'L') { %><span class="libur">L</span>
+              <% } else if (offDay && e.default_shift_id) { %><span class="libur default" title="<%= libur[d] || 'Bukan hari kerja' %>">L</span>
               <% } else if (s) { %><span class="shift-chip <%= isDefault ? 'default' : '' %>" style="background: <%= s.warna %>"><%= s.kode %></span>
               <% } else { %><span class="text-muted">·</span><% } %>
             </td>
@@ -155,9 +157,9 @@ const SHIFTS = <%- JSON.stringify(shiftById).replace(/</g, '\\u003c') %>;
     if (!r.ok) { alert((await r.json()).error || 'Gagal menyimpan'); return; }
     const v = b.dataset.set;
     const isDefault = v === 'default';
-    const s = isDefault ? SHIFTS[td.closest('tr').dataset.default] : SHIFTS[v];
+    const s = isDefault ? (td.dataset.workday === '1' ? SHIFTS[td.closest('tr').dataset.default] : null) : SHIFTS[v];
     td.dataset.value = v;
-    td.innerHTML = v === 'L' ? '<span class="libur">L</span>'
+    td.innerHTML = v === 'L' || (isDefault && td.dataset.workday !== '1' && td.closest('tr').dataset.default) ? `<span class="libur ${isDefault ? 'default' : ''}">L</span>`
       : s ? `<span class="shift-chip ${isDefault ? 'default' : ''}" style="background: ${s.warna}">${s.kode}</span>`
         : '<span class="text-muted">·</span>';
   }));

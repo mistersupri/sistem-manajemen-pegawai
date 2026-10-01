@@ -38,6 +38,11 @@
         <div class="form-text">Dipakai bila tidak ada jadwal khusus di menu Jadwal Shift.</div>
       </div>
       <div class="col-md-3">
+        <label class="form-label">ID Mesin Fingerprint</label>
+        <input name="id_mesin" class="form-control" value="<%= emp.id_mesin || '' %>" maxlength="30" placeholder="mis. 202504">
+        <div class="form-text">Nomor ID pegawai di mesin X302 / P280.</div>
+      </div>
+      <div class="col-md-3">
         <label class="form-label">Status</label>
         <select name="status" class="form-select">
           <option value="aktif" <%= emp.status === 'aktif' ? 'selected' : '' %>>Aktif</option>

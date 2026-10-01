@@ -6,10 +6,11 @@ const T = require('../time');
 const face = require('../face');
 const { saveDataUrl, removeFile, importUpload } = require('../uploads');
 const { ExcelJS, readTable, addSheet, sendWorkbook, sendCsv } = require('../excel');
+const fingerprint = require('../fingerprint');
 
 const router = express.Router();
 
-const FIELDS = ['nip', 'nama', 'jenis_kelamin', 'jabatan', 'unit_kerja', 'email', 'telepon', 'alamat', 'tanggal_masuk', 'status'];
+const FIELDS = ['nip', 'nama', 'jenis_kelamin', 'jabatan', 'unit_kerja', 'email', 'telepon', 'alamat', 'tanggal_masuk', 'status', 'id_mesin'];
 
 const EXPORT_COLUMNS = [
   { header: 'NIP', key: 'nip', width: 22 },
@@ -23,6 +24,7 @@ const EXPORT_COLUMNS = [
   { header: 'Tanggal Masuk', key: 'tanggal_masuk', width: 15 },
   { header: 'Status', key: 'status', width: 10 },
   { header: 'Kode Shift', key: 'kode_shift', width: 12 },
+  { header: 'ID Mesin', key: 'id_mesin', width: 12 },
   { header: 'Wajah Terdaftar', key: 'wajah', width: 15 },
 ];
 
@@ -53,6 +55,8 @@ function normalizeEmployee(input) {
     else errors.push('Format tanggal masuk harus YYYY-MM-DD atau DD/MM/YYYY.');
   }
   if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.push('Format email tidak valid.');
+  data.id_mesin = data.id_mesin.replace(/\.0+$/, '');
+  if (data.id_mesin && !/^[A-Za-z0-9_-]{1,30}$/.test(data.id_mesin)) errors.push('ID mesin hanya boleh huruf/angka (maks 30).');
   for (const f of FIELDS) if (data[f] === '') data[f] = null;
   return { data, errors };
 }
@@ -60,13 +64,14 @@ function normalizeEmployee(input) {
 function createEmployee(data, shiftId, password) {
   return db.transaction(() => {
     const info = db.prepare(`INSERT INTO employees (nip, nama, jenis_kelamin, jabatan, unit_kerja, email, telepon, alamat,
-      tanggal_masuk, status, default_shift_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+      tanggal_masuk, status, default_shift_id, id_mesin) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
       .run(data.nip, data.nama, data.jenis_kelamin, data.jabatan, data.unit_kerja, data.email, data.telepon, data.alamat,
-        data.tanggal_masuk, data.status, shiftId);
+        data.tanggal_masuk, data.status, shiftId, data.id_mesin);
     const id = info.lastInsertRowid;
     const username = db.prepare('SELECT 1 FROM users WHERE username = ?').get(data.nip) ? `${data.nip}-${id}` : data.nip;
     db.prepare("INSERT INTO users (username, password_hash, role, employee_id) VALUES (?, ?, 'pegawai', ?)")
       .run(username, bcrypt.hashSync(password || data.nip, 10), id);
+    if (data.id_mesin) fingerprint.processPin(data.id_mesin);
     return id;
   })();
 }
@@ -74,9 +79,11 @@ function createEmployee(data, shiftId, password) {
 function updateEmployee(id, old, data, shiftId) {
   db.transaction(() => {
     db.prepare(`UPDATE employees SET nip=?, nama=?, jenis_kelamin=?, jabatan=?, unit_kerja=?, email=?, telepon=?, alamat=?,
-      tanggal_masuk=?, status=?, default_shift_id=?, updated_at=datetime('now','localtime') WHERE id=?`)
+      tanggal_masuk=?, status=?, default_shift_id=?, id_mesin=?, updated_at=datetime('now','localtime') WHERE id=?`)
       .run(data.nip, data.nama, data.jenis_kelamin, data.jabatan, data.unit_kerja, data.email, data.telepon, data.alamat,
-        data.tanggal_masuk, data.status, shiftId, id);
+        data.tanggal_masuk, data.status, shiftId, data.id_mesin, id);
+    // ID mesin baru / berubah: proses log fingerprint yang sudah ada untuk pegawai ini
+    if (data.id_mesin && data.id_mesin !== old.id_mesin) fingerprint.processPin(data.id_mesin);
     if (old.nip !== data.nip && !db.prepare('SELECT 1 FROM users WHERE username = ?').get(data.nip)) {
       db.prepare('UPDATE users SET username = ? WHERE employee_id = ? AND username = ?').run(data.nip, id, old.nip);
     }
@@ -120,6 +127,7 @@ router.get('/admin/pegawai/baru', requireAdmin, (req, res) => {
 router.post('/admin/pegawai', requireAdmin, (req, res) => {
   const { data, errors } = normalizeEmployee(req.body);
   if (data.nip && db.prepare('SELECT 1 FROM employees WHERE nip = ?').get(data.nip)) errors.push('NIP sudah terdaftar.');
+  if (data.id_mesin && db.prepare('SELECT 1 FROM employees WHERE id_mesin = ?').get(data.id_mesin)) errors.push('ID mesin sudah dipakai pegawai lain.');
   if (req.body.password && req.body.password.length < 6) errors.push('Password minimal 6 karakter.');
   const shiftId = parseShiftId(req.body.default_shift_id);
   if (errors.length) {
@@ -151,6 +159,9 @@ router.post('/admin/pegawai/:id', requireAdmin, loadEmployee, (req, res) => {
   const { data, errors } = normalizeEmployee(req.body);
   if (data.nip && db.prepare('SELECT 1 FROM employees WHERE nip = ? AND id <> ?').get(data.nip, req.emp.id)) {
     errors.push('NIP sudah dipakai pegawai lain.');
+  }
+  if (data.id_mesin && db.prepare('SELECT 1 FROM employees WHERE id_mesin = ? AND id <> ?').get(data.id_mesin, req.emp.id)) {
+    errors.push('ID mesin sudah dipakai pegawai lain.');
   }
   const shiftId = parseShiftId(req.body.default_shift_id);
   if (errors.length) {
@@ -256,7 +267,7 @@ router.get('/admin/pegawai/template', requireAdmin, async (req, res) => {
   const example = [{
     nip: '198001012010011001', nama: 'Budi Santoso', jenis_kelamin: 'L', jabatan: 'Staf Administrasi',
     unit_kerja: 'Bagian Umum', email: 'budi@contoh.go.id', telepon: '081234567890', alamat: 'Jl. Merdeka No. 1',
-    tanggal_masuk: '2010-01-01', status: 'aktif', kode_shift: 'REG', password: '',
+    tanggal_masuk: '2010-01-01', status: 'aktif', kode_shift: 'REG', id_mesin: '1001', password: '',
   }];
   if (req.query.format === 'csv') return sendCsv(res, TEMPLATE_COLUMNS, example, 'template-import-pegawai.csv');
   const wb = new ExcelJS.Workbook();
@@ -268,6 +279,7 @@ router.get('/admin/pegawai/template', requireAdmin, async (req, res) => {
     ['- NIP dan Nama wajib diisi. NIP yang sudah ada akan diperbarui datanya.'],
     ['- Jenis Kelamin: L atau P. Status: aktif atau nonaktif.'],
     ['- Tanggal Masuk: format YYYY-MM-DD atau DD/MM/YYYY.'],
+    ['- ID Mesin: nomor ID pegawai di mesin fingerprint (opsional, untuk menghubungkan data scan sidik jari).'],
     ['- Kode Shift: ' + shifts().map((s) => `${s.kode} (${s.nama})`).join(', ')],
     ['- Password (opsional, min 6 karakter) hanya untuk pegawai baru. Jika kosong, password = NIP.'],
   ].forEach((r) => info.addRow(r));
@@ -302,6 +314,11 @@ router.post('/admin/pegawai/import', requireAdmin, importUpload.single('file'), 
       }
       try {
         const old = db.prepare('SELECT * FROM employees WHERE nip = ?').get(data.nip);
+        if (old && !('id_mesin' in row)) data.id_mesin = old.id_mesin; // kolom tidak ada di file: pertahankan
+        if (data.id_mesin && db.prepare('SELECT 1 FROM employees WHERE id_mesin = ? AND nip <> ?').get(data.id_mesin, data.nip)) {
+          result.errors.push(`Baris ${row.__row}: ID mesin ${data.id_mesin} sudah dipakai pegawai lain.`);
+          continue;
+        }
         if (old) {
           updateEmployee(old.id, old, data, row.kode_shift ? shiftId : old.default_shift_id);
           result.updated++;
@@ -321,3 +338,4 @@ router.post('/admin/pegawai/import', requireAdmin, importUpload.single('file'), 
 });
 
 module.exports = router;
+module.exports.createEmployee = createEmployee;

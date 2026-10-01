@@ -76,3 +76,17 @@ test('jarak haversine', () => {
   const d = A.haversineMeters(-6.175392, 106.827153, -6.176392, 106.827153);
   assert.ok(d > 100 && d < 120);
 });
+
+test('shift default hanya berlaku di hari kerja & bukan hari libur', () => {
+  const emp = newEmployee('F1', 'REG');
+  assert.equal(A.getShiftForDate(emp, '2026-09-14').shift.kode, 'REG'); // Senin
+  assert.equal(A.getShiftForDate(emp, '2026-09-19').libur, true); // Sabtu
+  db.prepare("INSERT INTO hari_libur (tanggal, keterangan) VALUES ('2026-09-15', 'Uji libur')").run();
+  assert.equal(A.getShiftForDate(emp, '2026-09-15').libur, true);
+  // Jadwal khusus tetap berlaku walau hari libur
+  db.prepare('INSERT INTO shift_schedules (employee_id, tanggal, shift_id) VALUES (?, ?, ?)').run(emp.id, '2026-09-15', shift('PAGI').id);
+  assert.equal(A.getShiftForDate(emp, '2026-09-15').shift.kode, 'PAGI');
+  const { rekap } = require('../src/routes/attendance');
+  const row = rekap({ dari: '2026-09-14', sampai: '2026-09-20', unit: '', q: 'F1' }).find((r) => r.nip === 'F1');
+  assert.equal(row.hari_kerja, 5); // Sen-Jum, Selasa libur tapi dijadwalkan piket
+});

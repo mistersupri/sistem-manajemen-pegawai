@@ -53,6 +53,8 @@ router.post('/admin/pengaturan', requireAdmin, (req, res) => {
   setSetting('enforce_geofence', b.enforce_geofence ? '1' : '0');
   setSetting('self_checkin', b.self_checkin ? '1' : '0');
   setSetting('liveness', b.liveness ? '1' : '0');
+  const hari = [].concat(b.hari_kerja || []).map(Number).filter((d) => d >= 0 && d <= 6);
+  setSetting('hari_kerja', [...new Set(hari)].sort().join(','));
   setSetting('timezone_label', String(b.timezone_label || 'WIB').trim().slice(0, 10));
   res.flash('success', 'Pengaturan disimpan.');
   res.redirect('/admin/pengaturan');

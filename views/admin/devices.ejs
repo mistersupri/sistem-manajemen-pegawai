@@ -1,0 +1,173 @@
+<%- include('../partials/header') %>
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+  <h1 class="h4 mb-0"><i class="bi bi-fingerprint"></i> Mesin Fingerprint</h1>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="/admin/mesin/pemetaan" class="btn btn-<%= unmatched ? 'warning' : 'outline-secondary' %>"><i class="bi bi-link-45deg"></i> Pemetaan ID Mesin<% if (unmatched) { %> <span class="badge bg-dark"><%= unmatched %></span><% } %></a>
+    <a href="/admin/mesin/log" class="btn btn-outline-secondary"><i class="bi bi-list-ul"></i> Log Scan</a>
+  </div>
+</div>
+
+<% if (result) { %>
+<div class="alert alert-<%= result.tidakDikenal.length ? 'warning' : 'success' %>">
+  <h2 class="h6"><i class="bi bi-check-circle"></i> <%= result.sumber %> selesai</h2>
+  <ul class="mb-0 small">
+    <% if (result.format) { %><li>Format terdeteksi: <b><%= result.format %></b><% if (result.period) { %> · periode <%= result.period.dari %> s.d. <%= result.period.sampai %><% } %></li><% } %>
+    <li><b><%= result.total %></b> scan dibaca: <b><%= result.baru %></b> baru, <%= result.duplikat %> sudah pernah diimpor.</li>
+    <% if (result.dari) { %><li>Rentang scan baru: <%= result.dari %> s.d. <%= result.sampai %>.</li><% } %>
+    <li><b><%= result.pegawai %></b> pegawai terhubung, <b><%= result.hari %></b> hari absensi dibuat/diperbarui.</li>
+    <% if (result.tidakDikenal.length) { %>
+      <li><b><%= result.tidakDikenal.length %></b> ID mesin belum terhubung ke data pegawai (<%= result.tidakDikenal.slice(0, 15).join(', ') %><%= result.tidakDikenal.length > 15 ? ', …' : '' %>).
+        <a href="/admin/mesin/pemetaan" class="alert-link">Petakan sekarang</a> — scan mereka akan otomatis diproses setelah dipetakan.</li>
+    <% } %>
+  </ul>
+</div>
+<% } %>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white d-flex justify-content-between"><b>Daftar Mesin</b>
+        <span class="small text-muted"><%= stats.total %> scan tersimpan<% if (stats.akhir) { %> · terakhir <%= stats.akhir.slice(0, 16) %><% } %></span></div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Mesin</th><th>Koneksi</th><th>Sinkron Terakhir</th><th class="text-end">Aksi</th></tr></thead>
+          <tbody>
+          <% if (!devices.length) { %><tr><td colspan="4" class="text-center text-muted py-4">Belum ada mesin. Tambahkan mesin di formulir samping.</td></tr><% } %>
+          <% devices.forEach((d) => { %>
+            <tr>
+              <td><div class="fw-semibold"><%= d.nama %></div><div class="small text-muted"><%= TIPE_MESIN[d.tipe] %><%= d.lokasi ? ' · ' + d.lokasi : '' %> · <%= d.jumlah_log %> scan</div></td>
+              <td class="small">
+                <% if (d.koneksi === 'lan') { %><i class="bi bi-ethernet"></i> LAN <code><%= d.ip %>:<%= d.port %></code>
+                  <div class="text-muted"><%= d.auto_sync_menit ? `Otomatis tiap ${d.auto_sync_menit} menit` : 'Tarik manual' %></div>
+                <% } else { %><i class="bi bi-usb-drive"></i> USB (impor file)<% } %>
+              </td>
+              <td class="small">
+                <% if (d.last_sync_at) { %>
+                  <span class="badge <%= d.last_sync_ok ? 'bg-success' : 'bg-danger' %>"><%= d.last_sync_ok ? 'OK' : 'Gagal' %></span> <%= d.last_sync_at.slice(0, 16) %>
+                  <div class="text-muted"><%= d.last_sync_status %></div>
+                <% } else { %><span class="text-muted">Belum pernah</span><% } %>
+              </td>
+              <td class="text-end text-nowrap">
+                <% if (d.koneksi === 'lan') { %>
+                  <form method="post" action="/admin/mesin/<%= d.id %>/tarik" class="d-inline"><button class="btn btn-sm btn-primary" title="Tarik data sekarang"><i class="bi bi-cloud-download"></i> Tarik</button></form>
+                  <form method="post" action="/admin/mesin/<%= d.id %>/tes" class="d-inline"><button class="btn btn-sm btn-outline-secondary" title="Tes koneksi"><i class="bi bi-plug"></i></button></form>
+                <% } %>
+                <a href="/admin/mesin?edit=<%= d.id %>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                <form method="post" action="/admin/mesin/<%= d.id %>/hapus" class="d-inline" data-confirm="Hapus mesin <%= d.nama %>? Log yang sudah diimpor tetap tersimpan."><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+              </td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-primary">
+      <div class="card-header bg-white"><b><i class="bi bi-usb-drive"></i> Impor Data dari Flashdisk (USB)</b></div>
+      <form class="card-body" method="post" action="/admin/mesin/impor" enctype="multipart/form-data">
+        <p class="small text-muted mb-3">Untuk mesin yang dibaca lewat USB (mis. <b>P280</b>): di mesin pilih menu <i>USB / Unduh Laporan</i>, lalu unggah file hasilnya di sini.
+          Format yang didukung: <b>laporan standar .xls</b> (mis. <code>StandardReport.xls</code>), <b>attlog .dat/.txt</b> (mis. <code>1_attlog.dat</code>), dan <b>CSV/Excel</b> berkolom ID &amp; Waktu.
+          Scan yang sudah pernah diimpor otomatis dilewati, jadi aman mengimpor file yang periodenya tumpang tindih.</p>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4"><label class="form-label small">Dari mesin</label>
+            <select name="device_id" class="form-select">
+              <option value="">(tidak ditentukan)</option>
+              <% devices.forEach((d) => { %><option value="<%= d.id %>" <%= d.koneksi === 'usb' ? 'selected' : '' %>><%= d.nama %></option><% }) %>
+            </select>
+          </div>
+          <div class="col-md-5"><label class="form-label small">File ekspor</label><input type="file" name="file" class="form-control" accept=".xls,.xlsx,.dat,.txt,.csv" required></div>
+          <div class="col-md-3"><button class="btn btn-primary w-100"><i class="bi bi-upload"></i> Impor</button></div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header bg-white"><b><i class="bi bi-arrow-repeat"></i> Proses Ulang Absensi dari Scan</b></div>
+      <form class="card-body" method="post" action="/admin/mesin/proses-ulang">
+        <p class="small text-muted">Jalankan bila jadwal shift atau ID mesin pegawai diubah setelah data diimpor, agar jam masuk/pulang dan keterlambatan dihitung ulang.</p>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4"><label class="form-label small">Dari</label><input type="date" name="dari" class="form-control" value="<%= T.addDays(T.fmtDate(new Date()), -30) %>" required></div>
+          <div class="col-md-4"><label class="form-label small">Sampai</label><input type="date" name="sampai" class="form-control" value="<%= T.fmtDate(new Date()) %>" required></div>
+          <div class="col-md-4"><button class="btn btn-outline-primary w-100">Proses Ulang</button></div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <% const e = edit || { tipe: 'x302', koneksi: 'lan', port: 80, comm_key: '0', auto_sync_menit: 15 }; %>
+    <form method="post" action="/admin/mesin" class="card shadow-sm mb-4">
+      <div class="card-header bg-white"><b><%= edit && edit.id ? 'Ubah Mesin' : 'Tambah Mesin' %></b></div>
+      <div class="card-body">
+        <% if (errors.length) { %><div class="alert alert-danger py-2 small"><% errors.forEach((x) => { %><div><%= x %></div><% }) %></div><% } %>
+        <input type="hidden" name="id" value="<%= e.id || '' %>">
+        <div class="mb-2"><label class="form-label">Nama Mesin</label><input name="nama" class="form-control" value="<%= e.nama || '' %>" placeholder="mis. X302 Lobi Utama" required></div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label">Tipe</label>
+            <select name="tipe" id="tipe" class="form-select">
+              <% Object.entries(TIPE_MESIN).forEach(([k, v]) => { %><option value="<%= k %>" <%= e.tipe === k ? 'selected' : '' %>><%= v %></option><% }) %>
+            </select>
+          </div>
+          <div class="col-6"><label class="form-label">Koneksi</label>
+            <select name="koneksi" id="koneksi" class="form-select">
+              <option value="lan" <%= e.koneksi === 'lan' ? 'selected' : '' %>>LAN (jaringan)</option>
+              <option value="usb" <%= e.koneksi === 'usb' ? 'selected' : '' %>>USB (impor file)</option>
+            </select>
+          </div>
+        </div>
+        <div id="lanFields">
+          <div class="row g-2 mb-2">
+            <div class="col-8"><label class="form-label">Alamat IP</label><input name="ip" class="form-control" value="<%= e.ip || '' %>" placeholder="192.168.1.201"></div>
+            <div class="col-4"><label class="form-label">Port</label><input type="number" name="port" class="form-control" value="<%= e.port %>"></div>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label">Comm Key</label><input name="comm_key" class="form-control" value="<%= e.comm_key %>"></div>
+            <div class="col-6"><label class="form-label">Tarik otomatis</label>
+              <select name="auto_sync_menit" class="form-select">
+                <% [[0, 'Manual'], [5, 'Tiap 5 menit'], [15, 'Tiap 15 menit'], [30, 'Tiap 30 menit'], [60, 'Tiap 1 jam']].forEach(([v, l]) => { %>
+                  <option value="<%= v %>" <%= Number(e.auto_sync_menit) === v ? 'selected' : '' %>><%= l %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mb-2"><label class="form-label">Lokasi</label><input name="lokasi" class="form-control" value="<%= e.lokasi || '' %>" placeholder="mis. Gedung A lantai 1"></div>
+      </div>
+      <div class="card-footer bg-white d-flex gap-2">
+        <button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button>
+        <% if (edit) { %><a href="/admin/mesin" class="btn btn-light">Batal</a><% } %>
+      </div>
+    </form>
+
+    <div class="card shadow-sm small">
+      <div class="card-header bg-white"><b>Panduan koneksi</b></div>
+      <div class="card-body">
+        <p class="mb-1"><b>X302 (LAN)</b></p>
+        <ol class="ps-3 mb-3">
+          <li>Di mesin: <i>Menu → Komunikasi → Ethernet</i>, catat/atur <b>IP Address</b> (mis. 192.168.1.201).</li>
+          <li>Pastikan <b>Comm Key</b> (kata sandi komunikasi) sama dengan isian di sini (default 0).</li>
+          <li>Komputer server aplikasi ini harus berada di jaringan yang sama dengan mesin.</li>
+          <li>Klik <i class="bi bi-plug"></i> untuk tes koneksi, lalu <b>Tarik</b>.</li>
+        </ol>
+        <p class="mb-1"><b>P280 (USB)</b></p>
+        <ol class="ps-3 mb-0">
+          <li>Colokkan flashdisk ke mesin, pilih menu <i>USB → Unduh Laporan / Download Attlog</i>.</li>
+          <li>Unggah file hasilnya (mis. <code>StandardReport.xls</code>) di form <b>Impor Data dari Flashdisk</b>.</li>
+          <li>Hubungkan ID mesin dengan pegawai di menu <b>Pemetaan ID Mesin</b> (cukup sekali).</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const k = document.getElementById('koneksi');
+  const t = document.getElementById('tipe');
+  const lan = document.getElementById('lanFields');
+  const upd = () => { lan.style.display = k.value === 'lan' ? '' : 'none'; };
+  t.addEventListener('change', () => { if (t.value === 'p280') k.value = 'usb'; if (t.value === 'x302') k.value = 'lan'; upd(); });
+  k.addEventListener('change', upd);
+  upd();
+})();
+</script>
+<%- include('../partials/footer') %>

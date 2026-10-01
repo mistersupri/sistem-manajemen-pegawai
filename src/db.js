@@ -155,6 +155,60 @@ CREATE INDEX IF NOT EXISTS idx_schedule_tanggal ON shift_schedules(tanggal);
 CREATE INDEX IF NOT EXISTS idx_clarif_status ON clarifications(status);
 `);
 
+// ---- Mesin fingerprint ----
+db.exec(`
+CREATE TABLE IF NOT EXISTS devices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nama TEXT NOT NULL,
+  tipe TEXT NOT NULL DEFAULT 'x302',
+  koneksi TEXT NOT NULL DEFAULT 'lan',
+  ip TEXT,
+  port INTEGER NOT NULL DEFAULT 80,
+  comm_key TEXT NOT NULL DEFAULT '0',
+  lokasi TEXT,
+  auto_sync_menit INTEGER NOT NULL DEFAULT 0,
+  last_sync_at TEXT,
+  last_sync_status TEXT,
+  last_sync_ok INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS fingerprint_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  device_id INTEGER REFERENCES devices(id) ON DELETE SET NULL,
+  pin TEXT NOT NULL,
+  waktu TEXT NOT NULL,
+  verify TEXT,
+  status_code TEXT,
+  sumber TEXT NOT NULL,
+  imported_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fp_log ON fingerprint_logs(IFNULL(device_id, 0), pin, waktu);
+CREATE INDEX IF NOT EXISTS idx_fp_pin_waktu ON fingerprint_logs(pin, waktu);
+
+-- Daftar pengguna yang terbaca dari mesin (untuk pemetaan ID mesin -> pegawai)
+CREATE TABLE IF NOT EXISTS fingerprint_users (
+  pin TEXT PRIMARY KEY,
+  nama TEXT,
+  departemen TEXT,
+  device_id INTEGER REFERENCES devices(id) ON DELETE SET NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+`);
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS hari_libur (
+  tanggal TEXT PRIMARY KEY,
+  keterangan TEXT NOT NULL
+);
+`);
+
+// Migrasi: kolom ID mesin fingerprint pada pegawai
+if (!db.prepare('PRAGMA table_info(employees)').all().some((c) => c.name === 'id_mesin')) {
+  db.exec('ALTER TABLE employees ADD COLUMN id_mesin TEXT');
+}
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_id_mesin ON employees(id_mesin) WHERE id_mesin IS NOT NULL AND id_mesin <> ''");
+
 const DEFAULT_SETTINGS = {
   nama_instansi: 'Instansi Saya',
   face_threshold: '0.5',
@@ -164,6 +218,7 @@ const DEFAULT_SETTINGS = {
   enforce_geofence: '0',
   self_checkin: '1',
   liveness: '0',
+  hari_kerja: '1,2,3,4,5',
   timezone_label: 'WIB',
 };
 

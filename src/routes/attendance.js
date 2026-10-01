@@ -51,6 +51,7 @@ function rekap(f) {
   for (const r of db.prepare('SELECT employee_id, tanggal, shift_id FROM shift_schedules WHERE tanggal BETWEEN ? AND ?').all(f.dari, f.sampai)) {
     scheds[`${r.employee_id}|${r.tanggal}`] = r.shift_id;
   }
+  const workday = Object.fromEntries(days.map((d) => [d, A.isWorkday(d)]));
   const recs = {};
   for (const r of db.prepare('SELECT * FROM attendance WHERE tanggal BETWEEN ? AND ?').all(f.dari, f.sampai)) {
     (recs[r.employee_id] = recs[r.employee_id] || {})[r.tanggal] = r;
@@ -64,7 +65,7 @@ function rekap(f) {
     const mine = recs[e.id] || {};
     for (const d of days) {
       const key = `${e.id}|${d}`;
-      const scheduled = key in scheds ? scheds[key] !== null : !!e.default_shift_id;
+      const scheduled = key in scheds ? scheds[key] !== null : !!e.default_shift_id && workday[d];
       const r = mine[d];
       if (scheduled) row.hari_kerja++;
       if (r) {
@@ -214,7 +215,12 @@ router.get('/admin/absensi/:id', requireAdmin, (req, res) => {
   if (!rec) return res.status(404).render('error', { title: 'Tidak Ditemukan', message: 'Data absensi tidak ditemukan.' });
   const klarifikasi = db.prepare('SELECT * FROM clarifications WHERE employee_id = ? AND tanggal = ? ORDER BY id DESC')
     .all(rec.employee_id, rec.tanggal);
-  res.render('admin/attendance_detail', { title: 'Detail Absensi', rec, klarifikasi });
+  const emp = db.prepare('SELECT id_mesin FROM employees WHERE id = ?').get(rec.employee_id);
+  const scans = emp && emp.id_mesin ? db.prepare(`SELECT l.waktu, l.sumber, d.nama AS mesin FROM fingerprint_logs l
+    LEFT JOIN devices d ON d.id = l.device_id WHERE l.pin = ? AND l.waktu BETWEEN ? AND ? ORDER BY l.waktu`)
+    .all(emp.id_mesin, `${rec.tanggal} 00:00:00`, `${T.addDays(rec.tanggal, 1)} 23:59:59`)
+    .filter((l) => l.waktu.slice(0, 10) === rec.tanggal || (rec.jam_pulang && l.waktu <= rec.jam_pulang)) : [];
+  res.render('admin/attendance_detail', { title: 'Detail Absensi', rec, klarifikasi, scans });
 });
 
 router.post('/admin/absensi/:id/hapus', requireAdmin, (req, res) => {

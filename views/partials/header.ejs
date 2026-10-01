@@ -27,10 +27,11 @@
           <li class="nav-item"><a class="nav-link <%= active('/admin') %>" href="/admin"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
           <li class="nav-item"><a class="nav-link <%= active('/admin/pegawai') %>" href="/admin/pegawai"><i class="bi bi-people"></i> Pegawai</a></li>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle <%= active('/admin/shift') || active('/admin/jadwal') %>" href="#" data-bs-toggle="dropdown"><i class="bi bi-clock-history"></i> Shift</a>
+            <a class="nav-link dropdown-toggle <%= active('/admin/shift') || active('/admin/jadwal') || active('/admin/hari-libur') %>" href="#" data-bs-toggle="dropdown"><i class="bi bi-clock-history"></i> Shift</a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="/admin/shift">Master Shift</a></li>
               <li><a class="dropdown-item" href="/admin/jadwal">Jadwal Shift Pegawai</a></li>
+              <li><a class="dropdown-item" href="/admin/hari-libur">Hari Libur Nasional</a></li>
             </ul>
           </li>
           <li class="nav-item dropdown">
@@ -42,6 +43,7 @@
             </ul>
           </li>
           <li class="nav-item"><a class="nav-link <%= active('/admin/klarifikasi') %>" href="/admin/klarifikasi"><i class="bi bi-chat-square-text"></i> Klarifikasi</a></li>
+          <li class="nav-item"><a class="nav-link <%= active('/admin/mesin') %>" href="/admin/mesin"><i class="bi bi-fingerprint"></i> Mesin</a></li>
           <li class="nav-item"><a class="nav-link" href="/kiosk" target="_blank"><i class="bi bi-camera-video"></i> Kiosk Wajah</a></li>
           <li class="nav-item"><a class="nav-link <%= active('/admin/pengaturan') %>" href="/admin/pengaturan"><i class="bi bi-gear"></i> Pengaturan</a></li>
         <% } else { %>

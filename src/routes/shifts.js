@@ -3,6 +3,7 @@ const { db } = require('../db');
 const { requireAdmin } = require('../auth');
 const T = require('../time');
 const { importUpload } = require('../uploads');
+const { isWorkday } = require('../attendance');
 const { ExcelJS, readTable, addSheet, sendWorkbook } = require('../excel');
 
 const router = express.Router();
@@ -90,7 +91,10 @@ function scheduleData(bulan, unit) {
   const map = {};
   for (const r of rows) map[`${r.employee_id}|${r.tanggal}`] = r.shift_id === null ? 'L' : r.shift_id;
   const shifts = db.prepare('SELECT * FROM shifts ORDER BY jam_masuk').all();
-  return { days, employees, map, shifts };
+  const workday = Object.fromEntries(days.map((d) => [d, isWorkday(d)]));
+  const libur = Object.fromEntries(db.prepare('SELECT tanggal, keterangan FROM hari_libur WHERE tanggal BETWEEN ? AND ?')
+    .all(days[0], days[days.length - 1]).map((r) => [r.tanggal, r.keterangan]));
+  return { days, employees, map, shifts, workday, libur };
 }
 
 router.get('/admin/jadwal', requireAdmin, (req, res) => {
@@ -153,7 +157,7 @@ router.post('/admin/jadwal/massal', requireAdmin, (req, res) => {
 
 router.get('/admin/jadwal/export', requireAdmin, async (req, res) => {
   const bulan = validMonth(req.query.bulan);
-  const { days, employees, map, shifts } = scheduleData(bulan, req.query.unit || '');
+  const { days, employees, map, shifts, workday } = scheduleData(bulan, req.query.unit || '');
   const kodeById = Object.fromEntries(shifts.map((s) => [s.id, s.kode]));
   const columns = [
     { header: 'NIP', key: 'nip', width: 22 },
@@ -164,7 +168,7 @@ router.get('/admin/jadwal/export', requireAdmin, async (req, res) => {
     const r = { nip: e.nip, nama: e.nama };
     for (const d of days) {
       const v = map[`${e.id}|${d}`];
-      r[d] = v === 'L' ? 'L' : v ? kodeById[v] : (kodeById[e.default_shift_id] || '');
+      r[d] = v === 'L' ? 'L' : v ? kodeById[v] : !e.default_shift_id ? '' : workday[d] ? kodeById[e.default_shift_id] : 'L';
     }
     return r;
   });
@@ -216,6 +220,42 @@ router.post('/admin/jadwal/import', requireAdmin, importUpload.single('file'), a
   const msg = `${n} jadwal diimpor.` + (errors.length ? ` ${errors.length} kesalahan: ${errors.slice(0, 5).join(' ')}` : '');
   res.flash(errors.length ? 'warning' : 'success', msg);
   res.redirect(`/admin/jadwal${firstMonth ? `?bulan=${firstMonth}` : ''}`);
+});
+
+// ---------- Hari libur nasional / cuti bersama ----------
+router.get('/admin/hari-libur', requireAdmin, (req, res) => {
+  const tahun = /^\d{4}$/.test(req.query.tahun || '') ? req.query.tahun : T.fmtDate(new Date()).slice(0, 4);
+  const list = db.prepare("SELECT * FROM hari_libur WHERE tanggal LIKE ? ORDER BY tanggal").all(`${tahun}-%`);
+  res.render('admin/holidays', { title: 'Hari Libur', list, tahun });
+});
+
+router.post('/admin/hari-libur', requireAdmin, (req, res) => {
+  const { dari, keterangan } = req.body;
+  const sampai = req.body.sampai || dari;
+  const ket = String(keterangan || '').trim();
+  if (!T.isValidDate(dari) || !T.isValidDate(sampai) || sampai < dari || !ket) {
+    res.flash('danger', 'Isi tanggal dan keterangan hari libur dengan benar.');
+    return res.redirect('/admin/hari-libur');
+  }
+  const days = T.dateRange(dari, sampai);
+  if (days.length > 60) {
+    res.flash('danger', 'Rentang hari libur maksimal 60 hari.');
+    return res.redirect('/admin/hari-libur');
+  }
+  db.transaction(() => {
+    for (const d of days) {
+      db.prepare('INSERT INTO hari_libur (tanggal, keterangan) VALUES (?, ?) ON CONFLICT(tanggal) DO UPDATE SET keterangan = excluded.keterangan')
+        .run(d, ket.slice(0, 200));
+    }
+  })();
+  res.flash('success', `${days.length} hari libur disimpan: ${ket}. Jalankan "Proses Ulang" di menu Mesin bila data fingerprint periode ini sudah diimpor.`);
+  res.redirect(`/admin/hari-libur?tahun=${dari.slice(0, 4)}`);
+});
+
+router.post('/admin/hari-libur/hapus', requireAdmin, (req, res) => {
+  if (T.isValidDate(req.body.tanggal)) db.prepare('DELETE FROM hari_libur WHERE tanggal = ?').run(req.body.tanggal);
+  res.flash('success', 'Hari libur dihapus.');
+  res.redirect(`/admin/hari-libur?tahun=${String(req.body.tanggal || '').slice(0, 4)}`);
 });
 
 module.exports = router;

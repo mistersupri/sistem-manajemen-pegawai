@@ -10,6 +10,15 @@
           <div class="col-md-4"><label class="form-label">Label Zona Waktu</label><input name="timezone_label" class="form-control" value="<%= settings.timezone_label %>" maxlength="10"><div class="form-text">Ditampilkan di stempel waktu foto.</div></div>
         </div>
 
+        <h2 class="h6 text-primary">Hari Kerja</h2>
+        <p class="small text-muted mb-2">Shift default pegawai hanya berlaku pada hari yang dicentang dan bukan <a href="/admin/hari-libur">hari libur</a>. Pegawai yang bekerja di luar hari ini (mis. satpam) diatur lewat <a href="/admin/jadwal">Jadwal Shift</a>.</p>
+        <% const hk = String(settings.hari_kerja || '').split(',').filter(Boolean).map(Number); %>
+        <div class="d-flex flex-wrap gap-3 mb-4">
+          <% T.HARI.forEach((h, i) => { %>
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="hari_kerja" value="<%= i %>" id="hk<%= i %>" <%= hk.includes(i) ? 'checked' : '' %>><label class="form-check-label" for="hk<%= i %>"><%= h %></label></div>
+          <% }) %>
+        </div>
+
         <h2 class="h6 text-primary">Pengenalan Wajah</h2>
         <div class="row g-3 mb-4">
           <div class="col-md-6">

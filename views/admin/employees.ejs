@@ -51,7 +51,7 @@
       <% if (!employees.length) { %><tr><td colspan="7" class="text-center text-muted py-4">Belum ada data pegawai.</td></tr><% } %>
       <% employees.forEach((e) => { %>
         <tr>
-          <td class="font-monospace small"><%= e.nip %></td>
+          <td class="font-monospace small"><%= e.nip %><% if (e.id_mesin) { %><div class="text-muted" title="ID mesin fingerprint"><i class="bi bi-fingerprint"></i> <%= e.id_mesin %></div><% } %></td>
           <td><div class="fw-semibold"><%= e.nama %></div><div class="small text-muted"><%= e.email || '' %></div></td>
           <td><div><%= e.jabatan || '-' %></div><div class="small text-muted"><%= e.unit_kerja || '' %></div></td>
           <td><% if (e.shift_kode) { %><span class="shift-chip" style="background: <%= e.shift_warna %>"><%= e.shift_kode %></span> <small><%= e.shift_nama %></small><% } else { %><span class="text-muted">-</span><% } %></td>

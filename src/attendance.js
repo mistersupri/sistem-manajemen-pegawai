@@ -19,6 +19,7 @@ const METODE_LABEL = {
   dinas_luar: 'Foto GPS Dinas Luar',
   klarifikasi: 'Klarifikasi',
   manual: 'Input Manual',
+  fingerprint: 'Mesin Fingerprint',
 };
 
 // Batas berapa jam setelah shift berakhir absen pulang masih dianggap milik shift tsb.
@@ -40,7 +41,17 @@ function getShiftForDate(employee, tanggal) {
     if (!sched.shift_id) return { shift: null, libur: true };
     return { shift: getShift(sched.shift_id), libur: false };
   }
+  // Shift default hanya berlaku pada hari kerja dan bukan hari libur nasional.
+  if (!isWorkday(tanggal)) return { shift: null, libur: true };
   return { shift: getShift(employee.default_shift_id), libur: false };
+}
+
+/** Hari kerja umum (Pengaturan > Hari Kerja) yang bukan tanggal merah. */
+function isWorkday(tanggal) {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'hari_kerja'").get();
+  const days = String(row ? row.value : '1,2,3,4,5').split(',').filter(Boolean).map(Number);
+  if (!days.includes(T.parseDateTime(tanggal).getDay())) return false;
+  return !db.prepare('SELECT 1 FROM hari_libur WHERE tanggal = ?').get(tanggal);
 }
 
 function isOvernight(shift) {
@@ -265,7 +276,7 @@ function parseCoord(v, max) {
 }
 
 module.exports = {
-  parseCoord, STATUS_LABEL, METODE_LABEL, FIXED_STATUS, AttendanceError,
+  isWorkday, parseCoord, STATUS_LABEL, METODE_LABEL, FIXED_STATUS, AttendanceError,
   getShift, getShiftForDate, isOvernight, shiftWindow, computeStatus, getRecord,
   resolveCheckInDate, resolveCheckOutDate, recordAttendance, upsertManual, haversineMeters,
 };

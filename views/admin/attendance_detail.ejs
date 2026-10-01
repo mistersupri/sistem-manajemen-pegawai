@@ -37,6 +37,14 @@
   </div>
   <% }) %>
 </div>
+<% if (scans.length) { %>
+<div class="card shadow-sm mt-4">
+  <div class="card-header bg-white"><b><i class="bi bi-fingerprint"></i> Scan mesin fingerprint</b></div>
+  <ul class="list-group list-group-flush small">
+    <% scans.forEach((l) => { %><li class="list-group-item d-flex justify-content-between"><span><%= l.waktu.slice(0, 16) %></span><span class="text-muted"><%= l.mesin || (l.sumber === 'lan' ? 'LAN' : 'File USB') %></span></li><% }) %>
+  </ul>
+</div>
+<% } %>
 <% if (rec.face_photo) { %>
 <div class="mt-4"><div class="small text-muted">Foto referensi wajah terdaftar:</div><img src="/uploads/<%= rec.face_photo %>" class="photo-thumb" style="max-width: 160px" alt="Foto referensi"></div>
 <% } %>
