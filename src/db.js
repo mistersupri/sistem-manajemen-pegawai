@@ -1,14 +1,54 @@
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
+
+// Pakai SQLite bawaan Node.js (node:sqlite) agar tidak perlu kompilasi modul native
+// (Visual Studio / build tools) saat npm install. Sembunyikan peringatan "experimental".
+const emitWarning = process.emitWarning;
+process.emitWarning = function (warning, ...args) {
+  if (String(warning && warning.message ? warning.message : warning).includes('SQLite')) return;
+  return emitWarning.call(this, warning, ...args);
+};
+const { DatabaseSync } = require('node:sqlite');
+process.emitWarning = emitWarning;
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'absensi.db');
 if (DB_PATH !== ':memory:') fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const db = new DatabaseSync(DB_PATH);
+db.exec('PRAGMA journal_mode = WAL');
+db.exec('PRAGMA foreign_keys = ON');
+db.exec('PRAGMA busy_timeout = 5000');
+
+// Cache prepared statement agar pemanggilan berulang tetap cepat.
+const stmtCache = new Map();
+const rawPrepare = db.prepare.bind(db);
+db.prepare = (sql) => {
+  let st = stmtCache.get(sql);
+  if (!st) {
+    st = rawPrepare(sql);
+    stmtCache.set(sql, st);
+  }
+  return st;
+};
+
+// db.transaction(fn) -> fungsi yang menjalankan fn di dalam transaksi (mendukung transaksi bersarang).
+let txDepth = 0;
+db.transaction = (fn) => (...args) => {
+  const sp = `sp${txDepth}`;
+  db.exec(txDepth === 0 ? 'BEGIN' : `SAVEPOINT ${sp}`);
+  txDepth++;
+  try {
+    const result = fn(...args);
+    txDepth--;
+    db.exec(txDepth === 0 ? 'COMMIT' : `RELEASE ${sp}`);
+    return result;
+  } catch (err) {
+    txDepth--;
+    db.exec(txDepth === 0 ? 'ROLLBACK' : `ROLLBACK TO ${sp}; RELEASE ${sp}`);
+    throw err;
+  }
+};
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (

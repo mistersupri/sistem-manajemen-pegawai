@@ -2,7 +2,7 @@
 
 Aplikasi web absensi pegawai dengan **pengenalan wajah**, **shift kerja**, **klarifikasi absen**, dan **absen dinas luar dengan foto berstempel waktu + GPS**. Data pegawai, jadwal shift, dan absensi dapat diekspor/diimpor dalam format Excel (.xlsx) dan CSV.
 
-Dibangun dengan Node.js + Express + SQLite (tanpa server database terpisah). Pengenalan wajah memakai [face-api.js](https://github.com/vladmandic/face-api) dan berjalan di browser; modelnya disajikan dari server sendiri, jadi tidak perlu internet.
+Dibangun dengan Node.js + Express + SQLite bawaan Node (`node:sqlite`), jadi tidak perlu server database terpisah dan tidak ada modul native yang harus dikompilasi. Pengenalan wajah memakai [face-api.js](https://github.com/vladmandic/face-api) dan berjalan di browser; modelnya disajikan dari server sendiri, jadi tidak perlu internet.
 
 ## Fitur
 
@@ -44,12 +44,14 @@ Dibangun dengan Node.js + Express + SQLite (tanpa server database terpisah). Pen
 
 ## Menjalankan
 
-Kebutuhan: **Node.js 18+**.
+Kebutuhan: **Node.js 22.13 atau lebih baru** (disarankan Node 24 LTS). Tidak perlu Visual Studio, Python, atau build tools.
 
 ```bash
 npm install
 npm start
 ```
+
+Bila sebelumnya `npm install` gagal karena `better-sqlite3` / `node-gyp` (versi lama aplikasi ini), hapus folder `node_modules` (dan `yarn.lock` bila ada), tarik versi terbaru, lalu jalankan `npm install` lagi.
 
 Buka `http://localhost:3000` dan login sebagai admin: **admin / admin123** (segera ganti lewat menu *Ubah Password*).
 
