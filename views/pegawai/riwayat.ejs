@@ -1,0 +1,34 @@
+<%- include('../partials/header') %>
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+  <h1 class="h4 mb-0"><i class="bi bi-list-check"></i> Riwayat Absensi</h1>
+  <form method="get" class="d-flex gap-2"><input type="month" name="bulan" class="form-control" value="<%= bulan %>"><button class="btn btn-secondary">Tampilkan</button></form>
+</div>
+<% if (summary) { %>
+<div class="row g-2 mb-3 text-center">
+  <% [['Hari Kerja', summary.hari_kerja], ['Tepat Waktu', summary.hadir], ['Terlambat', summary.terlambat], ['Dinas Luar', summary.dinas_luar], ['Izin/Sakit/Cuti', summary.izin + summary.sakit + summary.cuti], ['Tanpa Ket.', summary.tanpa_keterangan]].forEach(([l, v]) => { %>
+    <div class="col-4 col-md-2"><div class="card card-body py-2 shadow-sm"><div class="h5 mb-0"><%= v %></div><div class="small text-muted"><%= l %></div></div></div>
+  <% }) %>
+</div>
+<% } %>
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Tanggal</th><th>Shift</th><th>Masuk</th><th>Pulang</th><th>Status</th><th>Keterangan</th><th></th></tr></thead>
+      <tbody>
+      <% if (!records.length) { %><tr><td colspan="7" class="text-center text-muted py-4">Tidak ada data.</td></tr><% } %>
+      <% records.forEach((r) => { %>
+        <tr>
+          <td class="text-nowrap"><%= T.HARI[T.parseDateTime(r.tanggal).getDay()].slice(0, 3) %>, <%= r.tanggal %></td>
+          <td><%= r.shift_kode ? `${r.shift_kode} (${r.shift_masuk}-${r.shift_pulang})` : '-' %></td>
+          <td><%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %><% if (r.foto_masuk) { %> <a href="/uploads/<%= r.foto_masuk %>" target="_blank"><i class="bi bi-image"></i></a><% } %></td>
+          <td><%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %><% if (r.foto_pulang) { %> <a href="/uploads/<%= r.foto_pulang %>" target="_blank"><i class="bi bi-image"></i></a><% } %></td>
+          <td><%- include('../partials/status_badge', { status: r.status }) %><% if (r.terlambat_menit) { %> <small><%= r.terlambat_menit %>m</small><% } %></td>
+          <td class="small text-muted"><%= r.keterangan || '' %></td>
+          <td><a class="btn btn-sm btn-light" href="/pegawai/klarifikasi?tanggal=<%= r.tanggal %>" title="Ajukan klarifikasi"><i class="bi bi-chat-square-text"></i></a></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('../partials/footer') %>

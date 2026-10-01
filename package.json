@@ -1,0 +1,37 @@
+{
+  "name": "sistem-manajemen-pegawai",
+  "version": "1.0.0",
+  "description": "Sistem absensi pegawai dengan pengenalan wajah, shift kerja, klarifikasi absen, dan absen dinas luar berbasis foto GPS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sudinpendidikanjp2-del/sistem-manajemen-pegawai.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sudinpendidikanjp2-del/sistem-manajemen-pegawai/issues"
+  },
+  "homepage": "https://github.com/sudinpendidikanjp2-del/sistem-manajemen-pegawai#readme",
+  "dependencies": {
+    "@vladmandic/face-api": "^1.7.15",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.3",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "cookie-parser": "^1.4.7",
+    "ejs": "^6.0.1",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "multer": "^2.4.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}

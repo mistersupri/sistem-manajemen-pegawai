@@ -1,0 +1,73 @@
+<%- include('../partials/header') %>
+<h1 class="h4 mb-3"><i class="bi bi-chat-square-text"></i> Klarifikasi Absen</h1>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <form method="post" enctype="multipart/form-data" class="card shadow-sm">
+      <div class="card-header bg-white"><b>Ajukan Klarifikasi</b></div>
+      <div class="card-body">
+        <% if (error) { %><div class="alert alert-danger py-2"><%= error %></div><% } %>
+        <div class="mb-3"><label class="form-label">Tanggal Absen</label><input type="date" name="tanggal" class="form-control" value="<%= form.tanggal || '' %>" min="<%= minDate %>" max="<%= maxDate %>" required></div>
+        <div class="mb-3"><label class="form-label">Jenis Klarifikasi</label>
+          <select name="jenis" id="jenis" class="form-select" required>
+            <option value="">- pilih -</option>
+            <% Object.entries(JENIS).forEach(([k, v]) => { %><option value="<%= k %>" <%= form.jenis === k ? 'selected' : '' %>><%= v %></option><% }) %>
+          </select>
+        </div>
+        <div class="row g-2 mb-3" id="jamRow">
+          <div class="col-6" id="jmBox"><label class="form-label">Jam Masuk Sebenarnya</label><input type="time" name="jam_masuk" class="form-control" value="<%= form.jam_masuk || '' %>"></div>
+          <div class="col-6" id="jpBox"><label class="form-label">Jam Pulang Sebenarnya</label><input type="time" name="jam_pulang" class="form-control" value="<%= form.jam_pulang || '' %>"></div>
+        </div>
+        <div class="mb-3"><label class="form-label">Alasan / Penjelasan</label><textarea name="alasan" class="form-control" rows="4" minlength="10" required><%= form.alasan || '' %></textarea></div>
+        <div class="mb-3"><label class="form-label">Lampiran Bukti (opsional)</label><input type="file" name="lampiran" class="form-control" accept="image/jpeg,image/png,application/pdf"><div class="form-text">Surat dokter, surat tugas, foto, dsb. JPG/PNG/PDF maks 5 MB.</div></div>
+        <button class="btn btn-primary w-100"><i class="bi bi-send"></i> Kirim Klarifikasi</button>
+      </div>
+    </form>
+  </div>
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white"><b>Riwayat Klarifikasi</b></div>
+      <ul class="list-group list-group-flush">
+        <% if (!list.length) { %><li class="list-group-item text-muted text-center py-4">Belum ada klarifikasi.</li><% } %>
+        <% list.forEach((c) => { %>
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <div><b><%= JENIS[c.jenis] %></b> · <%= T.fmtTanggalIndo(c.tanggal) %></div>
+              <span class="badge klar-<%= c.status %> align-self-start"><%= STATUS_KLARIFIKASI[c.status] %></span>
+            </div>
+            <div class="small mt-1" style="white-space: pre-wrap"><%= c.alasan %></div>
+            <div class="small text-muted mt-1">
+              <% if (c.jam_masuk_usulan) { %>Masuk <%= c.jam_masuk_usulan %> <% } %><% if (c.jam_pulang_usulan) { %>· Pulang <%= c.jam_pulang_usulan %> <% } %>
+              <% if (c.lampiran) { %>· <a href="/uploads/<%= c.lampiran %>" target="_blank"><i class="bi bi-paperclip"></i> lampiran</a><% } %>
+              · diajukan <%= c.created_at.slice(0, 16) %>
+            </div>
+            <% if (c.catatan_admin) { %><div class="small mt-1"><i class="bi bi-reply"></i> Admin: <%= c.catatan_admin %></div><% } %>
+            <% if (c.status === 'menunggu') { %>
+              <form method="post" action="/pegawai/klarifikasi/<%= c.id %>/batal" class="mt-2" data-confirm="Batalkan klarifikasi ini?"><button class="btn btn-sm btn-outline-danger">Batalkan</button></form>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const jenis = document.getElementById('jenis');
+  const jm = document.getElementById('jmBox');
+  const jp = document.getElementById('jpBox');
+  const update = () => {
+    const v = jenis.value;
+    const showM = ['lupa_absen_masuk', 'lupa_absen', 'terlambat', 'dinas_luar', 'lainnya'].includes(v);
+    const showP = ['lupa_absen_pulang', 'lupa_absen', 'pulang_cepat', 'dinas_luar', 'lainnya'].includes(v);
+    jm.style.display = showM ? '' : 'none';
+    jp.style.display = showP ? '' : 'none';
+    jm.querySelector('input').required = ['lupa_absen_masuk', 'lupa_absen'].includes(v);
+    jp.querySelector('input').required = ['lupa_absen_pulang', 'lupa_absen'].includes(v);
+    if (!showM) jm.querySelector('input').value = '';
+    if (!showP) jp.querySelector('input').value = '';
+  };
+  jenis.addEventListener('change', update);
+  update();
+})();
+</script>
+<%- include('../partials/footer') %>

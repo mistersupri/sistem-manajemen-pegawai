@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kiosk Absensi · <%= settings.nama_instansi %></title>
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="kiosk-body">
+<div class="container-xl py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <div class="h4 mb-0"><i class="bi bi-person-bounding-box"></i> Absensi Wajah</div>
+      <div class="text-white-50"><%= settings.nama_instansi %> · <%= totalWajah %> wajah terdaftar</div>
+    </div>
+    <div class="text-end">
+      <div class="kiosk-clock" id="clock">--:--:--</div>
+      <div class="text-white-50" id="date"></div>
+    </div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="btn-group w-100 mb-3" role="group">
+        <input type="radio" class="btn-check" name="mode" id="mMasuk" value="masuk" checked>
+        <label class="btn btn-lg btn-outline-success" for="mMasuk"><i class="bi bi-box-arrow-in-right"></i> ABSEN MASUK</label>
+        <input type="radio" class="btn-check" name="mode" id="mPulang" value="pulang">
+        <label class="btn btn-lg btn-outline-warning" for="mPulang"><i class="bi bi-box-arrow-right"></i> ABSEN PULANG</label>
+      </div>
+      <div class="camera-wrap mirror">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas class="overlay" id="overlay"></canvas>
+        <div class="face-guide"></div>
+        <div class="camera-status" id="status">Memuat model pengenal wajah...</div>
+      </div>
+      <div class="d-flex justify-content-between mt-2 small text-white-50">
+        <span><% if (settings.liveness === '1') { %><i class="bi bi-eye"></i> Kedipkan mata untuk verifikasi<% } else { %>Hadapkan wajah ke kamera<% } %></span>
+        <span><a href="#" id="fs" class="text-white-50"><i class="bi bi-arrows-fullscreen"></i> Layar penuh</a> · <a href="/admin" class="text-white-50">Keluar kiosk</a></span>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="kiosk-result mb-3" id="result">
+        <div class="card"><div class="card-body text-center text-white-50 py-5">Hasil absensi akan tampil di sini.</div></div>
+      </div>
+      <div class="card" style="background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1)">
+        <div class="card-header text-white-50 small">Riwayat di perangkat ini</div>
+        <ul class="list-group list-group-flush kiosk-log" id="log"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/face-api/face-api.js"></script>
+<script src="/static/js/face.js"></script>
+<script>
+(async () => {
+  const LIVENESS = <%- JSON.stringify(settings.liveness === '1') %>;
+  const TZ = <%- JSON.stringify(settings.timezone_label).replace(/</g, '\\u003c') %>;
+  const video = document.getElementById('video');
+  const overlay = document.getElementById('overlay');
+  const status = document.getElementById('status');
+  const result = document.getElementById('result');
+  const log = document.getElementById('log');
+  const esc = FaceKit.esc;
+  const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const now = await FaceKit.serverClock();
+  setInterval(() => {
+    const d = now();
+    document.getElementById('clock').textContent = `${FaceKit.fmtClock(d)} ${TZ}`;
+    document.getElementById('date').textContent = `${HARI[d.getUTCDay()]}, ${d.getUTCDate()} ${BULAN[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  }, 500);
+
+  // Mode default: sebelum jam 12 masuk, sesudahnya pulang (dapat diganti manual).
+  if (now().getUTCHours() >= 12) document.getElementById('mPulang').checked = true;
+  const mode = () => document.querySelector('input[name=mode]:checked').value;
+
+  document.getElementById('fs').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  });
+
+  function showResult(ok, html) {
+    result.innerHTML = `<div class="card border-${ok ? 'success' : 'danger'}"><div class="card-body">${html}</div></div>`;
+  }
+  function addLog(text, ok) {
+    const li = document.createElement('li');
+    li.className = 'list-group-item bg-transparent text-white small d-flex justify-content-between';
+    li.innerHTML = `<span>${ok ? '✅' : '⚠️'} ${esc(text)}</span><span class="text-white-50">${FaceKit.fmtClock(now()).slice(0, 5)}</span>`;
+    log.prepend(li);
+    while (log.children.length > 30) log.lastChild.remove();
+  }
+
+  try {
+    await FaceKit.load();
+    await FaceKit.startCamera(video);
+  } catch (e) {
+    status.textContent = 'Gagal memulai: ' + e.message;
+    return;
+  }
+
+  let busy = false;
+  let pauseUntil = 0;
+  let stable = 0;
+  const blink = FaceKit.blinkDetector();
+
+  async function submit(det) {
+    busy = true;
+    status.textContent = 'Mencocokkan wajah...';
+    const photo = FaceKit.capture(video, { maxWidth: 480 }).toDataURL('image/jpeg', 0.8);
+    try {
+      const r = await FaceKit.postJson('/api/kiosk/absen', { descriptor: FaceKit.toArray(det.descriptor), mode: mode(), photo });
+      const masuk = r.mode === 'masuk';
+      const info = masuk
+        ? (r.terlambat_menit ? `<span class="badge bg-warning text-dark">Terlambat ${r.terlambat_menit} menit</span>` : '<span class="badge bg-success">Tepat waktu</span>')
+        : (r.pulang_cepat_menit ? `<span class="badge bg-warning text-dark">Pulang cepat ${r.pulang_cepat_menit} menit</span>` : '<span class="badge bg-success">Sesuai jadwal</span>');
+      showResult(true, `
+        <div class="d-flex align-items-center gap-3">
+          <i class="bi bi-check-circle-fill text-success display-4"></i>
+          <div>
+            <div class="h4 mb-0">${esc(r.nama)}</div>
+            <div class="text-white-50">${esc(r.nip)}${r.jabatan ? ' · ' + esc(r.jabatan) : ''}</div>
+            <div class="mt-2">Absen <b>${masuk ? 'MASUK' : 'PULANG'}</b> pukul <b>${esc(r.jam)}</b> ${info}</div>
+            ${r.shift ? `<div class="small text-white-50 mt-1">${esc(r.shift)} · kemiripan ${r.similarity}%</div>` : ''}
+          </div>
+        </div>`);
+      addLog(`${r.nama} — ${masuk ? 'masuk' : 'pulang'} ${r.jam}`, true);
+      status.textContent = `Terima kasih, ${r.nama}!`;
+      pauseUntil = Date.now() + 4000;
+    } catch (e) {
+      showResult(false, `<div class="d-flex align-items-center gap-3"><i class="bi bi-x-circle-fill text-danger display-4"></i><div class="h5 mb-0">${esc(e.message)}</div></div>`);
+      addLog(e.message, false);
+      status.textContent = e.message;
+      pauseUntil = Date.now() + 3500;
+    }
+    blink.reset();
+    stable = 0;
+    busy = false;
+  }
+
+  async function loop() {
+    if (!busy && video.readyState >= 2 && Date.now() > pauseUntil) {
+      const { detection, count } = await FaceKit.detect(video, 320);
+      FaceKit.draw(overlay, video, detection, detection && count === 1 ? '#00e676' : '#ffc107');
+      if (!detection) {
+        stable = 0; blink.reset();
+        status.textContent = 'Silakan hadapkan wajah ke kamera.';
+      } else if (count > 1) {
+        stable = 0;
+        status.textContent = 'Terdeteksi lebih dari satu wajah. Satu per satu ya.';
+      } else {
+        const blinked = LIVENESS ? blink.update(detection) : true;
+        stable = detection.detection.score > 0.5 ? stable + 1 : 0;
+        if (!blinked) status.textContent = 'Wajah terdeteksi — silakan kedipkan mata.';
+        else if (stable >= 3) await submit(detection);
+        else status.textContent = 'Tahan posisi...';
+      }
+    } else if (Date.now() <= pauseUntil) {
+      overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+    }
+    requestAnimationFrame(loop);
+  }
+  status.textContent = 'Siap. Silakan hadapkan wajah ke kamera.';
+  loop();
+})();
+</script>
+</body>
+</html>

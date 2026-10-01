@@ -1,0 +1,173 @@
+<%- include('partials/header') %>
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0"><i class="bi bi-person-bounding-box"></i> Daftarkan Wajah</h1>
+    <div class="text-muted"><%= emp.nama %> · NIP <%= emp.nip %></div>
+  </div>
+  <a href="<%= backUrl %>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="camera-wrap mirror" id="camWrap">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas class="overlay" id="overlay"></canvas>
+      <div class="face-guide"></div>
+      <div class="camera-status" id="status">Memuat model pengenal wajah...</div>
+    </div>
+    <div class="progress mt-3" style="height: 22px">
+      <div class="progress-bar progress-bar-striped" id="progress" style="width: 0%">0 / 5</div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <p class="mb-2">Status: <% if (samples) { %>
+          <span class="badge bg-success"><%= samples %> sampel wajah terdaftar</span>
+        <% } else { %>
+          <span class="badge bg-secondary">Belum terdaftar</span>
+        <% } %></p>
+        <% if (!canReset && samples) { %>
+          <div class="alert alert-info">Wajah Anda sudah terdaftar. Hubungi admin bila perlu mendaftarkan ulang.</div>
+        <% } else { %>
+        <ol class="small text-muted ps-3">
+          <li>Pastikan pencahayaan cukup dan wajah terlihat jelas (tanpa masker/kacamata gelap).</li>
+          <li>Posisikan wajah di dalam bingkai oval.</li>
+          <li>Klik <b>Mulai Rekam</b>, lalu gerakkan kepala sedikit (kiri, kanan, atas) agar sampel bervariasi.</li>
+        </ol>
+        <% if (canReset && samples) { %>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="replace" checked>
+            <label class="form-check-label" for="replace">Ganti semua sampel lama</label>
+          </div>
+        <% } %>
+        <button class="btn btn-primary w-100 mb-2" id="btnStart" disabled><i class="bi bi-record-circle"></i> Mulai Rekam</button>
+        <% if (canReset) { %>
+          <label class="btn btn-outline-primary w-100 mb-2">
+            <i class="bi bi-image"></i> Daftarkan dari File Foto
+            <input type="file" accept="image/*" id="fileInput" hidden>
+          </label>
+        <% } %>
+        <div id="msg"></div>
+        <% } %>
+        <% if (canReset && samples) { %>
+          <hr>
+          <form method="post" action="/admin/pegawai/<%= emp.id %>/wajah/hapus" data-confirm="Hapus semua data wajah pegawai ini?">
+            <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Hapus Data Wajah</button>
+          </form>
+        <% } %>
+        <% if (emp.face_photo) { %>
+          <hr><div class="small text-muted mb-1">Foto referensi:</div>
+          <img src="/uploads/<%= emp.face_photo %>" class="photo-thumb" alt="Foto wajah">
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/face-api/face-api.js"></script>
+<script src="/static/js/face.js"></script>
+<script>
+(async () => {
+  const TARGET = 5;
+  const saveUrl = <%- JSON.stringify(saveUrl) %>;
+  const video = document.getElementById('video');
+  const overlay = document.getElementById('overlay');
+  const status = document.getElementById('status');
+  const progress = document.getElementById('progress');
+  const btn = document.getElementById('btnStart');
+  const msg = document.getElementById('msg');
+  const fileInput = document.getElementById('fileInput');
+  const replaceBox = document.getElementById('replace');
+  let recording = false;
+  let samples = [];
+  let photo = null;
+  let lastAt = 0;
+
+  const show = (type, text) => { if (msg) msg.innerHTML = `<div class="alert alert-${type} py-2 mb-0">${FaceKit.esc(text)}</div>`; };
+  const setProgress = () => {
+    progress.style.width = `${(samples.length / TARGET) * 100}%`;
+    progress.textContent = `${samples.length} / ${TARGET}`;
+  };
+
+  async function save(descriptors, photoData) {
+    status.textContent = 'Menyimpan data wajah...';
+    try {
+      const r = await FaceKit.postJson(saveUrl, { descriptors, photo: photoData, replace: replaceBox ? replaceBox.checked : true });
+      show('success', `Berhasil! ${r.samples} sampel wajah tersimpan. Halaman akan dimuat ulang...`);
+      status.textContent = 'Selesai.';
+      setTimeout(() => location.reload(), 1500);
+    } catch (e) {
+      show('danger', e.message);
+      status.textContent = 'Gagal menyimpan.';
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  try {
+    await FaceKit.load();
+  } catch (e) {
+    status.textContent = 'Gagal memuat model wajah: ' + e.message;
+    return;
+  }
+  if (!btn) { status.textContent = 'Wajah sudah terdaftar.'; return; }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', async () => {
+      const f = fileInput.files[0];
+      if (!f) return;
+      const img = await faceapi.bufferToImage(f);
+      status.textContent = 'Menganalisis foto...';
+      const { detection, count } = await FaceKit.detect(img, 608);
+      if (!detection) return show('warning', 'Wajah tidak terdeteksi pada foto.');
+      if (count > 1) return show('warning', 'Terdeteksi lebih dari satu wajah. Gunakan foto satu orang.');
+      const c = document.createElement('canvas');
+      const scale = Math.min(1, 640 / img.width);
+      c.width = img.width * scale; c.height = img.height * scale;
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      await save([FaceKit.toArray(detection.descriptor)], c.toDataURL('image/jpeg', 0.85));
+      fileInput.value = '';
+    });
+  }
+
+  try {
+    await FaceKit.startCamera(video);
+  } catch (e) {
+    status.textContent = 'Kamera tidak tersedia: ' + e.message;
+    return;
+  }
+  status.textContent = 'Kamera siap. Klik "Mulai Rekam".';
+  btn.disabled = false;
+
+  btn.addEventListener('click', () => {
+    samples = []; photo = null; recording = true; btn.disabled = true; setProgress();
+    if (msg) msg.innerHTML = '';
+  });
+
+  async function loop() {
+    if (video.readyState >= 2) {
+      const { detection, count } = await FaceKit.detect(video, 416);
+      const good = detection && count === 1 && detection.detection.score > 0.6;
+      FaceKit.draw(overlay, video, detection, good ? '#00e676' : '#ffc107');
+      if (!recording) {
+        status.textContent = !detection ? 'Wajah belum terdeteksi.' : count > 1 ? 'Hanya satu wajah yang boleh terlihat.' : 'Wajah terdeteksi. Klik "Mulai Rekam".';
+      } else if (good && Date.now() - lastAt > 700) {
+        lastAt = Date.now();
+        samples.push(FaceKit.toArray(detection.descriptor));
+        if (!photo) photo = FaceKit.capture(video).toDataURL('image/jpeg', 0.85);
+        setProgress();
+        status.textContent = `Merekam sampel ${samples.length}/${TARGET}... gerakkan kepala sedikit.`;
+        if (samples.length >= TARGET) {
+          recording = false;
+          await save(samples, photo);
+        }
+      } else if (recording) {
+        status.textContent = !detection ? 'Wajah hilang dari kamera...' : 'Tahan posisi, pastikan wajah jelas...';
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+<%- include('partials/footer') %>
