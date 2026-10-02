@@ -29,6 +29,8 @@ export const SETTING_DEFAULTS = {
   'geo.officeLat': null as number | null,
   'geo.officeLng': null as number | null,
   'geo.radiusM': 200,
+  // Alamat dari koordinat lewat OpenStreetMap Nominatim (layanan pihak ketiga, gratis). Bawaan: mati.
+  'geo.reverseGeocode': false,
   // Aturan absensi umum.
   'rules.checkoutGraceHours': 6,
   // Tolak absen pada hari tanpa jadwal/libur. Bawaan: tetap dicatat dengan keterangan.

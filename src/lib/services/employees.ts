@@ -45,7 +45,7 @@ export const listQuery = z.object({
   unitId: z.string().uuid().optional().or(z.literal('')).transform((v) => v || undefined),
   status: z.enum(['aktif', 'nonaktif', 'semua']).optional().default('aktif'),
   employmentStatus: z.string().max(50).optional().or(z.literal('')).transform((v) => v || undefined),
-  face: z.enum(['terdaftar', 'belum']).optional().or(z.literal('')).transform((v) => v || undefined),
+  face: z.enum(['terdaftar', 'belum', 'menunggu']).optional().or(z.literal('')).transform((v) => v || undefined),
   sort: z.enum(['nama', 'nip', 'unit', 'terbaru']).optional().default('nama'),
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(200).optional().default(25),
@@ -59,6 +59,7 @@ export function employeeWhere(actor: Actor, q: Partial<ListQuery>, perm: 'employ
   if (q.unitId) and.push({ unitId: q.unitId });
   if (q.employmentStatus) and.push({ employmentStatus: q.employmentStatus });
   if (q.face === 'terdaftar') and.push({ biometrics: { some: { status: 'ACTIVE' } } });
+  if (q.face === 'menunggu') and.push({ biometrics: { some: { status: 'PENDING_VERIFICATION' } } });
   if (q.face === 'belum') and.push({ biometrics: { none: { status: { in: ['ACTIVE', 'PENDING_VERIFICATION'] } } } });
   if (q.q) {
     const t = q.q;
@@ -278,4 +279,10 @@ export async function supervisorOptions(actor: Actor) {
     orderBy: { fullName: 'asc' },
     take: 1000,
   });
+}
+
+/** Nilai status kepegawaian yang sudah dipakai (untuk saran isian). */
+export async function employeeStatuses() {
+  const rows = await prisma.employee.findMany({ where: { employmentStatus: { not: null } }, distinct: ['employmentStatus'], select: { employmentStatus: true } });
+  return rows.map((r) => r.employmentStatus!).sort();
 }

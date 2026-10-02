@@ -11,3 +11,6 @@ export const ADAPTERS: Record<string, DeviceAdapter> = {
 };
 
 export const adapterFor = (id: string) => ADAPTERS[id] ?? null;
+
+/** Info adapter yang aman dikirim ke browser. */
+export const adapterList = () => Object.values(ADAPTERS).map((a) => ({ id: a.id, label: a.label, maturity: a.maturity, connection: a.connection, pull: a.pull, note: a.note }));

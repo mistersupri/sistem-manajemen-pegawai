@@ -95,3 +95,23 @@ export function paging(req: NextRequest, maxSize = 100) {
   const size = Math.min(maxSize, Math.max(1, Number(req.nextUrl.searchParams.get('pageSize')) || 25));
   return { page, size, skip: (page - 1) * size, take: size };
 }
+
+/** Respons unduhan berkas. */
+export function fileResponse(body: Buffer, filename: string, type: string, inline = false) {
+  return new NextResponse(new Uint8Array(body), {
+    headers: {
+      'Content-Type': type,
+      'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${filename.replace(/[^\w.\- ]/g, '_')}"`,
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
+}
+
+/** Ambil berkas dari multipart form dengan batas ukuran. */
+export async function uploadedFile(form: FormData, field: string, maxBytes: number) {
+  const f = form.get(field);
+  if (!f || typeof f === 'string' || f.size === 0) return null;
+  if (f.size > maxBytes) throw unprocessable(`Ukuran berkas maksimal ${Math.round(maxBytes / 1_000_000)} MB.`, { [field]: 'Terlalu besar' });
+  return { name: f.name || 'berkas', buffer: Buffer.from(await f.arrayBuffer()) };
+}

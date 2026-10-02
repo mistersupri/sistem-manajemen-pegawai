@@ -28,6 +28,7 @@ const SCHEMAS: Partial<Record<SettingKey, z.ZodType>> = {
   'geo.officeLat': optNum(-90, 90),
   'geo.officeLng': optNum(-180, 180),
   'geo.radiusM': num(10, 100000),
+  'geo.reverseGeocode': z.boolean(),
   'rules.checkoutGraceHours': num(0, 12),
   'rules.blockOutsideSchedule': z.boolean(),
   'rules.backdateDays': num(1, 366),
