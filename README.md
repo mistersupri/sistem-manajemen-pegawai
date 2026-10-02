@@ -14,10 +14,10 @@ Tidak ada modul dokumen pegawai. Tidak memakai Firebase/Supabase atau API berbay
 |---|---|
 | Dashboard | Ringkasan per peran: admin (hari ini, tren 7 sampai 92 hari dengan filter unit dan status kepegawaian, pengajuan menunggu, status perangkat), pegawai (jadwal dan absensi hari ini, saldo cuti). |
 | Data Pegawai | CRUD, tab profil/penempatan/absensi/jadwal/riwayat, riwayat jabatan dan unit, pendaftaran wajah, nonaktif dengan tanggal efektif (soft delete), impor Excel/CSV dengan pratinjau, ekspor Excel/CSV (NIK hanya untuk izin data sensitif, tercatat di audit). |
-| Absensi | Absen wajah mandiri, kiosk wajah, dinas luar (foto, waktu server, GPS), input manual petugas, monitoring harian, rekapitulasi dengan telusur ke transaksi sumber, ekspor Excel/CSV/PDF. |
+| Absensi | Absen wajah mandiri, kiosk wajah, titik absen wajah tanpa login (tautan/QR untuk tablet atau ponsel), dinas luar (foto, waktu server, GPS) di halaman tersendiri `/dinas-luar`, input manual petugas, monitoring harian, rekapitulasi per pegawai, kalender bulanan (pegawai x tanggal) dan detail harian dengan telusur ke transaksi sumber, ekspor Excel (termasuk kalender)/CSV/PDF. |
 | Koreksi | Pengajuan pegawai, koreksi oleh petugas, persetujuan; nilai awal dan nilai hasil tersimpan. |
 | Perangkat | Adapter per merek (mock, Solution X302 via SOAP, impor berkas USB P280), sinkronisasi terjadwal/manual dengan retry, rekonsiliasi, log raw event immutable, pemetaan ID mesin. |
-| Jadwal Kerja | Jenis jadwal berversi, penugasan tetap/sementara ke pegawai atau unit, kalender bulanan dengan ubah harian, hari libur. |
+| Jadwal Kerja | Jenis jadwal berversi, penugasan tetap/sementara ke pegawai atau unit, atur jadwal banyak pegawai sekaligus (termasuk hanya hari tertentu), kalender bulanan dengan ubah harian, hari libur nasional dan cuti bersama yang diperbarui otomatis tiap hari (atau impor .ics/.csv bila server tanpa internet). |
 | Cuti & Izin | Jenis cuti dapat diatur, saldo tahunan, persetujuan 1 atau 2 tahap (atasan, admin kepegawaian), kalender, pembatalan. |
 | Notifikasi | Notifikasi dalam aplikasi; saluran WhatsApp/email bisa ditambahkan sebagai konfigurasi opsional (`registerChannel`). |
 | Pengaturan | Unit kerja (pohon), pengguna dan peran dengan cakupan unit, izin per peran, aturan absensi, metode absensi dan ambang wajah, retensi dan privasi, logo, audit log. |

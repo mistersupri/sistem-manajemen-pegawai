@@ -24,6 +24,17 @@ Panduan lengkap langkah demi langkah, termasuk pengaturan mesin dan pemecahan ma
 5. Petakan ID mesin yang belum terhubung di **Status Sinkronisasi**.
 6. Bila cocok beberapa hari berturut-turut, ubah `maturity` adapter menjadi `SIAP`.
 
+## Titik absen wajah (tanpa mesin)
+
+Selain mesin, absen wajah bisa direkam dari browser tanpa login lewat **Perangkat Absensi, Titik Absen Wajah**:
+
+1. Buat titik absen: beri nama, pilih unit yang pegawainya dikenali, centang "Wajib di area kantor" bila tautannya akan dibagikan ke ponsel, dan "Layani absen dinas luar" bila perlu.
+2. Tautan dan QR tampil **sekali**. Buka tautannya di tablet kiosk (pakai Layar penuh), atau cetak QR-nya untuk dipindai pegawai.
+3. Kamera dan GPS browser butuh HTTPS (atau localhost).
+4. Tautan bocor atau tablet hilang: pilih **Ganti tautan** atau **Nonaktifkan**. Titik absen yang sudah punya transaksi tidak bisa dihapus agar riwayatnya utuh.
+
+Metode "Kiosk wajah" di Pengaturan, Metode Absensi harus aktif. Transaksinya tercatat sebagai kiosk wajah (atau dinas luar) dengan nama titik absen di halaman rincian absensi.
+
 ## Jaringan
 
 - Server aplikasi harus bisa membuka koneksi TCP ke IP:port mesin. Bila aplikasi berjalan di Docker, pastikan container bisa menjangkau jaringan LAN mesin (rute dari host, atau `network_mode: host` untuk layanan `app` bila diperlukan).

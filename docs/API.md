@@ -32,7 +32,9 @@ Tabel ini dibuat dari berkas `src/app/api/**/route.ts`.
 | Metode | Path | Izin |
 |---|---|---|
 | GET | `/api/health` | publik |
-| GET | `/api/v1/attendance/export` | attendance.export |
+| POST | `/api/v1/absen/{token}` | publik, token titik absen |
+| POST | `/api/v1/absen/{token}/dinas-luar` | publik, token titik absen yang melayani dinas luar |
+| GET | `/api/v1/attendance/export` | attendance.export (`format=kalender&month=YYYY-MM` untuk Excel kalender) |
 | POST | `/api/v1/attendance/face` | attendance.self |
 | POST | `/api/v1/attendance/field-duty` | attendance.self |
 | POST | `/api/v1/attendance/kiosk` | kiosk.operate |
@@ -86,7 +88,10 @@ Tabel ini dibuat dari berkas `src/app/api/**/route.ts`.
 | POST | `/api/v1/employees/{id}/status` | employee.deactivate |
 | GET | `/api/v1/holidays` | schedule.read atau attendance.self |
 | POST | `/api/v1/holidays` | schedule.manage |
+| PATCH | `/api/v1/holidays/{id}` | schedule.manage (`{ disabled }`) |
 | DELETE | `/api/v1/holidays/{id}` | schedule.manage |
+| POST | `/api/v1/holidays/import` | schedule.manage (multipart `file` .ics/.csv, `year`) |
+| POST | `/api/v1/holidays/sync` | schedule.manage, cakupan seluruh unit (`{ year }`) |
 | GET | `/api/v1/leave` | leave.request atau leave.approve atau leave.manage |
 | POST | `/api/v1/leave` | leave.request |
 | GET | `/api/v1/leave/balances` | leave.manage atau leave.request |
@@ -114,6 +119,7 @@ Tabel ini dibuat dari berkas `src/app/api/**/route.ts`.
 | POST | `/api/v1/schedules` | schedule.manage |
 | GET | `/api/v1/schedules/assignments` | schedule.read |
 | POST | `/api/v1/schedules/assignments` | schedule.manage |
+| POST | `/api/v1/schedules/assignments/bulk` | schedule.manage |
 | PATCH | `/api/v1/schedules/assignments/{id}` | schedule.manage |
 | GET | `/api/v1/schedules/grid` | schedule.read |
 | PUT | `/api/v1/schedules/grid` | schedule.manage |
@@ -122,6 +128,11 @@ Tabel ini dibuat dari berkas `src/app/api/**/route.ts`.
 | POST | `/api/v1/schedules/{id}/status` | schedule.manage |
 | GET | `/api/v1/settings` | settings.manage |
 | PATCH | `/api/v1/settings` | settings.manage |
+| GET | `/api/v1/stations` | device.read |
+| POST | `/api/v1/stations` | device.manage |
+| PATCH | `/api/v1/stations/{id}` | device.manage |
+| DELETE | `/api/v1/stations/{id}` | device.manage (hanya bila belum ada transaksi) |
+| POST | `/api/v1/stations/{id}/token` | device.manage |
 | GET | `/api/v1/time` | publik |
 | GET | `/api/v1/units` | unit.read atau unit.manage |
 | POST | `/api/v1/units` | unit.manage |

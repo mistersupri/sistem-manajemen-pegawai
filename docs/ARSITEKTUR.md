@@ -66,6 +66,15 @@ Cuti/izin disetujui ────────────────────
 3. Pakai penyimpanan berkas bersama (NFS atau object storage).
 4. Sesi sudah di database, jadi tidak perlu sticky session.
 
+## Hari libur nasional
+
+`src/lib/services/holidays.ts`. Penjadwal memeriksa tiap jam dan menarik daftar tahun berjalan dan tahun depan paling sering sekali per 20 jam (3 jam bila gagal) dari sumber gratis tanpa kunci API, berurutan: dayoffapi.vercel.app, libur.deno.dev, lalu Nager.Date (hanya libur nasional, tanpa cuti bersama). Daftar dengan kurang dari 8 tanggal dianggap rusak dan sumber berikutnya dicoba.
+
+- Libur yang diisi petugas (`source = MANUAL`) tidak pernah ditimpa; libur otomatis yang dinonaktifkan tetap nonaktif.
+- Libur otomatis yang hilang dari daftar terbaru (mis. cuti bersama dibatalkan) dihapus, lalu rekap tanggal yang berubah dan sudah lewat dihitung ulang.
+- Server perlu akses HTTPS keluar ke ketiga domain itu. Di balik proxy, jalankan Node 24+ dengan `NODE_USE_ENV_PROXY=1` dan `HTTPS_PROXY`. Tanpa internet: impor `.ics`/`.csv` dari tab Hari libur.
+- Status tarik terakhir tampil di tab Hari libur; galat juga tercatat di log aplikasi.
+
 ## Zona waktu
 
 Zona waktu instansi diatur di Pengaturan (bawaan `APP_TIMEZONE`, Asia/Jakarta); unit kerja boleh punya zona waktu sendiri untuk perangkat di unit itu. Database menyimpan instan dalam UTC dan tanggal kerja sebagai `DATE`. Waktu transaksi selalu waktu server; waktu perangkat pengguna hanya dicatat sebagai informasi.
