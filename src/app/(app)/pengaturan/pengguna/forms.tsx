@@ -14,11 +14,12 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Field, fieldProps } from '@/components/app/field';
 import { api, useAction } from '@/components/app/api-client';
+import { EmployeePicker } from '@/components/app/employee-picker';
 import { confirmDialog } from '@/components/app/confirm-dialog';
 
 type Opt = { id: string; name: string };
 
-export function CreateUser({ employees, canNoEmployee }: { employees: Opt[]; canNoEmployee: boolean }) {
+export function CreateUser({ canNoEmployee }: { canNoEmployee: boolean }) {
   const [open, setOpen] = useState(false);
   const { pending, fields, run } = useAction();
   return (
@@ -34,10 +35,7 @@ export function CreateUser({ employees, canNoEmployee }: { employees: Opt[]; can
           <Field id="username" label="Username" error={fields.username} required><Input {...fieldProps('username', fields.username)} required autoComplete="off" /></Field>
           <Field id="email" label="Email" error={fields.email}><Input {...fieldProps('email', fields.email)} type="email" /></Field>
           <Field id="employeeId" label="Terhubung ke pegawai" error={fields.employeeId} hint={canNoEmployee ? 'Kosongkan untuk akun non-pegawai (mis. admin IT).' : undefined}>
-            <NativeSelect {...fieldProps('employeeId', fields.employeeId, canNoEmployee)} defaultValue="" required={!canNoEmployee}>
-              <NativeSelectOption value="" disabled={!canNoEmployee}>{canNoEmployee ? 'Tidak terhubung' : 'Pilih pegawai'}</NativeSelectOption>
-              {employees.map((e) => <NativeSelectOption key={e.id} value={e.id}>{e.name}</NativeSelectOption>)}
-            </NativeSelect>
+            <EmployeePicker id="employeeId" name="employeeId" purpose="akun" required={!canNoEmployee} emptyLabel={canNoEmployee ? 'Tidak terhubung' : undefined} invalid={!!fields.employeeId} />
           </Field>
           <Field id="password" label="Password sementara" error={fields.password} hint="Minimal 8 karakter, berisi huruf dan angka." required><Input {...fieldProps('password', fields.password, true)} type="password" required autoComplete="new-password" /></Field>
           <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button><Button type="submit" disabled={pending}>{pending ? 'Menyimpan...' : 'Simpan'}</Button></DialogFooter>

@@ -28,7 +28,6 @@ export default async function SyncPage({ searchParams }: { searchParams: Promise
   const sortProps = { sort: data.sort, dir: data.dir, params };
   const tz = s['org.timezone'];
   const canMap = can(actor, 'employee.write') || can(actor, 'device.manage');
-  const employees = canMap ? await prisma.employee.findMany({ where: { AND: [{ deletedAt: null, isActive: true, machinePin: null }, employeeScopeWhere(actor, can(actor, 'employee.write') ? 'employee.write' : 'device.manage')] }, select: { id: true, fullName: true, employeeNumber: true }, orderBy: { fullName: 'asc' } }) : [];
   return (
     <>
       <PageHeader title="Status Sinkronisasi" description="Riwayat tarik data, impor berkas USB, dan pemetaan ID mesin ke pegawai." crumbs={[{ href: '/perangkat', label: 'Perangkat Absensi' }, { label: 'Status sinkronisasi' }]} />
@@ -42,7 +41,7 @@ export default async function SyncPage({ searchParams }: { searchParams: Promise
                 {pins.map((p) => (
                   <li key={p.pin} className="grid gap-2 px-6 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
                     <span><b className="tabular">ID {p.pin}</b> {p.name && `(${p.name})`}<span className="block text-xs text-muted-foreground">{[p.department, p.device, `${p.scans} scan`, p.lastScan && `terakhir ${fmtWaktu(p.lastScan, tz)}`].filter(Boolean).join(', ')}</span></span>
-                    {canMap && <MapPin pin={p.pin} name={p.name} employees={employees} />}
+                    {canMap && <MapPin pin={p.pin} name={p.name} />}
                   </li>
                 ))}
               </ul>

@@ -1,5 +1,6 @@
 'use client';
 
+import { EmployeePicker } from '@/components/app/employee-picker';
 import { useState } from 'react';
 import { FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,16 +48,14 @@ export function ImportFile({ devices }: { devices: { id: string; name: string }[
   );
 }
 
-export function MapPin({ pin, name, employees }: { pin: string; name: string | null; employees: { id: string; fullName: string; employeeNumber: string | null }[] }) {
+export function MapPin({ pin, name }: { pin: string; name: string | null }) {
   const { pending, run } = useAction();
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
-  const guess = name ? employees.find((e) => norm(e.fullName) === norm(name))?.id : undefined;
-  const [value, setValue] = useState(guess ?? '');
+  const [value, setValue] = useState('');
   return (
-    <form className="flex gap-2" onSubmit={async (e) => { e.preventDefault(); await run(() => api<{ days: number }>('POST', '/api/v1/devices/map-pin', { pin, employeeId: value }), { success: (r) => `ID ${pin} terhubung, ${r.days} hari rekap diperbarui.` }); }}>
+    <form className="grid gap-2 sm:min-w-72" onSubmit={async (e) => { e.preventDefault(); await run(() => api<{ days: number }>('POST', '/api/v1/devices/map-pin', { pin, employeeId: value }), { success: (r) => `ID ${pin} terhubung, ${r.days} hari rekap diperbarui.` }); }}>
       <label className="sr-only" htmlFor={`map-${pin}`}>Pegawai untuk ID {pin}</label>
-      <NativeSelect id={`map-${pin}`} value={value} onChange={(e) => setValue(e.target.value)} className="min-w-48"><NativeSelectOption value="">Pilih pegawai</NativeSelectOption>{employees.map((e) => <NativeSelectOption key={e.id} value={e.id}>{e.fullName}{e.employeeNumber ? ` (${e.employeeNumber})` : ''}</NativeSelectOption>)}</NativeSelect>
-      <Button type="submit" size="sm" disabled={!value || pending} className="h-9">Hubungkan</Button>
+      <EmployeePicker id={`map-${pin}`} name="employeeId" purpose="pin" lazy defaultQuery={name ?? ''} onChange={setValue} />
+      <Button type="submit" size="sm" disabled={!value || pending} className="justify-self-end">Hubungkan</Button>
     </form>
   );
 }

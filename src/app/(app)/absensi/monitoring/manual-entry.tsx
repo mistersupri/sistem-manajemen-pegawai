@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Field, fieldProps } from '@/components/app/field';
 import { api, useAction } from '@/components/app/api-client';
+import { EmployeePicker } from '@/components/app/employee-picker';
 
 /** Input manual oleh petugas: metode alternatif bila wajah/kamera/mesin bermasalah. */
-export function ManualEntry({ employees, date }: { employees: { id: string; name: string }[]; date: string }) {
+export function ManualEntry({ date }: { date: string }) {
   const [open, setOpen] = useState(false);
   const { pending, fields, run } = useAction();
   return (
@@ -29,7 +30,7 @@ export function ManualEntry({ employees, date }: { employees: { id: string; name
             <DialogDescription>Untuk pegawai yang tidak bisa absen lewat wajah atau mesin. Tercatat sebagai input petugas beserta alasannya di audit log.</DialogDescription>
           </DialogHeader>
           <Field id="employeeId" label="Pegawai" error={fields.employeeId} required>
-            <NativeSelect {...fieldProps('employeeId', fields.employeeId)} required defaultValue=""><NativeSelectOption value="" disabled>Pilih pegawai</NativeSelectOption>{employees.map((e) => <NativeSelectOption key={e.id} value={e.id}>{e.name}</NativeSelectOption>)}</NativeSelect>
+            <EmployeePicker id="employeeId" name="employeeId" purpose="manual" required invalid={!!fields.employeeId} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field id="workDate" label="Tanggal kerja" error={fields.workDate} required><Input {...fieldProps('workDate', fields.workDate)} type="date" defaultValue={date} required /></Field>

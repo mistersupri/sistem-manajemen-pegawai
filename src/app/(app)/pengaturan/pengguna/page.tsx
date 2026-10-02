@@ -41,12 +41,11 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
 async function UsersTab({ sp, actorId, actor }: { sp: Record<string, string | undefined>; actorId: string; actor: Awaited<ReturnType<typeof requirePage>> }) {
   const filters = { q: sp.q, status: sp.status, role: sp.role, mfa: sp.mfa };
-  const [data, roles, units, tz, freeEmployees] = await Promise.all([
+  const [data, roles, units, tz] = await Promise.all([
     listUsersPage(actor, { ...filters, page: sp.page, per: sp.per, sort: sp.sort, dir: sp.dir }),
     listRoles(),
     unitOptions(actor, 'user.manage'),
     getSetting('org.timezone'),
-    prisma.employee.findMany({ where: { AND: [{ deletedAt: null, isActive: true, user: null }, employeeScopeWhere(actor, 'user.manage')] }, select: { id: true, fullName: true }, orderBy: { fullName: 'asc' }, take: 1000 }),
   ]);
   const canAll = !!scopeOf(actor, 'user.manage')?.all;
   const users = data.rows;
@@ -55,7 +54,7 @@ async function UsersTab({ sp, actorId, actor }: { sp: Record<string, string | un
   const filtered = Object.values(filters).some(Boolean);
   return (
     <>
-      <div className="flex justify-end"><CreateUser employees={freeEmployees.map((e) => ({ id: e.id, name: e.fullName }))} canNoEmployee={canAll} /></div>
+      <div className="flex justify-end"><CreateUser canNoEmployee={canAll} /></div>
       <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1.2fr_1fr_1fr_auto] lg:items-end" aria-label="Filter pengguna">
         <input type="hidden" name="tab" value="pengguna" />
         <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />

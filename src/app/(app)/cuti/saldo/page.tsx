@@ -6,7 +6,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageBody, PageHeader } from '@/components/app/page-header';
 import { EmptyState } from '@/components/app/empty-state';
-import { Pager } from '@/components/app/pagination';
+import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
 import { requirePage } from '@/lib/guard';
 import { getSetting } from '@/lib/settings';
 import { balanceTable } from '@/lib/services/leave';
@@ -23,8 +23,9 @@ export default async function BalancesPage({ searchParams }: { searchParams: Pro
   const year = Number(sp.tahun) >= 2000 && Number(sp.tahun) <= 2100 ? Number(sp.tahun) : thisYear;
   const units = await unitOptions(actor, 'leave.manage');
   const unit = units.some((u) => u.id === sp.unit) ? sp.unit : undefined;
-  const data = await balanceTable(actor, year, { unitId: unit, q: sp.q?.trim() || undefined, page: Number(sp.page) || 1 });
-  const params = { tahun: String(year), unit, q: sp.q };
+  const data = await balanceTable(actor, year, { unitId: unit, q: sp.q?.trim() || undefined, page: Number(sp.page) || 1, per: Number(sp.per) || undefined, sort: sp.sort, dir: sp.dir === 'desc' ? 'desc' : 'asc' });
+  const params = { tahun: String(year), unit, q: sp.q, sort: sp.sort, dir: sp.dir, per: sp.per };
+  const sortProps = { sort: data.sort, dir: data.dir, params };
   const yearHref = (y: number) => `?${new URLSearchParams(Object.entries({ ...params, tahun: String(y) }).filter(([, v]) => v) as [string, string][])}`;
   return (
     <>
@@ -45,6 +46,7 @@ export default async function BalancesPage({ searchParams }: { searchParams: Pro
             <input type="hidden" name="tahun" value={year} />
             <label className="grid gap-1 text-sm font-medium" htmlFor="q">Cari<Input id="q" name="q" defaultValue={sp.q ?? ''} placeholder="Nama atau NIP" className="w-56" /></label>
             <label className="grid gap-1 text-sm font-medium" htmlFor="unit">Unit<NativeSelect id="unit" name="unit" defaultValue={unit ?? ''} className="min-w-48"><NativeSelectOption value="">Semua</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></label>
+            <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
             <Button type="submit" variant="outline">Tampilkan</Button>
           </form>
         </div>
@@ -52,8 +54,11 @@ export default async function BalancesPage({ searchParams }: { searchParams: Pro
           <div className="rounded-xl border bg-card"><EmptyState title="Belum ada jenis cuti yang memakai saldo" description="Atur jenis cuti di Pengaturan, Aturan Absensi." actions={[{ href: '/pengaturan/aturan#cuti', label: 'Atur jenis cuti', primary: true }]} /></div>
         ) : (
           <div className="rounded-xl border bg-card">
+            <TableToolbar {...sortProps} sorts={[{ value: 'nama', label: 'Nama' }, { value: 'unit', label: 'Unit' }]}>
+              <span className="tabular-nums">{data.total.toLocaleString('id-ID')}</span> pegawai
+            </TableToolbar>
             <Table className="table-stack">
-              <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Pegawai</TableHead>{data.types.map((t) => <TableHead key={t.id}>{t.name}</TableHead>)}</TableRow></TableHeader>
+              <TableHeader><TableRow><SortableHead label="Pegawai" value="nama" {...sortProps} className="pl-4 lg:pl-6" />{data.types.map((t) => <TableHead key={t.id}>{t.name}</TableHead>)}</TableRow></TableHeader>
               <TableBody>
                 {data.rows.length === 0 && <TableRow><TableCell colSpan={data.types.length + 1}><EmptyState title="Tidak ada pegawai" filtered={!!(sp.q || unit)} /></TableCell></TableRow>}
                 {data.rows.map((r) => (

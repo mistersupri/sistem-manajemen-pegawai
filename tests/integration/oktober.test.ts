@@ -117,8 +117,10 @@ describe('rekap kalender', () => {
     expect(r.rows.map((x) => x.employee.fullName)).toContain('Staf Uji A');
     const row = r.rows.find((x) => x.employee.id === f.stafA.id)!;
     expect(row.cells).toHaveLength(r.columns.length);
-    const weekend = r.columns.findIndex((c) => c.weekend);
-    expect(row.cells[weekend].code).toBe('L');
+    // Akhir pekan tanpa rekap selalu L (tes lain bisa membuat rekap di hari ini, yang mungkin jatuh di akhir pekan).
+    const weekendNoRecord = row.cells.filter((c, i) => r.columns[i].weekend && !c.status);
+    expect(weekendNoRecord.length).toBeGreaterThan(0);
+    expect(weekendNoRecord.every((c) => c.code === 'L')).toBe(true);
   });
 
   it('operator unit B hanya melihat pegawai unit B', async () => {

@@ -50,7 +50,7 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
         description={fmtTanggal(d.date)}
         actions={
           <>
-            {can(actor, 'attendance.manual_entry') && s['methods.manual'] && <ManualEntry employees={d.rows.map((r) => ({ id: r.employee.id, name: r.employee.fullName }))} date={d.date} />}
+            {can(actor, 'attendance.manual_entry') && s['methods.manual'] && <ManualEntry date={d.date} />}
             {can(actor, 'kiosk.operate') && <Button asChild variant="outline"><Link href="/kiosk" target="_blank"><ScanFace />Buka kiosk wajah</Link></Button>}
           </>
         }

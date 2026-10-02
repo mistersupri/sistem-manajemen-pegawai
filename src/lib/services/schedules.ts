@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { Prisma } from '@/generated/prisma/client';
+import { clampPage, listSchema } from '../list';
 import { prisma, type Db } from '../db';
 import { audit, diff } from '../audit';
 import { assertCan, employeeScopeWhere, getEmployeeInScope, scopeOf, unitInScope, type Actor } from '../auth/actor';
@@ -131,7 +133,7 @@ export async function endAssignment(actor: Actor, id: string, raw: unknown) {
   await rebuildAfterAssignment(a.employeeId, a.unitId, fromDbDate(a.startDate), a.endDate ? fromDbDate(a.endDate) : null);
 }
 
-export async function listAssignments(actor: Actor, filter: { employeeId?: string; unitId?: string }) {
+export async function listAssignments(actor: Actor, filter: { employeeId?: string; unitId?: string; excludeDaily?: boolean }) {
   assertCan(actor, 'schedule.read');
   if (filter.employeeId) await getEmployeeInScope(actor, 'schedule.read', filter.employeeId);
   if (filter.unitId && !unitInScope(actor, 'schedule.read', filter.unitId)) throw notFound();
@@ -139,6 +141,7 @@ export async function listAssignments(actor: Actor, filter: { employeeId?: strin
   return prisma.employeeScheduleAssignment.findMany({
     where: {
       deletedAt: null,
+      ...(filter.excludeDaily ? { NOT: { kind: 'SEMENTARA', note: 'Perubahan harian' } } : {}),
       ...(filter.employeeId ? { employeeId: filter.employeeId } : {}),
       ...(filter.unitId ? { unitId: filter.unitId } : {}),
       ...(!filter.employeeId && !filter.unitId && !s.all ? { OR: [{ unitId: { in: s.unitIds } }, { employee: { unitId: { in: s.unitIds } } }] } : {}),
@@ -147,6 +150,52 @@ export async function listAssignments(actor: Actor, filter: { employeeId?: strin
     orderBy: [{ startDate: 'desc' }],
     take: 500,
   });
+}
+
+const ASSIGN_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.EmployeeScheduleAssignmentOrderByWithRelationInput[]> = {
+  mulai: (d) => [{ startDate: d }, { id: 'asc' }],
+  untuk: (d) => [{ employee: { fullName: d } }, { unit: { name: d } }, { startDate: 'desc' }],
+  jadwal: (d) => [{ schedule: { code: d } }, { startDate: 'desc' }],
+};
+export const assignmentListQuery = z.object({
+  q: z.string().trim().max(100).optional().or(z.literal('')).transform((v) => v || undefined),
+  kind: z.enum(['TETAP', 'SEMENTARA', '']).catch('').default(''),
+  scheduleId: z.string().max(40).optional().or(z.literal('')).catch(undefined).transform((v) => v || undefined),
+  state: z.enum(['berlaku', 'akan', 'berakhir', '']).catch('').default(''),
+}).and(listSchema(['mulai', 'untuk', 'jadwal'] as const, { sort: 'mulai', dir: 'desc' }));
+
+/**
+ * Daftar penugasan untuk tab Penugasan. Perubahan harian (dari kalender atau atur massal) disaring di database,
+ * karena jumlahnya bisa ribuan dan dikelola di kalender bulanan.
+ */
+export async function listAssignmentsPage(actor: Actor, raw: unknown, today: string) {
+  assertCan(actor, 'schedule.read');
+  const q = assignmentListQuery.parse(raw);
+  const s = scopeOf(actor, 'schedule.read')!;
+  const t = toDbDate(today);
+  const and: Prisma.EmployeeScheduleAssignmentWhereInput[] = [
+    { deletedAt: null },
+    { NOT: { kind: 'SEMENTARA', note: 'Perubahan harian' } },
+  ];
+  if (!s.all) and.push({ OR: [{ unitId: { in: s.unitIds } }, { employee: { unitId: { in: s.unitIds } } }] });
+  if (q.kind) and.push({ kind: q.kind });
+  if (q.scheduleId === 'LIBUR') and.push({ scheduleId: null });
+  else if (q.scheduleId) and.push({ scheduleId: q.scheduleId });
+  if (q.state === 'berlaku') and.push({ startDate: { lte: t }, OR: [{ endDate: null }, { endDate: { gte: t } }] });
+  if (q.state === 'akan') and.push({ startDate: { gt: t } });
+  if (q.state === 'berakhir') and.push({ endDate: { lt: t } });
+  if (q.q) and.push({ OR: [{ employee: { fullName: { contains: q.q, mode: 'insensitive' } } }, { employee: { employeeNumber: { contains: q.q } } }, { unit: { name: { contains: q.q, mode: 'insensitive' } } }, { note: { contains: q.q, mode: 'insensitive' } }] });
+  const where = { AND: and };
+  const total = await prisma.employeeScheduleAssignment.count({ where });
+  const page = clampPage(q.page, q.per, total);
+  const rows = await prisma.employeeScheduleAssignment.findMany({
+    where,
+    include: { schedule: true, employee: { select: { id: true, fullName: true } }, unit: { select: { id: true, name: true } } },
+    orderBy: ASSIGN_ORDER[q.sort](q.dir),
+    skip: (page - 1) * q.per,
+    take: q.per,
+  });
+  return { total, page, pageSize: q.per, sort: q.sort, dir: q.dir, rows };
 }
 
 /** Hitung ulang rekap yang terdampak perubahan penugasan (hanya sampai hari ini). */
@@ -187,15 +236,25 @@ export async function rebuildActive(employeeIds: string[] | null, from: string, 
 // Grid jadwal bulanan per unit
 // ---------------------------------------------------------------------------
 
-export async function scheduleGrid(actor: Actor, month: string, unitId?: string) {
+export async function scheduleGrid(actor: Actor, month: string, unitId?: string, opts: { q?: string; page?: number; per?: number } = {}) {
   assertCan(actor, 'schedule.read');
   if (unitId && !unitInScope(actor, 'schedule.read', unitId)) throw notFound();
   const { from, to } = monthBounds(month);
+  const per = [25, 50, 100].includes(opts.per ?? 0) ? opts.per! : 50;
+  const where: Prisma.EmployeeWhereInput = {
+    AND: [
+      { deletedAt: null, isActive: true }, employeeScopeWhere(actor, 'schedule.read'), unitId ? { unitId } : {},
+      opts.q ? { OR: [{ fullName: { contains: opts.q, mode: 'insensitive' } }, { employeeNumber: { contains: opts.q } }] } : {},
+    ],
+  };
+  const total = await prisma.employee.count({ where });
+  const page = clampPage(opts.page ?? 1, per, total);
   const employees = await prisma.employee.findMany({
-    where: { AND: [{ deletedAt: null, isActive: true }, employeeScopeWhere(actor, 'schedule.read'), unitId ? { unitId } : {}] },
+    where,
     select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } },
     orderBy: { fullName: 'asc' },
-    take: 300,
+    skip: (page - 1) * per,
+    take: per,
   });
   const ctx = await loadPlanContext(employees.map((e) => e.id), from, to);
   const temps = await prisma.employeeScheduleAssignment.findMany({
@@ -205,7 +264,7 @@ export async function scheduleGrid(actor: Actor, month: string, unitId?: string)
   const override = new Set(temps.filter((t) => t.endDate && fromDbDate(t.endDate) === fromDbDate(t.startDate)).map((t) => `${t.employeeId}:${fromDbDate(t.startDate)}`));
   const dates = dateRange(from, to);
   return {
-    dates,
+    dates, total, page, pageSize: per,
     rows: employees.map((e) => ({
       employee: e,
       days: dates.map((d) => {

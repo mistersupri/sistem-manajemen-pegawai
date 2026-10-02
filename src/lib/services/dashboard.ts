@@ -29,6 +29,33 @@ export async function adminDashboard(actor: Actor, f: DashboardFilter) {
   const employees = await prisma.employee.findMany({ where: empWhere, select: { id: true, unitId: true, employmentStatus: true, unit: { select: { name: true } } } });
   const ids = employees.map((e) => e.id);
 
+  // Anomali, perangkat, dan pengajuan menunggu dimuat bersamaan dengan rekap di bawah.
+  const since = addDays(date, -6);
+  const extras = Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: { employee: empWhere, needsReview: true, workDate: { gte: toDbDate(since), lte: toDbDate(date) } },
+      include: { employee: { select: { id: true, fullName: true } } }, orderBy: { workDate: 'desc' }, take: 20,
+    }),
+    prisma.attendanceEvent.findMany({
+      where: { occurredAt: { gte: zonedToUtc(since, '00:00', tz) }, verification: { outcome: { notIn: ['SUCCESS', 'DUPLICATE', 'ALREADY_RECORDED'] } }, OR: [{ employee: empWhere }, ...(scopeOf(actor, 'attendance.monitor')?.all ? [{ employeeId: null }] : [])] },
+      include: { verification: true, employee: { select: { id: true, fullName: true } } }, orderBy: { occurredAt: 'desc' }, take: 20,
+    }),
+    prisma.deviceRawEvent.count({ where: { clockSkewSuspect: true, deviceTime: { gte: zonedToUtc(since, '00:00', tz) } } }),
+    prisma.deviceRawEvent.count({ where: { employeeId: null } }),
+
+    // Perangkat
+    can(actor, 'device.read')
+      ? prisma.attendanceDevice.findMany({ where: { deletedAt: null }, select: { id: true, name: true, status: true, lastSyncAt: true, isActive: true, adapter: true }, orderBy: { name: 'asc' } })
+      : Promise.resolve([]),
+    // Pengajuan menunggu
+    (async () => ({
+      corrections: can(actor, 'correction.review') ? await prisma.attendanceCorrection.count({ where: { status: 'PENDING', employee: employeeScopeWhere(actor, 'correction.review'), ...(actor.employeeId ? { NOT: { employeeId: actor.employeeId } } : {}) } }) : 0,
+      leave: can(actor, 'leave.approve') || can(actor, 'leave.manage') ? await prisma.leaveApproval.count({ where: await pendingLeaveApprovalWhere(actor) }) : 0,
+      biometrics: (await pendingVerifications(actor)).length,
+    }))(),
+  ]);
+  extras.catch(() => undefined); // galat tetap dilempar saat di-await di bawah; ini hanya mencegah unhandled rejection
+
   const byUnit = new Map<string, number>();
   const byStatus = new Map<string, number>();
   for (const e of employees) {
@@ -36,60 +63,53 @@ export async function adminDashboard(actor: Actor, f: DashboardFilter) {
     byStatus.set(e.employmentStatus || 'Belum diisi', (byStatus.get(e.employmentStatus || 'Belum diisi') || 0) + 1);
   }
 
-  const [records, ctx] = await Promise.all([
-    prisma.attendanceRecord.findMany({
-      where: { employeeId: { in: ids }, workDate: { gte: toDbDate(from), lte: toDbDate(date) }, ...(f.method ? { OR: [{ checkInMethod: f.method }, { checkOutMethod: f.method }] } : {}) },
-      select: { employeeId: true, workDate: true, status: true, needsReview: true },
-    }),
+  // Satu baris per pegawai berisi "YYYY-MM-DDSTATUS,..." untuk seluruh rentang: jauh lebih ringan
+  // daripada mengambil puluhan ribu baris rekap lewat ORM.
+  const [packed, ctx] = await Promise.all([
+    ids.length
+      ? prisma.$queryRaw<{ e: string; d: string }[]>`
+          select employee_id::text as e, string_agg(to_char(work_date, 'YYYY-MM-DD') || status, ',') as d
+          from attendance_records
+          where employee_id = any(${ids}::uuid[]) and work_date between ${toDbDate(from)} and ${toDbDate(date)}
+            and (${f.method ?? null}::text is null or check_in_method = ${f.method ?? null} or check_out_method = ${f.method ?? null})
+          group by employee_id`
+      : Promise.resolve([]),
     loadPlanContext(ids, from, date),
   ]);
-  const recKey = new Map(records.map((r) => [`${r.employeeId}:${fromDbDate(r.workDate)}`, r]));
+  // Status rekap per pegawai per tanggal; peta bertingkat menghindari ratusan ribu kunci string gabungan.
+  const statusOf = new Map<string, Map<string, string>>();
+  for (const row of packed) {
+    const m = new Map<string, string>();
+    for (const item of row.d.split(',')) m.set(item.slice(0, 10), item.slice(10));
+    statusOf.set(row.e, m);
+  }
+  const NO_RECORDS = new Map<string, string>();
 
   // Ringkasan tanggal terpilih
   const summary: Record<string, number> = { HADIR: 0, TERLAMBAT: 0, DINAS_LUAR: 0, IZIN_CUTI: 0, TIDAK_HADIR: 0, BELUM_ABSEN: 0, LIBUR: 0 };
-  for (const id of ids) summary[categoryOf(ctx.planFor(id, date), recKey.get(`${id}:${date}`) ?? null)]++;
+  for (const id of ids) {
+    const st = statusOf.get(id)?.get(date);
+    summary[categoryOf(ctx.planFor(id, date), st ? { status: st } : null)]++;
+  }
 
-  // Tren harian
-  const trend = dateRange(from, date).map((d) => {
-    const t = { date: d, hadir: 0, terlambat: 0, izin: 0, tanpaTransaksi: 0, dijadwalkan: 0 };
-    for (const id of ids) {
-      const p = ctx.planFor(id, d);
-      const r = recKey.get(`${id}:${d}`);
-      if (isScheduledWorkday(p)) t.dijadwalkan++;
-      if (!r) { if (isScheduledWorkday(p)) t.tanpaTransaksi++; continue; }
-      if (r.status === 'HADIR' || r.status === 'DINAS_LUAR') t.hadir++;
-      else if (r.status === 'TERLAMBAT') t.terlambat++;
-      else if (['IZIN', 'SAKIT', 'CUTI'].includes(r.status)) t.izin++;
+  // Tren harian: pegawai di luar, tanggal di dalam, agar peta per pegawai diambil sekali.
+  const dates = dateRange(from, date);
+  const trend = dates.map((d) => ({ date: d, hadir: 0, terlambat: 0, izin: 0, tanpaTransaksi: 0, dijadwalkan: 0 }));
+  for (const id of ids) {
+    const recs = statusOf.get(id) ?? NO_RECORDS;
+    for (let i = 0; i < dates.length; i++) {
+      const t = trend[i];
+      const scheduled = isScheduledWorkday(ctx.planFor(id, dates[i]));
+      if (scheduled) t.dijadwalkan++;
+      const st = recs.get(dates[i]);
+      if (!st) { if (scheduled) t.tanpaTransaksi++; continue; }
+      if (st === 'HADIR' || st === 'DINAS_LUAR') t.hadir++;
+      else if (st === 'TERLAMBAT') t.terlambat++;
+      else if (st === 'IZIN' || st === 'SAKIT' || st === 'CUTI') t.izin++;
     }
-    return t;
-  });
+  }
 
-  // Anomali yang perlu ditinjau
-  const since = addDays(date, -6);
-  const [reviewRecords, failedEvents, skewed, unmatchedRaw] = await Promise.all([
-    prisma.attendanceRecord.findMany({
-      where: { employeeId: { in: ids }, needsReview: true, workDate: { gte: toDbDate(since), lte: toDbDate(date) } },
-      include: { employee: { select: { id: true, fullName: true } } }, orderBy: { workDate: 'desc' }, take: 20,
-    }),
-    prisma.attendanceEvent.findMany({
-      where: { occurredAt: { gte: zonedToUtc(since, '00:00', tz) }, verification: { outcome: { notIn: ['SUCCESS', 'DUPLICATE', 'ALREADY_RECORDED'] } }, OR: [{ employeeId: { in: ids } }, ...(scopeOf(actor, 'attendance.monitor')?.all ? [{ employeeId: null }] : [])] },
-      include: { verification: true, employee: { select: { id: true, fullName: true } } }, orderBy: { occurredAt: 'desc' }, take: 20,
-    }),
-    prisma.deviceRawEvent.count({ where: { clockSkewSuspect: true, deviceTime: { gte: zonedToUtc(since, '00:00', tz) } } }),
-    prisma.deviceRawEvent.count({ where: { employeeId: null } }),
-  ]);
-
-  // Perangkat
-  const devices = can(actor, 'device.read')
-    ? await prisma.attendanceDevice.findMany({ where: { deletedAt: null }, select: { id: true, name: true, status: true, lastSyncAt: true, isActive: true, adapter: true }, orderBy: { name: 'asc' } })
-    : [];
-
-  // Pengajuan menunggu
-  const pending = {
-    corrections: can(actor, 'correction.review') ? await prisma.attendanceCorrection.count({ where: { status: 'PENDING', employee: employeeScopeWhere(actor, 'correction.review'), ...(actor.employeeId ? { NOT: { employeeId: actor.employeeId } } : {}) } }) : 0,
-    leave: can(actor, 'leave.approve') || can(actor, 'leave.manage') ? await prisma.leaveApproval.count({ where: await pendingLeaveApprovalWhere(actor) }) : 0,
-    biometrics: (await pendingVerifications(actor)).length,
-  };
+  const [reviewRecords, failedEvents, skewed, unmatchedRaw, devices, pending] = await extras;
 
   return {
     date, from, tz, today,

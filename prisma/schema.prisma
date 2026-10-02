@@ -329,6 +329,7 @@ model DeviceSyncRun {
   rawEvents DeviceRawEvent[]
 
   @@index([deviceId, startedAt])
+  @@index([startedAt])
   @@map("device_sync_runs")
 }
 
@@ -359,6 +360,7 @@ model DeviceRawEvent {
   @@index([employeeId, deviceTime])
   @@index([employeeId, workDate])
   @@index([deviceTime])
+  @@index([receivedAt])
   @@map("device_raw_events")
 }
 
@@ -504,6 +506,7 @@ model AttendanceCorrection {
 
   @@index([status, createdAt])
   @@index([employeeId, workDate])
+  @@index([createdAt])
   @@map("attendance_corrections")
 }
 
@@ -575,6 +578,7 @@ model EmployeeScheduleAssignment {
 
   @@index([employeeId, startDate])
   @@index([unitId, startDate])
+  @@index([startDate])
   @@map("employee_schedule_assignments")
 }
 
@@ -666,6 +670,7 @@ model LeaveRequest {
 
   @@index([employeeId, startDate])
   @@index([status])
+  @@index([createdAt])
   @@map("leave_requests")
 }
 
@@ -725,6 +730,7 @@ model AuditLog {
   @@index([createdAt])
   @@index([entityType, entityId])
   @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
   @@map("audit_logs")
 }
 

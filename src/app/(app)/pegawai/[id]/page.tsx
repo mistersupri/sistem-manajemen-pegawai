@@ -145,7 +145,7 @@ async function AttendanceTab({ id, tz }: { id: string; tz: string }) {
 async function ScheduleTab({ id, tz }: { id: string; tz: string }) {
   const actor = await requirePage();
   const today = todayIn(tz);
-  const [assignments, plans] = await Promise.all([listAssignments(actor, { employeeId: id }), plansFor(id, today, addDays(today, 13))]);
+  const [assignments, plans] = await Promise.all([listAssignments(actor, { employeeId: id, excludeDaily: true }), plansFor(id, today, addDays(today, 13))]);
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>

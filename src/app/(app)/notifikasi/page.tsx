@@ -14,7 +14,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const actor = await requirePage();
   const sp = await searchParams;
   const unreadOnly = sp.lihat === 'belum';
-  const [data, tz] = await Promise.all([listNotifications(actor.userId, { unreadOnly, page: Number(sp.page) || 1 }), getSetting('org.timezone')]);
+  const [data, tz] = await Promise.all([listNotifications(actor.userId, { unreadOnly, page: Number(sp.page) || 1, pageSize: [25, 50, 100].includes(Number(sp.per)) ? Number(sp.per) : 25 }), getSetting('org.timezone')]);
   return (
     <>
       <PageHeader title="Notifikasi" description="Pemberitahuan pengajuan, persetujuan, dan status perangkat." actions={data.unread > 0 ? <MarkAllRead /> : undefined} />
@@ -36,7 +36,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
               ))}
             </ul>
           )}
-          <Pager total={data.total} page={data.page} pageSize={data.pageSize} params={{ lihat: unreadOnly ? 'belum' : undefined }} />
+          <Pager total={data.total} page={data.page} pageSize={data.pageSize} params={{ lihat: unreadOnly ? 'belum' : undefined, per: sp.per }} />
         </div>
       </PageBody>
     </>

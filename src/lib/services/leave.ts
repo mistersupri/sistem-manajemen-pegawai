@@ -327,7 +327,7 @@ export async function leaveCalendar(actor: Actor, month: string, unitId?: string
 }
 
 /** Tabel saldo seluruh pegawai dalam cakupan untuk satu tahun (satu kali query per tabel). */
-export async function balanceTable(actor: Actor, year: number, opts: { unitId?: string; q?: string; page?: number } = {}) {
+export async function balanceTable(actor: Actor, year: number, opts: { unitId?: string; q?: string; page?: number; per?: number; sort?: string; dir?: 'asc' | 'desc' } = {}) {
   assertCan(actor, 'leave.manage');
   const where: Prisma.EmployeeWhereInput = {
     AND: [
@@ -337,11 +337,13 @@ export async function balanceTable(actor: Actor, year: number, opts: { unitId?: 
       opts.q ? { OR: [{ fullName: { contains: opts.q, mode: 'insensitive' } }, { employeeNumber: { contains: opts.q } }] } : {},
     ],
   };
-  const size = 50;
-  const page = Math.max(1, opts.page ?? 1);
-  const [total, employees, types] = await Promise.all([
-    prisma.employee.count({ where }),
-    prisma.employee.findMany({ where, select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } }, orderBy: { fullName: 'asc' }, skip: (page - 1) * size, take: size }),
+  const size = [25, 50, 100].includes(opts.per ?? 0) ? opts.per! : 50;
+  const sort: 'nama' | 'unit' = opts.sort === 'unit' ? 'unit' : 'nama';
+  const dir: 'asc' | 'desc' = opts.dir === 'desc' ? 'desc' : 'asc';
+  const total = await prisma.employee.count({ where });
+  const page = clampPage(Math.max(1, opts.page ?? 1), size, total);
+  const [employees, types] = await Promise.all([
+    prisma.employee.findMany({ where, select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } }, orderBy: sort === 'unit' ? [{ unit: { name: dir } }, { fullName: 'asc' }] : [{ fullName: dir }], skip: (page - 1) * size, take: size }),
     prisma.leaveType.findMany({ where: { usesBalance: true, isActive: true }, orderBy: { name: 'asc' } }),
   ]);
   const ids = employees.map((e) => e.id);
@@ -353,13 +355,15 @@ export async function balanceTable(actor: Actor, year: number, opts: { unitId?: 
       _sum: { days: true },
     }),
   ]);
-  const sum = (e: string, t: string, s: string) => used.find((u) => u.employeeId === e && u.leaveTypeId === t && u.status === s)?._sum.days ?? 0;
+  const usedMap = new Map(used.map((u) => [`${u.employeeId}:${u.leaveTypeId}:${u.status}`, u._sum.days ?? 0]));
+  const balMap = new Map(balances.map((b) => [`${b.employeeId}:${b.leaveTypeId}`, b]));
+  const sum = (e: string, t: string, s: string) => usedMap.get(`${e}:${t}:${s}`) ?? 0;
   return {
-    total, page, pageSize: size, types,
+    total, page, pageSize: size, sort, dir, types,
     rows: employees.map((e) => ({
       employee: e,
       cells: types.map((t) => {
-        const b = balances.find((x) => x.employeeId === e.id && x.leaveTypeId === t.id);
+        const b = balMap.get(`${e.id}:${t.id}`);
         const entitled = b ? b.entitled + b.carriedOver + b.adjustment : 0;
         const u = sum(e.id, t.id, 'APPROVED');
         const r = sum(e.id, t.id, 'PENDING');

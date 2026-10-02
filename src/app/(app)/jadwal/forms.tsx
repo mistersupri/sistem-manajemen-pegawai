@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CloudDownload, Pencil, Plus, Upload, Users } from 'lucide-react';
+import { CloudDownload, Pencil, Plus, Search, Upload, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea';
 import { Field, fieldProps } from '@/components/app/field';
 import { confirmDialog } from '@/components/app/confirm-dialog';
+import { EmployeePicker, fetchEmployeeOptions, type EmployeeOption } from '@/components/app/employee-picker';
 import { api, useAction } from '@/components/app/api-client';
 import { cn } from '@/lib/utils';
 
@@ -87,7 +88,7 @@ export function ScheduleForm({ initial }: { initial?: ScheduleValues }) {
 
 type Opt = { id: string; name: string };
 
-export function AssignmentForm({ schedules, employees, units, canAllUnits }: { schedules: (Opt & { code: string })[]; employees: (Opt & { unit: string | null })[]; units: Opt[]; canAllUnits: boolean }) {
+export function AssignmentForm({ schedules, units, canAllUnits }: { schedules: (Opt & { code: string })[]; units: Opt[]; canAllUnits: boolean }) {
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<'employee' | 'unit'>('employee');
   const [kind, setKind] = useState('TETAP');
@@ -120,7 +121,7 @@ export function AssignmentForm({ schedules, employees, units, canAllUnits }: { s
           </div>
           {target === 'employee' ? (
             <Field id="employeeId" label="Pegawai" error={fields.employeeId} required>
-              <NativeSelect {...fieldProps('employeeId', fields.employeeId)} required defaultValue=""><NativeSelectOption value="" disabled>Pilih pegawai</NativeSelectOption>{employees.map((e) => <NativeSelectOption key={e.id} value={e.id}>{e.name}{e.unit ? ` (${e.unit})` : ''}</NativeSelectOption>)}</NativeSelect>
+              <EmployeePicker id="employeeId" name="employeeId" purpose="jadwal" required invalid={!!fields.employeeId} />
             </Field>
           ) : (
             <Field id="unitId" label="Unit kerja" error={fields.unitId} required hint="Berlaku juga untuk sub-unit, kecuali pegawai yang punya penugasan sendiri.">
@@ -206,13 +207,30 @@ export function HolidayForm({ units, canAllUnits }: { units: Opt[]; canAllUnits:
 const HARI_PANJANG = [[0, 'Minggu'], [1, 'Senin'], [2, 'Selasa'], [3, 'Rabu'], [4, 'Kamis'], [5, 'Jumat'], [6, 'Sabtu']] as const;
 
 /** Ubah harian massal: satu shift, libur, atau kembali ke shift default untuk beberapa pegawai pada rentang tanggal. */
-export function BulkDaysDialog({ employees, schedules, from, to }: { employees: (Opt & { unit: string | null })[]; schedules: (Opt & { code: string; checkIn: string; checkOut: string })[]; from: string; to: string }) {
+export function BulkDaysDialog({ units, schedules, from, to }: { units: Opt[]; schedules: (Opt & { code: string; checkIn: string; checkOut: string })[]; from: string; to: string }) {
   const [open, setOpen] = useState(false);
+  const [employees, setEmployees] = useState<EmployeeOption[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [unit, setUnit] = useState('');
   const [sel, setSel] = useState<string[]>([]);
   const [days, setDays] = useState<number[]>([]);
   const { pending, fields, run } = useAction();
+
+  // Daftar pegawai baru dimuat saat dialog dibuka, tidak ikut di HTML halaman.
+  async function openDialog(o: boolean) {
+    setOpen(o);
+    if (o && !employees) {
+      try { setEmployees((await fetchEmployeeOptions('jadwal', { limit: 5000 })).rows); setLoadError(null); } catch (e) { setLoadError((e as Error).message); }
+    }
+  }
+  const term = q.trim().toLowerCase();
+  const visible = (employees ?? []).filter((e) => (!unit || e.unitId === unit) && (!term || e.name.toLowerCase().includes(term) || (e.nip ?? '').includes(term)));
+  const visibleIds = new Set(visible.map((e) => e.id));
+  const hiddenSelected = sel.filter((id) => !visibleIds.has(id)).length;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={openDialog}>
       <DialogTrigger asChild><Button variant="highlight"><Users />Atur banyak pegawai</Button></DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <form className="grid gap-5" onSubmit={async (e) => {
@@ -229,16 +247,23 @@ export function BulkDaysDialog({ employees, schedules, from, to }: { employees: 
           </DialogHeader>
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="grid content-start gap-2">
-              <label htmlFor="bulkEmployees" className="text-sm font-medium">Pegawai {sel.length > 0 && <span className="font-normal text-muted-foreground">({sel.length} dipilih)</span>}</label>
-              <select id="bulkEmployees" multiple size={9} value={sel} aria-invalid={!!fields.employeeIds || undefined} aria-describedby="bulkEmployeesHint"
-                onChange={(e) => setSel(Array.from(e.currentTarget.selectedOptions, (o) => o.value))}
+              <label htmlFor="bulkEmployees" className="text-sm font-medium">Pegawai {sel.length > 0 && <span className="font-normal text-muted-foreground tabular-nums">({sel.length} dipilih{hiddenSelected ? `, ${hiddenSelected} di luar saringan` : ''})</span>}</label>
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama atau NIP" className="pl-9" aria-label="Cari pegawai" /></div>
+                {units.length > 1 && <NativeSelect value={unit} onChange={(e) => setUnit(e.target.value)} aria-label="Saring unit" className="max-w-36"><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect>}
+              </div>
+              <select id="bulkEmployees" multiple size={9} value={sel.filter((id) => visibleIds.has(id))} aria-invalid={!!fields.employeeIds || undefined} aria-describedby="bulkEmployeesHint"
+                onChange={(e) => { const picked = new Set(Array.from(e.currentTarget.selectedOptions, (o) => o.value)); setSel((cur) => [...cur.filter((id) => !visibleIds.has(id)), ...picked]); }}
                 className="w-full rounded-md border border-input bg-card px-1 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive [&>option]:rounded-sm [&>option]:px-2 [&>option]:py-1">
-                {employees.map((e) => <option key={e.id} value={e.id}>{e.unit ? `${e.name} · ${e.unit}` : e.name}</option>)}
+                {employees === null && !loadError && <option disabled>Memuat daftar pegawai...</option>}
+                {employees !== null && visible.length === 0 && <option disabled>Tidak ada pegawai yang cocok</option>}
+                {visible.map((e) => <option key={e.id} value={e.id}>{e.unit ? `${e.name} · ${e.unit}` : e.name}</option>)}
               </select>
-              <p id="bulkEmployeesHint" className="text-sm text-muted-foreground">Tahan Ctrl (atau Cmd) untuk memilih lebih dari satu.</p>
+              <p id="bulkEmployeesHint" className="text-sm text-muted-foreground">Tahan Ctrl (atau Cmd) untuk memilih lebih dari satu. Pilihan tetap tersimpan saat mencari.</p>
+              {loadError && <p className="text-sm font-medium text-destructive" role="alert">{loadError}</p>}
               {fields.employeeIds && <p className="text-sm font-medium text-destructive">{fields.employeeIds}</p>}
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setSel(employees.map((e) => e.id))}>Pilih semua pegawai</Button>
+                <Button type="button" variant="outline" size="sm" disabled={!visible.length} onClick={() => setSel((cur) => [...new Set([...cur, ...visible.map((e) => e.id)])])}>{term || unit ? `Pilih semua hasil (${visible.length})` : 'Pilih semua pegawai'}</Button>
                 {sel.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => setSel([])}>Kosongkan</Button>}
               </div>
             </div>
@@ -269,7 +294,7 @@ export function BulkDaysDialog({ employees, schedules, from, to }: { employees: 
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button>
-            <Button type="submit" disabled={pending || sel.length === 0}>{pending ? 'Menerapkan...' : 'Terapkan jadwal'}</Button>
+            <Button type="submit" disabled={pending || sel.length === 0}>{pending ? 'Menerapkan...' : sel.length ? `Terapkan ke ${sel.length} pegawai` : 'Terapkan jadwal'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -351,7 +376,7 @@ export function ScheduleGrid({ dates, rows: initialRows, schedules, editable, to
   const color = new Map(schedules.map((s) => [s.id, s.color]));
   const byId = new Map(schedules.map((s) => [s.id, s]));
   return (
-    <div className="overflow-x-auto rounded-xl border bg-card">
+    <div className="overflow-x-auto rounded-t-xl border bg-card">
       <table className="schedule-grid w-full border-collapse text-sm">
         <caption className="sr-only">Jadwal kerja per pegawai per tanggal</caption>
         <thead>
