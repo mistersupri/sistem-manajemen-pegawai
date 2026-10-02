@@ -25,6 +25,10 @@ Token sesi hanya ada di cookie; database menyimpan hash SHA-256-nya. Akun dikunc
 - **Data sensitif**: secret perangkat, template wajah, NIK, dan secret MFA tidak pernah dikirim ke klien. NIK hanya muncul bila pengguna punya `employee.read_sensitive` dan setiap ekspor ber-NIK tercatat di audit log.
 - **Unduhan** (ekspor, template, lampiran, foto) dijawab sebagai berkas dengan `Cache-Control: private, no-store`.
 
+## Parameter daftar
+
+Endpoint daftar (`/employees`, `/audit`, dan daftar lain yang dipakai halaman) menerima `page`, `per` (25, 50, atau 100), `sort`, dan `dir` (`asc`/`desc`). Nilai yang tidak dikenal memakai bawaan, bukan galat. Respons memuat `total`, `page`, `pageSize`, `sort`, `dir`, dan `rows`.
+
 ## Endpoint
 
 Tabel ini dibuat dari berkas `src/app/api/**/route.ts`.
@@ -74,6 +78,7 @@ Tabel ini dibuat dari berkas `src/app/api/**/route.ts`.
 | GET | `/api/v1/employees` | employee.read |
 | POST | `/api/v1/employees` | employee.write |
 | GET | `/api/v1/employees/export` | employee.export |
+| GET | `/api/v1/employees/options` | sesuai `for`: `jadwal` schedule.manage, `manual` attendance.manual_entry, `akun` user.manage, `pin` employee.write atau device.manage (`q`, `unitId`, `limit` maks 5000) |
 | POST | `/api/v1/employees/import/commit` | employee.import |
 | POST | `/api/v1/employees/import/preview` | employee.import |
 | GET | `/api/v1/employees/import/{token}` | employee.import |

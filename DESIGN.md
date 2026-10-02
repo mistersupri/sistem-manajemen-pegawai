@@ -93,3 +93,30 @@ Bahan utama aplikasi ini adalah **waktu**: jam masuk, jam pulang, jadwal, dan "s
 - **Kartu** tanpa bayangan (cukup garis), padding 16 px di ponsel dan 24 px di layar lebar. Metadata ditulis sebagai kalimat atau baris terpisah, bukan dipisah titik tengah.
 - **Keadaan halaman**: kerangka saat memuat (`loading.tsx`), halaman galat dengan langkah berikutnya, dan halaman tidak ditemukan. Animasi dinonaktifkan bila pengguna memilih *reduced motion*; grafik tidak beranimasi.
 - **Halaman masuk**: panel kiri menampilkan jam server berjalan dalam zona waktu instansi, karena itu yang dipakai untuk semua absensi.
+
+## Baseline UI dan data besar (Oktober 2026)
+
+Aturan [baseline-ui](.claude/skills/baseline-ui/SKILL.md) berlaku untuk semua pekerjaan antarmuka berikutnya. Yang diterapkan:
+
+- **Tanpa gradien.** Pita judul dan sisi halaman masuk memakai navy polos.
+- **Tanpa letter-spacing.** `tracking-*` dihapus dari komponen dan halaman.
+- **Teks:** judul `text-wrap: balance` dan paragraf `pretty`, berlaku global lewat `globals.css`, termasuk judul dan deskripsi Card/Dialog. Angka data memakai `tabular-nums`.
+- **Gerak:** hanya `transform`/`opacity`, plus warna untuk kontrol kecil. Sidebar tidak lagi menganimasikan `width`/`left`. Tidak ada `transition-all`.
+- **Konfirmasi:** aksi merusak atau tidak bisa dibatalkan selalu memakai AlertDialog: `ConfirmButton`, atau `confirmDialog()` dari `components/app/confirm-dialog.tsx` untuk menu. `window.confirm` tidak dipakai.
+- **Keadaan kosong** memberi satu langkah berikutnya: "Hapus filter" bila hasil tersaring kosong, atau aksi utama (tambah/ajukan) bila memang belum ada data.
+
+### Daftar data
+
+Semua daftar besar memakai parameter URL yang sama sehingga tautan bisa dibagikan dan tombol Kembali bekerja: `page`, `per` (25/50/100), `sort`, `dir` (asc/desc), ditambah filter per halaman.
+
+- `lib/list.ts`: `listSchema()` membaca parameter. Nilai yang salah jatuh ke bawaan, bukan galat. Halaman di luar jangkauan dijepit ke halaman terakhir.
+- `SortableHead`: judul kolom yang bisa diklik dengan ikon arah dan `aria-sort` pada `<th>`. Klik pertama mengurut naik; kolom angka dan tanggal mulai dari turun.
+- `TableToolbar`: jumlah data. Di ponsel, tempat judul kolom tersembunyi, ada `SortMenu` untuk memilih urutan.
+- `Pager`: rentang "1–50 dari 3.017", nomor halaman, dan pilihan baris per halaman.
+- `KeepParams` di setiap form filter menjaga urutan dan jumlah baris saat filter diubah.
+- Pemilih pegawai (`EmployeePicker`) mencari di server (`/api/v1/employees/options`), tidak mengirim ribuan nama di HTML halaman. Dialog Atur banyak pegawai memuat daftarnya saat dibuka.
+- Kalender jadwal bulanan dipaginasi dengan pencarian.
+
+### Ukuran performa
+
+Diukur di build produksi dengan 3.000 pegawai dan sekitar 198 ribu rekap harian. Sebagian besar halaman daftar 30–180 ms. Dashboard sekitar 200 ms di layanan (sebelumnya 844 ms). Jadwal Kerja 161 ms / 1,2 MB (sebelumnya 652 ms / 7,3 MB).

@@ -24,6 +24,8 @@ Tidak ada modul dokumen pegawai. Tidak memakai Firebase/Supabase atau API berbay
 
 Peran bawaan: Super Admin, Admin Kepegawaian, Admin IT/Perangkat, Pimpinan/Approver, Operator Unit, Pegawai, Auditor. Izin tiap peran bisa diubah; cakupan unit diberikan per penugasan peran.
 
+Semua daftar besar (pegawai, rekap, monitoring, koreksi, cuti, saldo, pengguna, audit, log perangkat, sinkronisasi, penugasan) punya filter, urutan naik/turun per kolom, dan paginasi 25/50/100 baris yang tersimpan di URL. Arah desain dan aturan antarmuka ada di [DESIGN.md](DESIGN.md).
+
 ## Menjalankan dengan Docker
 
 ```bash

@@ -166,6 +166,8 @@
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   }
   [hidden] { display: none !important; }
+  /* Isi halaman berbentuk grid: satu kolom yang boleh menyempit, agar tabel lebar menggulir di kartunya sendiri. */
+  [data-slot="page-body"].grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @layer components {

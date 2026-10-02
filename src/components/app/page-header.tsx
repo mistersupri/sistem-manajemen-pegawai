@@ -47,5 +47,5 @@ export function PageHeader({ title, description, crumbs, actions, children }: {
 
 /** Area isi halaman di bawah pita judul. */
 export function PageBody({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn('px-4 py-6 lg:px-8', className)}>{children}</div>;
+  return <div data-slot="page-body" className={cn('min-w-0 px-4 py-6 lg:px-8', className)}>{children}</div>;
 }

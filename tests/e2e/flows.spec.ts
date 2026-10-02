@@ -76,7 +76,12 @@ test('absensi: input manual petugas muncul di monitoring', async ({ page }) => {
   await open(page, '/absensi/monitoring');
   await page.getByRole('button', { name: 'Input manual' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Pegawai').selectOption({ index: 1 });
+  // Daftar pegawai dimuat dari server saat dialog dibuka; tunggu opsi pertama sebelum memilih.
+  const picker = dialog.getByRole('combobox', { name: /Pegawai/ });
+  await expect(picker.locator('option:not([disabled])').first()).toBeAttached();
+  await picker.selectOption({ index: 1 });
+  // Tanggal kemarin agar jam 07:15 tidak pernah "melebihi waktu sekarang" saat tes dijalankan dini hari.
+  await dialog.getByLabel('Tanggal kerja').fill(pastWeekday(1));
   await dialog.getByLabel('Jam').fill('07:15');
   await dialog.getByLabel('Alasan').fill('Mesin absensi mati, uji E2E');
   await dialog.getByRole('button', { name: 'Simpan' }).click();
