@@ -133,6 +133,7 @@ model OrganizationUnit {
   devices     AttendanceDevice[]
   assignments EmployeeScheduleAssignment[]
   holidays    Holiday[]
+  stations    AttendanceStation[]
 
   @@map("organization_units")
 }
@@ -401,10 +402,12 @@ model AttendanceEvent {
   photoPath      String?        @map("photo_path")
   note           String?
   actorUserId    String?        @map("actor_user_id") @db.Uuid
+  stationId      String?        @map("station_id") @db.Uuid // titik absen tanpa login yang dipakai
   userAgent      String?        @map("user_agent")
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
 
   employee     Employee?               @relation(fields: [employeeId], references: [id])
+  station      AttendanceStation?      @relation(fields: [stationId], references: [id], onDelete: Restrict)
   verification AttendanceVerification?
 
   @@index([employeeId, occurredAt])
@@ -580,6 +583,12 @@ model Holiday {
   date      DateTime @db.Date
   name      String
   unitId    String?  @map("unit_id") @db.Uuid // kosong = berlaku untuk semua unit
+  // NASIONAL | CUTI_BERSAMA | INSTANSI
+  kind      String   @default("INSTANSI")
+  // MANUAL | nama sumber sinkronisasi (mis. dayoffapi, nager). Baris hasil sinkronisasi diperbarui otomatis.
+  source    String   @default("MANUAL")
+  // Hari libur hasil sinkronisasi yang dinonaktifkan admin tidak dihitung dan tidak dibuat ulang.
+  disabled  Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   unit OrganizationUnit? @relation(fields: [unitId], references: [id])
@@ -726,4 +735,26 @@ model SystemSetting {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("system_settings")
+}
+
+// Titik absen: tautan rahasia untuk absen wajah tanpa login (tablet kiosk atau ponsel).
+// Token hanya disimpan sebagai hash; tautan lengkap ditampilkan sekali saat dibuat.
+model AttendanceStation {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String
+  tokenHash       String    @unique @map("token_hash")
+  tokenHint       String    @map("token_hint") // 4 karakter terakhir, untuk dikenali admin
+  unitId          String?   @map("unit_id") @db.Uuid // kosong = semua unit
+  allowFieldDuty  Boolean   @default(false) @map("allow_field_duty")
+  requireLocation Boolean   @default(false) @map("require_location") // wajib di dalam radius kantor
+  isActive        Boolean   @default(true) @map("is_active")
+  createdById     String?   @map("created_by_id") @db.Uuid
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  unit   OrganizationUnit? @relation(fields: [unitId], references: [id])
+  events AttendanceEvent[]
+
+  @@map("attendance_stations")
 }

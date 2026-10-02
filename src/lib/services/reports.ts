@@ -205,3 +205,92 @@ export async function monitoring(actor: Actor, raw: unknown) {
   if (q.method) rows = rows.filter((r) => r.record && (r.record.checkInMethod === q.method || r.record.checkOutMethod === q.method));
   return { date, counts, rows, tz };
 }
+
+// ---------------------------------------------------------------------------
+// Rekap kalender: pegawai x tanggal dalam satu bulan
+// ---------------------------------------------------------------------------
+
+/** Kode singkat status di sel kalender. "-" = hari kerja lewat tanpa transaksi (bukan otomatis tidak hadir). */
+export const CALENDAR_CODE: Record<string, string> = {
+  HADIR: 'H', TERLAMBAT: 'T', DINAS_LUAR: 'DL', IZIN: 'I', SAKIT: 'S', CUTI: 'C', TIDAK_HADIR: 'A', LIBUR: 'L', TANPA_TRANSAKSI: '-',
+};
+export const CALENDAR_LEGEND: [string, string][] = [
+  ['H', 'Hadir'], ['T', 'Terlambat'], ['DL', 'Dinas luar'], ['I', 'Izin'], ['S', 'Sakit'], ['C', 'Cuti'],
+  ['A', 'Tidak hadir (ditetapkan petugas)'], ['L', 'Libur atau bukan hari kerja'], ['-', 'Belum ada transaksi'],
+];
+
+export interface CalendarCell {
+  date: string;
+  code: string | null; // null = hari yang belum terjadi
+  status: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  lateMinutes: number;
+  missingIn: boolean; // ada absen pulang tanpa absen masuk
+  missingOut: boolean; // hari sudah lewat, ada absen masuk tanpa absen pulang
+  corrected: boolean;
+  note: string | null;
+}
+
+export async function calendarRecap(actor: Actor, raw: unknown, perm: 'attendance.report' | 'attendance.export' = 'attendance.report') {
+  assertCan(actor, perm);
+  const q = z.object({
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Bulan tidak valid'),
+    unitId: z.string().uuid().optional().or(z.literal('')).transform((v) => v || undefined),
+    q: z.string().max(100).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(500).default(50),
+  }).parse(raw);
+  const tz = (await getSettings())['org.timezone'];
+  const today = todayIn(tz);
+  const from = `${q.month}-01`;
+  const to = addDays(`${addDays(from, 32).slice(0, 7)}-01`, -1);
+  const dates = dateRange(from, to);
+  const where = { AND: [employeeFilter(actor, { unitId: q.unitId, q: q.q }, perm), { OR: [{ isActive: true }, { activeEffectiveDate: { gte: toDbDate(from) } }] }] };
+  const [total, employees] = await Promise.all([
+    prisma.employee.count({ where }),
+    prisma.employee.findMany({
+      where, select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } },
+      orderBy: { fullName: 'asc' }, skip: (q.page - 1) * q.pageSize, take: q.pageSize,
+    }),
+  ]);
+  const ids = employees.map((e) => e.id);
+  const range = { gte: toDbDate(from), lte: toDbDate(to) };
+  const [records, corrections, holidays, ctx] = await Promise.all([
+    prisma.attendanceRecord.findMany({ where: { employeeId: { in: ids }, workDate: range }, select: { employeeId: true, workDate: true, status: true, checkInAt: true, checkOutAt: true, lateMinutes: true, note: true } }),
+    prisma.attendanceCorrection.findMany({ where: { employeeId: { in: ids }, workDate: range, status: 'APPROVED' }, select: { employeeId: true, workDate: true } }),
+    prisma.holiday.findMany({ where: { date: range, unitId: null, disabled: false }, select: { date: true, name: true, kind: true } }),
+    loadPlanContext(ids, from, to),
+  ]);
+  const rec = new Map(records.map((r) => [`${r.employeeId}:${fromDbDate(r.workDate)}`, r]));
+  const fixed = new Set(corrections.map((c) => `${c.employeeId}:${fromDbDate(c.workDate)}`));
+  const hol = new Map(holidays.map((h) => [fromDbDate(h.date), { name: h.name, kind: h.kind }]));
+  const hhmm = (d: Date | null) => (d ? new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d) : null);
+
+  const columns = dates.map((d) => {
+    const wd = new Date(`${d}T00:00:00Z`).getUTCDay();
+    return { date: d, day: Number(d.slice(8)), weekday: wd, weekend: wd === 0 || wd === 6, holiday: hol.get(d) ?? null, isToday: d === today };
+  });
+  const rows = employees.map((e) => ({
+    employee: e,
+    cells: dates.map((d): CalendarCell => {
+      const r = rec.get(`${e.id}:${d}`);
+      const p = ctx.planFor(e.id, d);
+      const checkIn = hhmm(r?.checkInAt ?? null);
+      const checkOut = hhmm(r?.checkOutAt ?? null);
+      let code: string | null;
+      if (r) code = CALENDAR_CODE[r.status] ?? r.status;
+      else if (!isScheduledWorkday(p)) code = 'L';
+      else code = d < today ? '-' : null;
+      const presence = !!r && ['HADIR', 'TERLAMBAT', 'DINAS_LUAR'].includes(r.status);
+      return {
+        date: d, code, status: r?.status ?? null, checkIn, checkOut, lateMinutes: r?.lateMinutes ?? 0,
+        missingIn: presence && !checkIn && !!checkOut,
+        missingOut: presence && !!checkIn && !checkOut && d < today,
+        corrected: fixed.has(`${e.id}:${d}`),
+        note: !r && !isScheduledWorkday(p) ? (p.holidayName ?? null) : r?.note ?? null,
+      };
+    }),
+  }));
+  return { month: q.month, from, to, today, tz, columns, rows, total, page: q.page, pageSize: q.pageSize };
+}

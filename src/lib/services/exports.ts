@@ -6,9 +6,9 @@ import { assertCan, can, type Actor } from '../auth/actor';
 import { decryptOptional } from '../crypto';
 import { toCsv } from '../files/csv';
 import { getSettings } from '../settings';
-import { fmtJam, fmtTglPendek, fromDbDate } from '../time';
+import { BULAN, HARI_PENDEK, fmtJam, fmtTglPendek, fromDbDate } from '../time';
 import { METHOD_LABEL, STATUS_LABEL } from '../attendance/engine';
-import { dailyRecords, recap, type RecapRow } from './reports';
+import { CALENDAR_LEGEND, calendarRecap, dailyRecords, recap, type RecapRow } from './reports';
 import { employeeWhere, listQuery } from './employees';
 
 const RECAP_HEADERS = ['Nama', 'NIP', 'Unit', 'Hari kerja terjadwal', 'Hadir', 'Terlambat (kali)', 'Terlambat (menit)', 'Pulang awal (kali)', 'Pulang awal (menit)', 'Dinas luar', 'Izin', 'Sakit', 'Cuti', 'Tidak hadir', 'Tanpa transaksi', '% Kehadiran'];
@@ -119,6 +119,68 @@ function recapPdf(org: string, title: string, rows: RecapRow[]): Promise<Buffer>
 // ---------------------------------------------------------------------------
 // Pegawai
 // ---------------------------------------------------------------------------
+
+const CAL_FILL: Record<string, string> = { H: 'FFDCF3E3', T: 'FFFDE7D7', DL: 'FFDCE6FB', I: 'FFD8EFEC', S: 'FFD8EFEC', C: 'FFD8EFEC', A: 'FFF8D9D9', L: 'FFEEF1F6' };
+
+/** Rekap kalender satu bulan: satu baris per pegawai, satu kolom per tanggal (kode, jam masuk, jam pulang). */
+export async function exportCalendar(actor: Actor, raw: Record<string, unknown>) {
+  assertCan(actor, 'attendance.export');
+  const s = await getSettings();
+  const first = await calendarRecap(actor, { ...raw, page: 1, pageSize: 500 }, 'attendance.export');
+  const rows = [...first.rows];
+  for (let page = 2; (page - 1) * 500 < first.total; page++) rows.push(...(await calendarRecap(actor, { ...raw, page, pageSize: 500 }, 'attendance.export')).rows);
+  const { columns, month } = first;
+  const label = `${BULAN[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
+  await audit(actor, { action: 'attendance.export', entityType: 'AttendanceRecord', meta: { format: 'kalender', month, unitId: raw.unitId || null, q: raw.q || null, rows: rows.length } });
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'SIMPEG';
+  const ws = wb.addWorksheet(`Kalender ${month}`);
+  ws.addRow([`Rekap absensi ${label}`, `${s['org.name']}`]).font = { bold: true, size: 13 };
+  ws.addRow([]);
+  const head = ws.addRow(['Nama', 'NIP', 'Unit', ...columns.map((c) => `${HARI_PENDEK[c.weekday]}\n${String(c.day).padStart(2, '0')}`)]);
+  head.height = 32;
+  head.eachCell((cell, i) => {
+    const c = columns[i - 4];
+    const bg = c?.holiday ? 'FF5F6878' : c?.weekend ? 'FF0E1B3D' : 'FF1A3A8F';
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+    cell.alignment = { horizontal: i > 3 ? 'center' : 'left', vertical: 'middle', wrapText: true };
+    if (c?.holiday) cell.note = c.holiday.name;
+  });
+  for (const r of rows) {
+    const row = ws.addRow([
+      r.employee.fullName, r.employee.employeeNumber ?? '', r.employee.unit?.name ?? '',
+      ...r.cells.map((c) => (c.code ? [c.code, c.code !== 'L' && c.code !== '-' ? `${c.checkIn ?? '--:--'} ${c.checkOut ?? '--:--'}` : '', c.corrected ? 'dikoreksi' : ''].filter(Boolean).join('\n') : '')),
+    ]);
+    row.height = 44;
+    r.cells.forEach((c, i) => {
+      const cell = row.getCell(i + 4);
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.font = { size: 9, color: { argb: c.missingIn || c.missingOut ? 'FFB91C1C' : 'FF1F2937' } };
+      const fill = c.code ? CAL_FILL[c.code] : undefined;
+      if (fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+    });
+  }
+  ws.getColumn(1).width = 30;
+  ws.getColumn(2).width = 20;
+  ws.getColumn(3).width = 18;
+  columns.forEach((_, i) => { ws.getColumn(i + 4).width = 9; });
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 3 }];
+  ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
+
+  const info = wb.addWorksheet('Keterangan');
+  info.addRows([
+    ['Instansi', s['org.name']], ['Bulan', label], ['Dibuat', new Date().toISOString()], ['Oleh', actor.username], [],
+    ['Kode', 'Arti'], ...CALENDAR_LEGEND,
+    [], ['Jam', 'Kiri jam masuk, kanan jam pulang. --:-- berwarna merah = tidak absen masuk atau pulang.'],
+    ['Kepala kolom', 'Biru tua = akhir pekan, abu-abu = hari libur (nama libur ada di komentar sel).'],
+    ...columns.filter((c) => c.holiday).map((c) => [c.date, `${c.holiday!.name}${c.holiday!.kind === 'CUTI_BERSAMA' ? ' (cuti bersama)' : ''}`]),
+  ]);
+  info.getColumn(1).width = 14;
+  info.getColumn(2).width = 70;
+  return { filename: `absensi-kalender-${month}.xlsx`, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', body: Buffer.from(await wb.xlsx.writeBuffer()) };
+}
 
 export const EMPLOYEE_COLUMNS = [
   ['nip', 'NIP'], ['nik', 'NIK'], ['nama', 'Nama lengkap'], ['gelar_depan', 'Gelar depan'], ['gelar_belakang', 'Gelar belakang'],

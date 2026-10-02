@@ -46,7 +46,7 @@ export async function loadPlanContext(employeeIds: string[], from: string, to: s
     select: { id: true, scheduleId: true, version: true },
   });
   const revId = new Map(revisions.map((r) => [`${r.scheduleId}:${r.version}`, r.id]));
-  const holidays = await db.holiday.findMany({ where: { date: { gte: toDbDate(from), lte: toDbDate(to) } } });
+  const holidays = await db.holiday.findMany({ where: { disabled: false, date: { gte: toDbDate(from), lte: toDbDate(to) } } });
   const holidayMap = new Map<string, { name: string; unitId: string | null }[]>();
   for (const h of holidays) {
     const d = fromDbDate(h.date);
