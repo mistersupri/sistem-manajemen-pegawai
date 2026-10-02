@@ -72,10 +72,7 @@ export function workDateFor(at: Date, today: string, yesterdayPlan: DayPlan | nu
   return today;
 }
 
-// ---------------------------------------------------------------------------
 // Penyusunan rekap harian
-// ---------------------------------------------------------------------------
-
 export const LOCKED_STATUSES = ['DINAS_LUAR', 'IZIN', 'SAKIT', 'CUTI', 'TIDAK_HADIR'] as const;
 
 export interface SourceEvent {

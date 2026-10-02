@@ -126,10 +126,7 @@ export async function testDevice(actor: Actor, id: string) {
   return r;
 }
 
-// ---------------------------------------------------------------------------
 // Penyimpanan raw event dan pemrosesan
-// ---------------------------------------------------------------------------
-
 const BATCH = 500;
 
 /** Kunci idempotensi: perangkat + PIN + waktu perangkat. Scan yang sama tidak pernah tersimpan dua kali. */
@@ -219,10 +216,7 @@ export async function processPendingRawEvents(filter: Prisma.DeviceRawEventWhere
   return { processed: pending.length - [...unmatched].length, matched: touched.size, unmatchedPins: [...unmatched], days };
 }
 
-// ---------------------------------------------------------------------------
 // Sinkronisasi
-// ---------------------------------------------------------------------------
-
 const running = new Set<string>();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -371,10 +365,7 @@ export async function importDeviceFile(actor: Actor, deviceId: string | null, bu
   return { runId: run.id, ...summary };
 }
 
-// ---------------------------------------------------------------------------
 // Pemetaan PIN mesin ke pegawai
-// ---------------------------------------------------------------------------
-
 export async function unmatchedPins(actor: Actor) {
   assertCan(actor, 'device.read');
   const users = await prisma.deviceUser.findMany({ include: { device: { select: { name: true } } }, orderBy: [{ name: 'asc' }, { pin: 'asc' }] });
@@ -409,10 +400,7 @@ export async function reprocess(actor: Actor, from: string, to: string) {
   return r;
 }
 
-// ---------------------------------------------------------------------------
 // Log dan riwayat
-// ---------------------------------------------------------------------------
-
 export async function syncRuns(actor: Actor, deviceId?: string, take = 50) {
   assertCan(actor, 'device.read');
   if (deviceId) await getDevice(actor, deviceId);
@@ -482,10 +470,7 @@ export async function rawEvents(actor: Actor, raw: unknown) {
   return { total, page, pageSize: size, sort: q.sort, dir: q.dir, rows };
 }
 
-// ---------------------------------------------------------------------------
 // Penjadwal tarik otomatis (dipanggil dari instrumentation.ts setiap menit)
-// ---------------------------------------------------------------------------
-
 export async function runDueSyncs() {
   const devices = await prisma.attendanceDevice.findMany({ where: { isActive: true, deletedAt: null, syncIntervalMinutes: { gt: 0 } } });
   const now = Date.now();

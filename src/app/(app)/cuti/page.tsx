@@ -19,6 +19,7 @@ import { can, type Actor } from '@/lib/auth/actor';
 import { getSettings } from '@/lib/settings';
 import { balancesFor, leaveCalendar, listLeave, listLeaveTypes } from '@/lib/services/leave';
 import { BULAN, HARI_PENDEK, dateRange, fmtTglPendek, fmtWaktu, fromDbDate, monthBounds, todayIn } from '@/lib/time';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Cuti & Izin' };
 
@@ -105,7 +106,7 @@ async function ListView({ actor, view, sp, tz, year }: { actor: Actor; view: 'sa
           {view !== 'persetujuan' && <input type="hidden" name="status" value={status} />}
           <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
           {showEmployee ? (
-            <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama atau NIP" className="rounded-full pl-9" /></div></div>
+            <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama atau NIP" className="pl-9" /></div></div>
           ) : <div className="max-lg:hidden" />}
           <div className="grid gap-2"><Label htmlFor="jenis">Jenis</Label><NativeSelect id="jenis" name="jenis" defaultValue={sp.jenis ?? ''}><NativeSelectOption value="">Semua jenis</NativeSelectOption>{types.map((t) => <NativeSelectOption key={t.id} value={t.id}>{t.name}</NativeSelectOption>)}</NativeSelect></div>
           <div className="grid gap-2"><Label htmlFor="dari">Tanggal dari</Label><Input id="dari" name="dari" type="date" defaultValue={sp.dari} /></div>
@@ -131,7 +132,7 @@ async function ListView({ actor, view, sp, tz, year }: { actor: Actor; view: 'sa
             {data.rows.length === 0 && (
               <TableRow><TableCell colSpan={7}>
                 {filtered
-                  ? <EmptyState filtered title="Tidak ada pengajuan yang cocok" description="Ubah filter atau rentang tanggal." actions={[{ href: qs({ lihat: view, status: params.status }), label: 'Hapus filter' }]} />
+                  ? <EmptyState title="Tidak ada pengajuan yang cocok" description="Ubah filter atau rentang tanggal." actions={[{ href: qs({ lihat: view, status: params.status }), label: 'Hapus filter' }]} />
                   : <EmptyState title={view === 'persetujuan' ? 'Tidak ada pengajuan yang menunggu Anda' : 'Belum ada pengajuan'} description={view === 'saya' ? 'Pengajuan cuti, izin, atau sakit akan tampil di sini beserta status persetujuannya.' : 'Pengajuan pegawai di unit Anda akan muncul di sini.'} actions={view === 'saya' && can(actor, 'leave.request') ? [{ href: '/cuti/baru', label: 'Ajukan cuti/izin', primary: true }] : undefined} />}
               </TableCell></TableRow>
             )}
@@ -172,11 +173,11 @@ async function CalendarView({ actor, month, today }: { actor: Actor; month: stri
         </div>
       </CardHeader>
       <CardContent>
-        {busy.length === 0 ? <EmptyState title="Tidak ada cuti atau izin bulan ini" /> : (
+        {busy.length === 0 ? <EmptyState title="Tidak ada cuti atau izin bulan ini" description="Pengajuan yang disetujui atau masih menunggu akan tampil di kalender ini." /> : (
           <ol className="divide-y">
             {busy.map(({ d, items }) => (
               <li key={d} className="grid gap-2 py-3 sm:grid-cols-[9rem_1fr]">
-                <span className={`font-medium tabular ${d === today ? 'text-primary' : ''}`}>{HARI_PENDEK[new Date(`${d}T00:00:00Z`).getUTCDay()]}, {fmtTglPendek(d, false)}</span>
+                <span className={cn('font-medium tabular', d === today && 'text-primary')}>{HARI_PENDEK[new Date(`${d}T00:00:00Z`).getUTCDay()]}, {fmtTglPendek(d, false)}</span>
                 <ul className="flex flex-wrap gap-2">
                   {items.map((r) => (
                     <li key={r.id}>

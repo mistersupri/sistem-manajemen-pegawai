@@ -25,6 +25,7 @@ import { AssignmentForm, BulkDaysDialog, EndAssignment, HolidayForm, HolidayImpo
 import { HOLIDAY_KIND_LABEL, HOLIDAY_SOURCE_LABEL } from '@/lib/services/holidays';
 import { Badge } from '@/components/ui/badge';
 import { getSettings } from '@/lib/settings';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Jadwal Kerja' };
 
@@ -124,7 +125,7 @@ async function GridTab({ actor, month, unitId, today, manage, sp }: { actor: Act
           <div className="rounded-b-xl border border-t-0 bg-card"><Pager total={grid.total} page={grid.page} pageSize={grid.pageSize} params={params} /></div>
         </div>
       ) : <Card>{search || unit
-        ? <EmptyState filtered title="Tidak ada pegawai yang cocok" description="Ubah kata kunci atau unit." actions={[{ href: `?tab=kalender&bulan=${month}`, label: 'Hapus filter' }]} />
+        ? <EmptyState title="Tidak ada pegawai yang cocok" description="Ubah kata kunci atau unit." actions={[{ href: `?tab=kalender&bulan=${month}`, label: 'Hapus filter' }]} />
         : <EmptyState title="Belum ada pegawai aktif" description="Pegawai aktif dalam unit yang dipilih akan tampil di sini." actions={[{ href: '/pegawai/baru', label: 'Tambah pegawai', primary: true }]} />}</Card>}
       {manage && <p className="text-sm text-muted-foreground">Klik sel untuk mengganti jadwal satu hari. Rekap hari yang sudah lewat dihitung ulang otomatis.</p>}
     </>
@@ -143,7 +144,7 @@ async function SchedulesTab({ manage, revFor, tz }: { manage: boolean; revFor?: 
         <Table className="table-stack">
           <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Jadwal</TableHead><TableHead>Jam kerja</TableHead><TableHead>Hari kerja</TableHead><TableHead>Toleransi</TableHead><TableHead>Versi</TableHead><TableHead>Penugasan</TableHead><TableHead>Status</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
           <TableBody>
-            {rows.length === 0 && <TableRow><TableCell colSpan={8}><EmptyState title="Belum ada jadwal kerja" description="Tambahkan jadwal sesuai aturan jam kerja instansi Anda." /></TableCell></TableRow>}
+            {rows.length === 0 && <TableRow><TableCell colSpan={8}><EmptyState title="Belum ada jadwal kerja" description={manage ? 'Tambahkan jadwal dengan tombol di atas, sesuai aturan jam kerja instansi.' : 'Jadwal kerja diatur oleh admin kepegawaian.'} /></TableCell></TableRow>}
             {rows.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="stack-head pl-4 lg:pl-6"><span className="inline-flex items-center gap-2"><span className="size-3 shrink-0 rounded-sm" style={{ background: s.color }} aria-hidden /><b>{s.code}</b>{s.name}</span><span className="block text-xs text-muted-foreground">{s.kind === 'SHIFT' ? 'Shift' : 'Reguler'}{s.checkOut <= s.checkIn ? ', melewati tengah malam' : ''}</span></TableCell>
@@ -213,7 +214,7 @@ async function AssignmentsTab({ actor, manage, sp, today }: { actor: Actor; mana
       <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1.4fr_1fr_auto] lg:items-end" aria-label="Filter penugasan">
         <input type="hidden" name="tab" value="penugasan" />
         <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
-        <div className="grid gap-2"><Label htmlFor="q">Cari</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Pegawai, NIP, unit, atau catatan" className="rounded-full pl-9" /></div></div>
+        <div className="grid gap-2"><Label htmlFor="q">Cari</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Pegawai, NIP, unit, atau catatan" className="pl-9" /></div></div>
         <div className="grid gap-2"><Label htmlFor="jenis">Jenis</Label><NativeSelect id="jenis" name="jenis" defaultValue={sp.jenis ?? ''}><NativeSelectOption value="">Semua</NativeSelectOption><NativeSelectOption value="TETAP">Tetap</NativeSelectOption><NativeSelectOption value="SEMENTARA">Sementara</NativeSelectOption></NativeSelect></div>
         <div className="grid gap-2"><Label htmlFor="jadwal">Jadwal</Label><NativeSelect id="jadwal" name="jadwal" defaultValue={sp.jadwal ?? ''}><NativeSelectOption value="">Semua jadwal</NativeSelectOption>{schedules.map((x) => <NativeSelectOption key={x.id} value={x.id}>{`${x.code}, ${x.name}`}</NativeSelectOption>)}<NativeSelectOption value="LIBUR">Libur</NativeSelectOption></NativeSelect></div>
         <div className="grid gap-2"><Label htmlFor="keadaan">Masa berlaku</Label><NativeSelect id="keadaan" name="keadaan" defaultValue={sp.keadaan ?? ''}><NativeSelectOption value="">Semua</NativeSelectOption><NativeSelectOption value="berlaku">Sedang berlaku</NativeSelectOption><NativeSelectOption value="akan">Akan datang</NativeSelectOption><NativeSelectOption value="berakhir">Sudah berakhir</NativeSelectOption></NativeSelect></div>
@@ -233,8 +234,8 @@ async function AssignmentsTab({ actor, manage, sp, today }: { actor: Actor; mana
           </TableRow></TableHeader>
           <TableBody>
             {data.rows.length === 0 && <TableRow><TableCell colSpan={6}>{filtered
-              ? <EmptyState filtered title="Tidak ada penugasan yang cocok" description="Ubah kata kunci atau filter." actions={[{ href: '?tab=penugasan', label: 'Hapus filter' }]} />
-              : <EmptyState title="Belum ada penugasan" description="Tanpa penugasan, pegawai tercatat tanpa jadwal dan status kehadirannya tidak dinilai terlambat atau tidak hadir." />}</TableCell></TableRow>}
+              ? <EmptyState title="Tidak ada penugasan yang cocok" description="Ubah kata kunci atau filter." actions={[{ href: '?tab=penugasan', label: 'Hapus filter' }]} />
+              : <EmptyState title="Belum ada penugasan" description="Tanpa penugasan, pegawai tercatat tanpa jadwal dan kehadirannya tidak dinilai terlambat. Tambahkan penugasan untuk unit atau pegawai dengan tombol di atas." actions={[{ href: '?tab=jadwal', label: 'Lihat jenis jadwal' }]} />}</TableCell></TableRow>}
             {data.rows.map((a) => (
               <TableRow key={a.id}>
                 <TableCell className="stack-head pl-4 lg:pl-6">{a.employee ? <Link className="font-medium text-primary hover:underline" href={`/pegawai/${a.employee.id}`}>{a.employee.fullName}</Link> : <span className="font-medium">Unit: {a.unit?.name}</span>}</TableCell>
@@ -324,13 +325,13 @@ async function MySchedule({ actor, month, today }: { actor: Actor; month: string
           <h2 className="min-w-40 text-center text-lg font-semibold">{monthLabel(month)}</h2>
           <Button asChild variant="outline" size="icon" aria-label="Bulan berikutnya"><Link href={`?bulan=${shiftMonth(month, 1)}`}><ChevronRight /></Link></Button>
         </div>
-        {!actor.employeeId ? <Card><EmptyState title="Akun ini tidak terhubung ke data pegawai" /></Card> : (
+        {!actor.employeeId ? <Card><EmptyState title="Akun ini tidak terhubung ke data pegawai" description="Jadwal pribadi hanya tampil untuk akun pegawai. Minta admin kepegawaian menghubungkan akun ini." actions={[{ href: '/dashboard', label: 'Kembali ke beranda' }]} /></Card> : (
           <div className="rounded-xl border bg-card">
             <ul className="divide-y">
               {plans.map((p) => {
                 const wd = new Date(`${p.date}T00:00:00Z`).getUTCDay();
                 return (
-                  <li key={p.date} className={`flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 lg:px-6 ${p.date === today ? 'bg-accent/50' : ''}`} aria-current={p.date === today ? 'date' : undefined}>
+                  <li key={p.date} className={cn('flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 lg:px-6', p.date === today && 'bg-accent/50')} aria-current={p.date === today ? 'date' : undefined}>
                     <span className="min-w-44"><span className="font-medium">{HARI[wd]}, {fmtTglPendek(p.date, false)}</span>{p.date === today && <span className="ml-2 text-xs font-semibold text-primary">Hari ini</span>}</span>
                     <span className={p.isOffDay || !p.schedule ? 'text-muted-foreground' : 'tabular'}>
                       {p.isOffDay ? (p.holidayName ?? OFF[p.offReason ?? ''] ?? 'Libur') : p.schedule ? `${p.schedule.code}, ${p.schedule.checkIn} sampai ${p.schedule.checkOut}` : 'Tanpa jadwal'}

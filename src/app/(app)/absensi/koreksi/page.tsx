@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PageBody, PageHeader } from '@/components/app/page-header';
 import { StatusBadge, REQUEST_LABEL } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
+import { Segmented } from '@/components/app/segmented';
 import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
 import { qs } from '@/lib/list';
 import { requirePage } from '@/lib/guard';
@@ -44,17 +45,9 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
       <PageBody className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {canReview && actor.employeeId && (
-            <nav className="flex max-w-full gap-1 overflow-x-auto rounded-full border bg-card p-1 [scrollbar-width:none]" aria-label="Tampilan">
-              {[['saya', 'Pengajuan saya'], ['tinjau', 'Perlu ditinjau']].map(([k, l]) => (
-                <Link key={k} href={qs({ lihat: k })} aria-current={view === k ? 'page' : undefined} className={`inline-flex min-h-10 shrink-0 items-center rounded-full whitespace-nowrap px-4 text-sm font-medium ${view === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{l}</Link>
-              ))}
-            </nav>
+            <Segmented label="Tampilan" current={view} items={[['saya', 'Pengajuan saya'], ['tinjau', 'Perlu ditinjau']].map(([k, l]) => ({ key: k, label: l, href: qs({ lihat: k }) }))} />
           )}
-          <nav className="flex max-w-full gap-1 overflow-x-auto rounded-full border bg-card p-1 [scrollbar-width:none]" aria-label="Filter status">
-            {['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL'].map((k) => (
-              <Link key={k} href={link({ status: k })} aria-current={status === k ? 'page' : undefined} className={`inline-flex min-h-10 shrink-0 items-center rounded-full whitespace-nowrap px-3 text-sm font-medium ${status === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{k === 'ALL' ? 'Semua' : REQUEST_LABEL[k]}</Link>
-            ))}
-          </nav>
+          <Segmented label="Filter status" current={status} items={['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL'].map((k) => ({ key: k, label: k === 'ALL' ? 'Semua' : REQUEST_LABEL[k], href: link({ status: k }) }))} />
         </div>
         <CollapsibleFilters active={Object.values(filters).filter(Boolean).length}>
           <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1.4fr_1fr_1fr_auto] lg:items-end" aria-label="Filter koreksi">
@@ -62,7 +55,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
             <input type="hidden" name="status" value={status} />
             <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
             {view === 'tinjau' ? (
-              <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama atau NIP" className="rounded-full pl-9" /></div></div>
+              <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama atau NIP" className="pl-9" /></div></div>
             ) : <div className="max-lg:hidden" />}
             <div className="grid gap-2"><Label htmlFor="jenis">Jenis</Label><NativeSelect id="jenis" name="jenis" defaultValue={sp.jenis ?? ''}><NativeSelectOption value="">Semua jenis</NativeSelectOption>{Object.entries(KIND_LABEL).map(([k, v]) => <NativeSelectOption key={k} value={k}>{v}</NativeSelectOption>)}</NativeSelect></div>
             <div className="grid gap-2"><Label htmlFor="dari">Tanggal absensi dari</Label><Input id="dari" name="dari" type="date" defaultValue={sp.dari} /></div>
@@ -84,7 +77,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
             </TableRow></TableHeader>
             <TableBody>
               {data.rows.length === 0 && <TableRow><TableCell colSpan={6}>{filtered
-                ? <EmptyState filtered title="Tidak ada pengajuan yang cocok" description="Ubah filter atau rentang tanggal." actions={[{ href: qs({ lihat: view, status }), label: 'Hapus filter' }]} />
+                ? <EmptyState title="Tidak ada pengajuan yang cocok" description="Ubah filter atau rentang tanggal." actions={[{ href: qs({ lihat: view, status }), label: 'Hapus filter' }]} />
                 : <EmptyState title={view === 'tinjau' ? 'Tidak ada koreksi untuk ditinjau' : 'Belum ada pengajuan koreksi'} description={view === 'saya' ? `Ajukan koreksi bila lupa absen atau ada gangguan alat, maksimal ${s['rules.backdateDays']} hari ke belakang.` : 'Pengajuan baru dari pegawai di unit Anda akan muncul di sini.'} actions={view === 'saya' && can(actor, 'correction.request') ? [{ href: '/absensi/koreksi/baru', label: 'Ajukan koreksi', primary: true }] : undefined} />}</TableCell></TableRow>}
               {data.rows.map((c) => (
                 <TableRow key={c.id}>

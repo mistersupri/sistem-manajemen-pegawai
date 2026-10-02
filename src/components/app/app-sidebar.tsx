@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 const ICONS: Record<string, LucideIcon> = {
   'layout-dashboard': LayoutDashboard, users: Users, clock: Clock, 'scan-face': ScanFace, activity: Activity, table: Table,
@@ -86,7 +87,7 @@ export function AppSidebar({ items, orgName, logoUrl, user }: {
                         <SidebarMenuButton className="min-h-10">
                           <Icon />{item.label}
                           {item.badge ? <span className="ml-auto rounded-full bg-highlight px-1.5 text-xs font-semibold text-highlight-foreground">{item.badge}</span> : null}
-                          <ChevronDown className={`${item.badge ? 'ml-1' : 'ml-auto'} transition-transform group-data-[state=open]/collapsible:rotate-180`} />
+                          <ChevronDown className={cn(item.badge ? 'ml-1' : 'ml-auto', 'transition-transform group-data-[state=open]/collapsible:rotate-180')} />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>

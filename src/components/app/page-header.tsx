@@ -21,12 +21,13 @@ export function PageHeader({ title, description, crumbs, actions, children }: {
         <nav aria-label="Breadcrumb" className="mb-3">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
             {crumbs.map((c, i) => (
-              <li key={i} className="inline-flex items-center gap-1.5">
-                {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
+              // Halaman sekarang sudah jadi judul H1; di ponsel cukup tautan induk agar nama panjang tidak tampil dua kali.
+              <li key={i} className={cn('inline-flex min-w-0 items-center gap-1.5', !c.href && 'max-md:hidden')}>
+                {i > 0 && <ChevronRight className="size-3.5 shrink-0" aria-hidden />}
                 {c.href ? (
                   <Link className="inline-flex min-h-8 items-center hover:text-foreground max-lg:min-h-11" href={c.href}>{c.label}</Link>
                 ) : (
-                  <span aria-current="page" className="font-medium text-foreground">{c.label}</span>
+                  <span aria-current="page" className="max-w-[40ch] truncate font-medium text-foreground" title={c.label}>{c.label}</span>
                 )}
               </li>
             ))}

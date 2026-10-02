@@ -356,10 +356,7 @@ export function HolidayToggle({ id, name, disabled }: { id: string; name: string
   );
 }
 
-// ---------------------------------------------------------------------------
 // Grid bulanan
-// ---------------------------------------------------------------------------
-
 type Cell = { date: string; scheduleId: string | null; code: string | null; isOffDay: boolean; offReason: string | null; holidayName: string | null; source: string; overridden: boolean };
 type Row = { employee: { id: string; fullName: string; employeeNumber: string | null; unit: { name: string } | null }; days: Cell[] };
 

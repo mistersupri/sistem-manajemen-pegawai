@@ -86,10 +86,7 @@ export async function scheduleRevisions(id: string) {
   return prisma.workScheduleRevision.findMany({ where: { scheduleId: id }, orderBy: { version: 'desc' } });
 }
 
-// ---------------------------------------------------------------------------
 // Penugasan
-// ---------------------------------------------------------------------------
-
 export const assignmentInput = z.object({
   scheduleId: z.string().uuid().nullable(),
   employeeId: z.string().uuid().nullable().optional(),
@@ -232,10 +229,7 @@ export async function rebuildActive(employeeIds: string[] | null, from: string, 
   return { employees: ids.length };
 }
 
-// ---------------------------------------------------------------------------
 // Grid jadwal bulanan per unit
-// ---------------------------------------------------------------------------
-
 export async function scheduleGrid(actor: Actor, month: string, unitId?: string, opts: { q?: string; page?: number; per?: number } = {}) {
   assertCan(actor, 'schedule.read');
   if (unitId && !unitInScope(actor, 'schedule.read', unitId)) throw notFound();
@@ -350,10 +344,7 @@ export async function setDaysBulk(actor: Actor, raw: unknown) {
   return { employees: ids.length, days: days.length, replaced: old.length };
 }
 
-// ---------------------------------------------------------------------------
 // Hari libur
-// ---------------------------------------------------------------------------
-
 export const holidayInput = z.object({ date, name: z.string().trim().min(2, 'Nama wajib diisi').max(120), unitId: z.string().uuid().nullable().optional().or(z.literal('')).transform((v) => v || null), kind: z.enum(['NASIONAL', 'CUTI_BERSAMA', 'INSTANSI']).default('INSTANSI') });
 
 export async function listHolidays(year: number) {

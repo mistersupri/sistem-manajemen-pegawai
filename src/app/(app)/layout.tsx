@@ -57,7 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {badges['/notifikasi'] ? <span className="absolute top-1 right-1 min-w-4 rounded-full bg-highlight px-1 text-center text-[0.65rem] font-bold text-highlight-foreground">{badges['/notifikasi']}</span> : null}
           </Link>
         </header>
-        <main id="konten" className={tabs ? 'flex-1 pb-20 md:pb-0' : 'flex-1'}>{children}</main>
+        <main id="konten" className={tabs ? 'flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0' : 'flex-1'}>{children}</main>
         {tabs && <TabBar items={tabs} />}
       </SidebarInset>
     </SidebarProvider>

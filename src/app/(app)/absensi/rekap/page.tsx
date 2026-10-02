@@ -10,8 +10,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PageBody, PageHeader } from '@/components/app/page-header';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
+import { Segmented } from '@/components/app/segmented';
 import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
-import { clampPage, listSchema, sortRows } from '@/lib/list';
+import { clampPage, listSchema, qs, sortRows } from '@/lib/list';
 import { requirePage } from '@/lib/guard';
 import { can } from '@/lib/auth/actor';
 import { CALENDAR_LEGEND, calendarRecap, dailyRecords, recap, type RecapRow } from '@/lib/services/reports';
@@ -22,6 +23,7 @@ import { prisma } from '@/lib/db';
 import { METHOD_LABEL, STATUS_LABEL } from '@/lib/attendance/engine';
 import { BULAN, addDays, fmtJam, fmtTglPendek, fromDbDate, isValidDate, monthBounds, todayIn, weekdayOf } from '@/lib/time';
 import { Recalculate } from './recalculate';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Rekapitulasi' };
 
@@ -86,8 +88,8 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
                 <Button asChild variant="outline" size="icon" aria-label={`Bulan berikutnya, ${monthLabel(shiftMonth(bulan, 1))}`}><Link href={qs({ bulan: shiftMonth(bulan, 1), page: undefined })}><ChevronRight /></Link></Button>
               </div>
             </div>
-            <div className="grid min-w-48 flex-1 gap-2 sm:flex-none"><Label htmlFor="unit">Unit kerja</Label><NativeSelect id="unit" name="unit" defaultValue={f.unitId}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></div>
-            <div className="grid min-w-48 flex-1 gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={f.q} placeholder="Nama atau NIP" className="rounded-full pl-9" /></div></div>
+            <div className="grid min-w-48 flex-1 grid-cols-1 gap-2 sm:max-w-80 sm:flex-none"><Label htmlFor="unit">Unit kerja</Label><NativeSelect id="unit" name="unit" defaultValue={f.unitId}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></div>
+            <div className="grid min-w-48 flex-1 gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={f.q} placeholder="Nama atau NIP" className="pl-9" /></div></div>
             <Button type="submit">Terapkan</Button>
           </form>
         ) : (
@@ -98,7 +100,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
           <div className="grid gap-2"><Label htmlFor="unit">Unit kerja</Label><NativeSelect id="unit" name="unit" defaultValue={f.unitId}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></div>
           <div className="grid gap-2"><Label htmlFor="status">Status</Label><NativeSelect id="status" name="status" defaultValue={f.status}><NativeSelectOption value="">Semua</NativeSelectOption>{Object.entries(STATUS_LABEL).map(([k, v]) => <NativeSelectOption key={k} value={k}>{v}</NativeSelectOption>)}</NativeSelect></div>
           <div className="grid gap-2"><Label htmlFor="metode">Metode</Label><NativeSelect id="metode" name="metode" defaultValue={f.method}><NativeSelectOption value="">Semua</NativeSelectOption>{Object.entries(METHOD_LABEL).map(([k, v]) => <NativeSelectOption key={k} value={k}>{v}</NativeSelectOption>)}</NativeSelect></div>
-          <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={f.q} placeholder="Nama atau NIP" className="rounded-full pl-9" /></div></div>
+          <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={f.q} placeholder="Nama atau NIP" className="pl-9" /></div></div>
           <input type="hidden" name="tampilan" value={view} />
           <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
           <div className="flex gap-2"><Button type="submit">Terapkan</Button></div>
@@ -112,11 +114,10 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
         </CollapsibleFilters>
         )}
 
-        <nav className="flex w-fit gap-1 rounded-full border bg-card p-1" aria-label="Tampilan">
-          {[['rekap', 'Rekap per pegawai'], ['kalender', 'Kalender'], ['harian', 'Detail harian']].map(([k, label]) => (
-            <Link key={k} href={`?${new URLSearchParams(Object.fromEntries(Object.entries({ tampilan: k, unit: sp.unit, q: sp.q, ...(k === 'kalender' ? { bulan } : { dari: from, sampai: to }) }).filter(([, v]) => v)) as Record<string, string>)}`} aria-current={view === k ? 'page' : undefined} className={`inline-flex min-h-10 items-center rounded-full px-4 text-sm font-medium ${view === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{label}</Link>
-          ))}
-        </nav>
+        <Segmented label="Tampilan" current={view} className="w-fit"
+          items={[['rekap', 'Rekap per pegawai'], ['kalender', 'Kalender'], ['harian', 'Detail harian']].map(([k, label]) => ({
+            key: k, label, href: qs({ tampilan: k, unit: sp.unit, q: sp.q, ...(k === 'kalender' ? { bulan } : { dari: from, sampai: to }) }),
+          }))} />
 
         {view === 'rekap' && <RecapTable data={await recap(actor, f)} sp={sp} params={params} />}
         {view === 'harian' && (() => {
@@ -134,7 +135,7 @@ function CalendarView({ data, params }: { data: Awaited<ReturnType<typeof calend
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3">
       <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Keterangan kode">
-        {CALENDAR_LEGEND.map(([code, label]) => <li key={code} className="flex items-center gap-1.5"><span className={`cal-code c-${code === '-' ? 'x' : code}`}>{code}</span>{label}</li>)}
+        {CALENDAR_LEGEND.map(([code, label]) => <li key={code} className="flex items-center gap-1.5"><span className={cn('cal-code', `c-${code === '-' ? 'x' : code}`)}>{code}</span>{label}</li>)}
         <li className="flex items-center gap-1.5"><span className="cal-time in">07:30</span>masuk</li>
         <li className="flex items-center gap-1.5"><span className="cal-time out">16:00</span>pulang</li>
         <li className="flex items-center gap-1.5"><span className="cal-time warn">--:--</span>tidak absen masuk/pulang</li>
@@ -142,7 +143,7 @@ function CalendarView({ data, params }: { data: Awaited<ReturnType<typeof calend
         <li className="flex items-center gap-1.5"><span className="cal-head-swatch holiday" aria-hidden />hari libur (arahkan kursor ke tanggal untuk namanya)</li>
       </ul>
       {data.rows.length === 0 ? (
-        <div className="rounded-xl border bg-card"><EmptyState filtered title="Tidak ada pegawai untuk filter ini" /></div>
+        <div className="rounded-xl border bg-card"><EmptyState title="Tidak ada pegawai untuk filter ini" description="Ubah unit atau kata kunci." actions={[{ href: '?tampilan=kalender', label: 'Hapus filter' }]} /></div>
       ) : (
         <div className="min-w-0 overflow-hidden rounded-xl border bg-card">
           <CalendarRecap columns={data.columns} rows={data.rows} />
@@ -193,7 +194,7 @@ function RecapTable({ data, sp, params }: { data: Awaited<ReturnType<typeof reca
           <SortableHead label="Kehadiran" value="persen" {...sortProps} {...num} className="pr-4 lg:pr-6" />
         </TableRow></TableHeader>
         <TableBody>
-          {rows.length === 0 && <TableRow><TableCell colSpan={10}><EmptyState filtered title="Tidak ada data untuk filter ini" description="Ubah rentang tanggal atau hapus filter." actions={[{ href: '/absensi/rekap', label: 'Hapus filter' }]} /></TableCell></TableRow>}
+          {rows.length === 0 && <TableRow><TableCell colSpan={10}><EmptyState title="Tidak ada data untuk filter ini" description="Ubah rentang tanggal atau hapus filter." actions={[{ href: '/absensi/rekap', label: 'Hapus filter' }]} /></TableCell></TableRow>}
           {rows.map((r) => (
             <TableRow key={r.employeeId}>
               <TableCell className="stack-head pl-4 lg:pl-6"><Link className="font-medium text-primary hover:underline" href={`/absensi/rekap?tampilan=harian&dari=${filter.from}&sampai=${filter.to}&q=${encodeURIComponent(r.employeeNumber ?? r.name)}`}>{r.name}</Link><span className="block text-xs text-muted-foreground">{r.unit ?? ''}</span></TableCell>
@@ -233,7 +234,7 @@ function DailyTable({ data, tz, params }: { data: Awaited<ReturnType<typeof dail
           <TableHead className="pr-4 lg:pr-6">Catatan</TableHead>
         </TableRow></TableHeader>
         <TableBody>
-          {data.rows.length === 0 && <TableRow><TableCell colSpan={7}><EmptyState filtered title="Tidak ada catatan absensi untuk filter ini" /></TableCell></TableRow>}
+          {data.rows.length === 0 && <TableRow><TableCell colSpan={7}><EmptyState title="Tidak ada catatan absensi untuk filter ini" description="Catatan muncul setelah ada scan, absen wajah, atau input petugas pada rentang ini." actions={[{ href: '?tampilan=harian', label: 'Hapus filter' }]} /></TableCell></TableRow>}
           {data.rows.map((r) => (
             <TableRow key={r.id}>
               <TableCell className="stack-head pl-4 lg:pl-6"><Link className="font-medium text-primary hover:underline" href={`/absensi/rekap/${r.employeeId}/${fromDbDate(r.workDate)}`}>{fmtTglPendek(fromDbDate(r.workDate))}</Link></TableCell>

@@ -164,10 +164,7 @@ export async function resetUserMfa(actor: Actor, userId: string) {
   await audit(actor, { action: 'user.mfa_reset', entityType: 'User', entityId: userId });
 }
 
-// ---------------------------------------------------------------------------
 // Peran dan izin
-// ---------------------------------------------------------------------------
-
 export async function listRoles() {
   return prisma.role.findMany({ include: { permissions: { include: { permission: true } }, _count: { select: { users: true } } }, orderBy: { name: 'asc' } });
 }
@@ -204,10 +201,7 @@ export async function createRole(actor: Actor, raw: unknown) {
   return r;
 }
 
-// ---------------------------------------------------------------------------
 // Akun sendiri: password dan MFA
-// ---------------------------------------------------------------------------
-
 export async function changeOwnPassword(actor: Actor, current: string, next: string) {
   const u = await prisma.user.findUniqueOrThrow({ where: { id: actor.userId } });
   if (!(await verifyPassword(current, u.passwordHash))) throw unprocessable('Password lama salah.', { current: 'Password lama salah' });

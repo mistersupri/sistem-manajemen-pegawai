@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { StatusBadge } from './status-badge';
+import { cn } from '@/lib/utils';
 
 // Sumbu papan: 05.00 sampai 24.00, cukup untuk shift pagi sampai awal shift malam.
 const START = 5 * 60;
@@ -38,10 +39,15 @@ export function TodayBoard({ rows, now }: { rows: BoardRow[]; now: string | null
       <div className="grid grid-cols-1 items-end gap-x-4 md:grid-cols-[13rem_1fr]" aria-hidden>
         <span className="hidden md:block" />
         <div className="board-axis h-5 text-xs text-muted-foreground">
-          {HOURS.map((h) => (
-            <span key={h} className="absolute -translate-x-1/2 tabular" style={{ left: `${pos(`${String(h).padStart(2, '0')}:00`)}%` }}>{String(h).padStart(2, '0')}.00</span>
-          ))}
-          {n != null && <span className="absolute -translate-x-1/2 rounded bg-highlight px-1 font-semibold text-highlight-foreground tabular" style={{ left: `${n}%` }}>{now!.replace(':', '.')}</span>}
+          {/* Label jam yang terlalu dekat dengan penanda sekarang disembunyikan agar tidak bertumpuk. */}
+          {HOURS.map((h) => {
+            const x = pos(`${String(h).padStart(2, '0')}:00`)!;
+            const gap = n == null ? 100 : Math.abs(x - n);
+            if (gap < 10) return null;
+            // Sumbu sempit (tablet, kolom kedua) butuh jarak lebih lebar.
+            return <span key={h} className={cn('absolute -translate-x-1/2 tabular', gap < 25 && 'md:max-lg:hidden')} style={{ left: `${x}%` }}>{String(h).padStart(2, '0')}.00</span>;
+          })}
+          {n != null && <span className={cn('absolute rounded bg-highlight px-1 font-semibold text-highlight-foreground tabular', n < 4 ? 'translate-x-0' : n > 96 ? '-translate-x-full' : '-translate-x-1/2')} style={{ left: `${n}%` }}>{now!.replace(':', '.')}</span>}
         </div>
       </div>
       <ul className="divide-y">
@@ -66,7 +72,7 @@ export function TodayBoard({ rows, now }: { rows: BoardRow[]; now: string | null
                 <span className="board-track" aria-hidden>
                   {HOURS.map((h) => <span key={h} className="board-grid" style={{ left: `${pos(`${String(h).padStart(2, '0')}:00`)}%` }} />)}
                   {a != null && b != null && <span className="shift" style={{ left: `${a}%`, width: `${Math.max(0.8, b - a)}%` }} />}
-                  {i != null && <span className={`tick ${r.late ? 'late' : ''}`} style={{ left: `${i}%` }} />}
+                  {i != null && <span className={cn('tick', r.late && 'late')} style={{ left: `${i}%` }} />}
                   {o != null && <span className="tick out" style={{ left: `${o}%` }} />}
                   {n != null && <span className="board-now" style={{ left: `${n}%` }} />}
                 </span>

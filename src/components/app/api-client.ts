@@ -58,7 +58,8 @@ export function useAction() {
       const e = err as ApiError;
       setFields(e.fields || {});
       setError(e.message);
-      toast.error(e.message);
+      // Rincian galat per isian tampil di samping isiannya; toast cukup memberi tahu bahwa ada yang perlu diperbaiki.
+      toast.error(e.fields && Object.keys(e.fields).length ? 'Periksa isian yang ditandai.' : e.message);
       return undefined;
     } finally {
       setPending(false);

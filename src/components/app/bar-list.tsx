@@ -2,9 +2,9 @@
 export function BarList({ items, total }: { items: { name: string; count: number }[]; total: number }) {
   const max = Math.max(1, ...items.map((i) => i.count));
   return (
-    <ul className="grid gap-2.5">
+    <ul className="grid grid-cols-1 gap-2.5">
       {items.map((i) => (
-        <li key={i.name} className="grid gap-1">
+        <li key={i.name} className="grid min-w-0 grid-cols-1 gap-1">
           <div className="flex justify-between gap-3 text-sm">
             <span className="truncate">{i.name}</span>
             <span className="shrink-0 tabular"><b className="font-semibold">{i.count}</b>{total ? <span className="text-muted-foreground"> ({Math.round((i.count / total) * 100)}%)</span> : null}</span>

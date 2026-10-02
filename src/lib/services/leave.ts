@@ -15,10 +15,7 @@ async function assertModuleOn() {
   if (!(await getSettings())['modules.leave']) throw forbidden('Modul cuti dan izin sedang dinonaktifkan.');
 }
 
-// ---------------------------------------------------------------------------
 // Jenis cuti/izin
-// ---------------------------------------------------------------------------
-
 export const leaveTypeInput = z.object({
   code: z.string().trim().min(1).max(20).regex(/^[A-Za-z0-9_-]+$/, 'Hanya huruf/angka'),
   name: z.string().trim().min(2).max(100),
@@ -55,10 +52,7 @@ export async function saveLeaveType(actor: Actor, id: string | null, raw: unknow
   return t;
 }
 
-// ---------------------------------------------------------------------------
 // Saldo
-// ---------------------------------------------------------------------------
-
 /** Saldo per jenis yang memakai saldo: hak, terpakai (disetujui), dipesan (menunggu), sisa. */
 export async function balancesFor(employeeId: string, year: number) {
   const types = await prisma.leaveType.findMany({ where: { usesBalance: true, isActive: true } });
@@ -114,10 +108,7 @@ export async function generateBalances(actor: Actor, year: number) {
   return { created };
 }
 
-// ---------------------------------------------------------------------------
 // Pengajuan
-// ---------------------------------------------------------------------------
-
 export const requestInput = z.object({
   leaveTypeId: z.string().uuid('Pilih jenis cuti/izin'),
   startDate: z.string().refine(isValidDate, 'Tanggal tidak valid'),

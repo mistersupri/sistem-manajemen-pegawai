@@ -32,7 +32,7 @@ export default async function StationsPage() {
           <Table className="table-stack">
             <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Titik absen</TableHead><TableHead>Pegawai dikenali</TableHead><TableHead>Aturan</TableHead><TableHead>Status</TableHead><TableHead>Terakhir dipakai</TableHead><TableHead className="text-right">Transaksi</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
             <TableBody>
-              {rows.length === 0 && <TableRow><TableCell colSpan={7}><EmptyState title="Belum ada titik absen" description="Buat titik absen untuk membuka rekam wajah tanpa login di tablet lobi atau ponsel pegawai." /></TableCell></TableRow>}
+              {rows.length === 0 && <TableRow><TableCell colSpan={7}><EmptyState title="Belum ada titik absen" description={manage ? 'Buat titik absen dengan tombol di atas untuk membuka rekam wajah tanpa login di tablet lobi atau ponsel pegawai.' : 'Titik absen dibuat oleh admin perangkat.'} /></TableCell></TableRow>}
               {rows.map((r) => (
                 <TableRow key={r.id} className={r.isActive ? undefined : 'text-muted-foreground'}>
                   <TableCell className="stack-head pl-4 lg:pl-6"><span className="font-medium">{r.name}</span><span className="block font-mono text-xs text-muted-foreground">/absen/…{r.tokenHint}</span></TableCell>

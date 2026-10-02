@@ -31,7 +31,6 @@ export const SETTING_DEFAULTS = {
   'geo.radiusM': 200,
   // Alamat dari koordinat lewat OpenStreetMap Nominatim (layanan pihak ketiga, gratis). Bawaan: mati.
   'geo.reverseGeocode': false,
-  // Aturan absensi umum.
   'rules.checkoutGraceHours': 6,
   // Tolak absen pada hari tanpa jadwal/libur. Bawaan: tetap dicatat dengan keterangan.
   'rules.blockOutsideSchedule': false,
@@ -39,10 +38,8 @@ export const SETTING_DEFAULTS = {
   'rules.backdateDays': 31,
   'rules.duplicateWindowMinutes': 2,
   'rules.clockSkewToleranceMinutes': 10,
-  // Privasi dan retensi.
   'privacy.storeFieldDutyPhotos': true,
   'privacy.photoRetentionDays': null as number | null,
-  // Keamanan.
   'security.mfaRequiredForAdmins': false,
   'security.sessionHours': 12,
   // Hari libur nasional dan cuti bersama: ditarik otomatis setiap hari dari sumber daring.
@@ -50,7 +47,6 @@ export const SETTING_DEFAULTS = {
   'holidays.includeCutiBersama': true,
   // Status tarik terakhir (diisi sistem, tidak diubah dari form).
   'holidays.lastSync': null as null | { at: string; ok: boolean; source: string | null; message: string },
-  // Modul.
   'modules.leave': true,
 };
 

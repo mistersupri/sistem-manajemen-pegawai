@@ -45,7 +45,7 @@ export default async function BalancesPage({ searchParams }: { searchParams: Pro
           <form className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="tahun" value={year} />
             <label className="grid gap-1 text-sm font-medium" htmlFor="q">Cari<Input id="q" name="q" defaultValue={sp.q ?? ''} placeholder="Nama atau NIP" className="w-56" /></label>
-            <label className="grid gap-1 text-sm font-medium" htmlFor="unit">Unit<NativeSelect id="unit" name="unit" defaultValue={unit ?? ''} className="min-w-48"><NativeSelectOption value="">Semua</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></label>
+            <label className="grid max-w-80 grid-cols-1 gap-1 text-sm font-medium" htmlFor="unit">Unit<NativeSelect id="unit" name="unit" defaultValue={unit ?? ''} className="min-w-48"><NativeSelectOption value="">Semua</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></label>
             <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
             <Button type="submit" variant="outline">Tampilkan</Button>
           </form>
@@ -60,7 +60,7 @@ export default async function BalancesPage({ searchParams }: { searchParams: Pro
             <Table className="table-stack">
               <TableHeader><TableRow><SortableHead label="Pegawai" value="nama" {...sortProps} className="pl-4 lg:pl-6" />{data.types.map((t) => <TableHead key={t.id}>{t.name}</TableHead>)}</TableRow></TableHeader>
               <TableBody>
-                {data.rows.length === 0 && <TableRow><TableCell colSpan={data.types.length + 1}><EmptyState title="Tidak ada pegawai" filtered={!!(sp.q || unit)} /></TableCell></TableRow>}
+                {data.rows.length === 0 && <TableRow><TableCell colSpan={data.types.length + 1}><EmptyState title="Tidak ada pegawai" description={sp.q || unit ? 'Ubah kata kunci atau unit.' : 'Belum ada pegawai aktif dalam cakupan Anda.'} actions={sp.q || unit ? [{ href: `?tahun=${year}`, label: 'Hapus filter' }] : undefined} /></TableCell></TableRow>}
                 {data.rows.map((r) => (
                   <TableRow key={r.employee.id}>
                     <TableCell className="stack-head pl-4 lg:pl-6"><span className="font-medium">{r.employee.fullName}</span><span className="block text-xs text-muted-foreground">{[r.employee.employeeNumber, r.employee.unit?.name].filter(Boolean).join(', ')}</span></TableCell>

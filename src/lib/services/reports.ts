@@ -165,10 +165,7 @@ export async function traceRecord(actor: Actor, employeeId: string, date: string
   return { employee: emp, date, plan, record, events: events.map(({ photoPath, ...e }) => ({ ...e, hasPhoto: !!photoPath })), raws, corrections, leave, tz };
 }
 
-// ---------------------------------------------------------------------------
 // Monitoring kehadiran harian
-// ---------------------------------------------------------------------------
-
 export const CATEGORY_LABEL: Record<string, string> = {
   HADIR: 'Hadir',
   TERLAMBAT: 'Terlambat',
@@ -221,10 +218,7 @@ export async function monitoring(actor: Actor, raw: unknown) {
   return { date, counts, rows, tz };
 }
 
-// ---------------------------------------------------------------------------
 // Rekap kalender: pegawai x tanggal dalam satu bulan
-// ---------------------------------------------------------------------------
-
 /** Kode singkat status di sel kalender. "-" = hari kerja lewat tanpa transaksi (bukan otomatis tidak hadir). */
 export const CALENDAR_CODE: Record<string, string> = {
   HADIR: 'H', TERLAMBAT: 'T', DINAS_LUAR: 'DL', IZIN: 'I', SAKIT: 'S', CUTI: 'C', TIDAK_HADIR: 'A', LIBUR: 'L', TANPA_TRANSAKSI: '-',

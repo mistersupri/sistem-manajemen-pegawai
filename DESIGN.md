@@ -18,7 +18,7 @@ Aplikasi kerja harian untuk admin kepegawaian, pimpinan, operator unit, dan pega
 | Netral: Garis | `#E2E7F0` | Batas card, pemisah baris | Senada dengan latar |
 | Teks | `#0F1B3D` / redup `#556079` | Teks utama / keterangan | 16:1 dan 6:1 di latar |
 
-Pita judul memakai gradasi navy `#0C1A45` ke biru tua `#1A3590` (satu keluarga warna, bukan biru ke ungu). Gradasi hanya ada di pita ini dan panel halaman masuk, untuk memisahkan identitas halaman dari area kerja (R-01: gradasi sebagai penanda hierarki, bukan latar seluruh halaman).
+Pita judul dan panel halaman masuk memakai navy polos `#0C1A45`, tanpa gradasi. Batas tegas antara pita navy dan area kerja terang sudah cukup memisahkan identitas halaman dari isinya.
 
 Warna status adalah skala semantik, bukan dekorasi. Semuanya berupa latar muda dengan teks gelap (minimal 6:1):
 
@@ -37,7 +37,7 @@ Warna jadwal dipilih admin dan hanya dipakai sebagai latar tipis (15%) dan garis
 ## Permukaan, radius, bayangan
 
 - Panel memakai Card shadcn: batas garis 1px dengan bayangan `shadow-sm` bawaan shadcn yang sangat tipis. Bayangan tebal (`shadow-lg`) hanya untuk elemen yang melayang: DropdownMenu, Dialog, Sheet, dan menu sel jadwal.
-- Radius mengikuti token `--radius: 0.75rem` shadcn: Card 14px (`rounded-xl`), kontrol 8–10px (`rounded-md`). Badge berbentuk pil sesuai shadcn.
+- Radius mengikuti token `--radius: 0.75rem` shadcn dan satu hierarki: Card 14px (`rounded-xl`), kontrol termasuk kolom cari, tombol, dan navigasi tampilan 8–10px (`rounded-md`/`rounded-lg`). Bentuk pil hanya untuk penanda kecil: badge, jumlah, dan switch.
 
 ## Motif identitas: garis hari kerja
 
@@ -49,14 +49,26 @@ Setiap baris absensi hari ini menampilkan **garis hari kerja**: jalur tipis dari
 - **Header** tipis di atas area kerja: tombol buka/tutup sidebar, nama instansi, dan lonceng notifikasi dengan jumlah belum dibaca.
 - **Pita judul** (`.page-head`): elemen pertama tiap halaman. Isinya breadcrumb (halaman turunan), judul, keterangan, dan aksi halaman. Token tema ditimpa di dalam pita sehingga tombol utama otomatis kuning.
 - **Area kerja** di bawah pita: card putih di atas latar terang. Lebar form dibatasi (`max-w-2xl` sampai `max-w-5xl`); tabel memakai lebar penuh.
-- Tampilan dalam satu halaman dipilih lewat navigasi pil berbasis URL (`Segmented`), sehingga bisa dibagikan dan tetap berfungsi tanpa JavaScript.
+- Tampilan dalam satu halaman dipilih lewat kontrol segmen berbasis URL (`Segmented`: wadah bergaris, item aktif biru tua, jumlah opsional), sehingga bisa dibagikan dan tetap berfungsi tanpa JavaScript.
 - Dashboard admin dibangun di sekitar keputusan pagi hari; ringkasan angka hanya satu baris, grafik tren memakai palet referensi dataviz dengan tabel data sebagai alternatif.
 - Di HP sidebar menjadi Sheet, tabel berubah menjadi daftar kartu (`.table-stack`) dengan kolom penentu di baris pertama, dan kontrol bertinggi minimal 44px.
 - Kalender jadwal bulanan: tabel bergulir horizontal dengan kolom nama tetap (sticky). Warna jadwal hanya penanda (latar tipis dan garis bawah); kodenya tetap tertulis sehingga tidak bergantung warna.
 
 ## Gerak
 
-MOTION 1: hanya transisi hover/fokus 120ms dan indikator proses (spinner) saat aksi berjalan. Tidak ada animasi masuk atau loop.
+MOTION 1: gerak hanya untuk umpan balik dan kesinambungan ruang, tidak untuk hiasan. Token di `globals.css`:
+
+| Token | Nilai | Dipakai untuk |
+|---|---|---|
+| `ease-out` | `cubic-bezier(0.23, 1, 0.32, 1)` | Elemen masuk/keluar: Dialog, AlertDialog, menu, popover, select, tooltip, hasil absen |
+| `ease-in-out` | `cubic-bezier(0.77, 0, 0.175, 1)` | Elemen yang berpindah di layar |
+| `ease-drawer` | `cubic-bezier(0.32, 0.72, 0, 1)` | Sheet (sidebar ponsel) |
+
+- Durasi UI di bawah 300 ms: menu 150–200 ms, Dialog 200 ms buka dan 150 ms tutup, Sheet 300 ms buka dan 200 ms tutup. Tidak ada `ease-in`, `transition-all`, atau `scale(0)`; elemen masuk mulai dari skala 0,95.
+- Tombol menyusut ke `scale(0.97)` saat ditekan (hanya bila gerak diizinkan).
+- Hasil absen (wajah, kiosk, dinas luar) muncul dengan `.enter-rise`: naik 6 px dan memudar dalam 200 ms lewat `@starting-style`. Ini satu-satunya animasi masuk di luar overlay, karena menandai hasil aksi yang penting.
+- Yang sengaja tidak beranimasi: navigasi bawah, sorotan menu, pengurutan dan paginasi tabel, angka dashboard, grafik. Semuanya dipakai puluhan sampai ratusan kali sehari.
+- *Reduced motion* menghapus gerak posisi dan skala, tetapi tetap memakai pudar (opacity) agar perubahan keadaan tetap terlihat.
 
 ## Tema
 
@@ -71,9 +83,9 @@ Semua komponen mengikuti [shadcn/ui](https://ui.shadcn.com/) gaya new-york-v4, d
 - `Field` + `fieldProps`: label, petunjuk, dan pesan galat per isian yang terhubung lewat `aria-describedby`. Galat dari API (`error.fields`) tampil di isian yang bersangkutan.
 - `ConfirmButton`: aksi yang mengubah data penting selalu lewat dialog konfirmasi, dengan alasan wajib bila aksinya perlu jejak (pembatalan, penonaktifan).
 - `StatusBadge`: satu peta status untuk absensi, pengajuan, sinkronisasi, perangkat, dan wajah.
-- `EmptyState`: ikon dalam lingkaran abu, judul, alasan, lalu aksi. Pesan kosong membedakan "belum ada data" dan "tidak ada hasil filter".
+- `EmptyState`: judul, penyebab, lalu satu langkah berikutnya ("Hapus filter" bila hasil tersaring kosong, aksi utama bila memang belum ada data). Tanpa lingkaran ikon dekoratif; ikon hanya bila memberi arti.
 - Status "Belum ada transaksi" selalu netral (abu), tidak pernah merah. Hanya status yang ditetapkan aturan atau petugas yang memakai warna peringatan.
-- Ikon dari Lucide.
+- Ikon dari Lucide, garis 2px seragam. Alasannya: satu set yang sudah menjadi bawaan shadcn, lengkap untuk istilah kerja (jadwal, sidik jari, wajah, perangkat), dan tidak menambah pustaka. Ikon selalu berdampingan dengan teks, kecuali tombol ikon yang punya `aria-label`.
 
 ## Logo
 
@@ -89,19 +101,17 @@ Bahan utama aplikasi ini adalah **waktu**: jam masuk, jam pulang, jadwal, dan "s
 - **Warna kategori** satu sumber (`attendance-colors.ts`) untuk batang dan grafik tren. "Belum ada transaksi" abu netral karena belum tentu tidak hadir.
 - **Beranda pegawai**: satu kartu "Absensi hari ini" dengan jam besar, garis hari, satu tombol kuning untuk aksi berikutnya, lalu aksi lain sebagai baris di bawahnya. Jadwal minggu ini sebagai strip 7 hari.
 - **Navigasi bawah** di ponsel untuk pegawai tanpa peran pengelola: Beranda, Absen, Jadwal, Koreksi, Cuti.
-- **Daftar di ponsel**: filter dilipat di balik tombol "Filter" (`CollapsibleFilters`); baris tabel dipadatkan (nama dan status di baris pertama, jam dalam satu kalimat); tabel banyak angka memakai varian `stack-grid` (tiga kolom, label di atas nilai). Navigasi pil menjadi satu baris yang bisa digeser.
+- **Daftar di ponsel**: filter dilipat di balik tombol "Filter" (`CollapsibleFilters`); baris tabel dipadatkan (nama dan status di baris pertama, jam dalam satu kalimat); tabel banyak angka memakai varian `stack-grid` (tiga kolom, label di atas nilai). Kontrol segmen menjadi satu baris yang bisa digeser.
 - **Kartu** tanpa bayangan (cukup garis), padding 16 px di ponsel dan 24 px di layar lebar. Metadata ditulis sebagai kalimat atau baris terpisah, bukan dipisah titik tengah.
-- **Keadaan halaman**: kerangka saat memuat (`loading.tsx`), halaman galat dengan langkah berikutnya, dan halaman tidak ditemukan. Animasi dinonaktifkan bila pengguna memilih *reduced motion*; grafik tidak beranimasi.
+- **Keadaan halaman**: kerangka saat memuat (`loading.tsx`), halaman galat dengan langkah berikutnya, dan halaman tidak ditemukan. Bila pengguna memilih *reduced motion*, gerak posisi dihapus dan hanya pudar yang tersisa; grafik tidak beranimasi.
 - **Halaman masuk**: panel kiri menampilkan jam server berjalan dalam zona waktu instansi, karena itu yang dipakai untuk semua absensi.
 
-## Baseline UI dan data besar (Oktober 2026)
+## Aturan antarmuka dan data besar (Oktober 2026)
 
-Aturan [baseline-ui](.claude/skills/baseline-ui/SKILL.md) berlaku untuk semua pekerjaan antarmuka berikutnya. Yang diterapkan:
-
-- **Tanpa gradien.** Pita judul dan sisi halaman masuk memakai navy polos.
-- **Tanpa letter-spacing.** `tracking-*` dihapus dari komponen dan halaman.
+- **Tanpa gradien** dan **tanpa letter-spacing** (`tracking-*`).
 - **Teks:** judul `text-wrap: balance` dan paragraf `pretty`, berlaku global lewat `globals.css`, termasuk judul dan deskripsi Card/Dialog. Angka data memakai `tabular-nums`.
-- **Gerak:** hanya `transform`/`opacity`, plus warna untuk kontrol kecil. Sidebar tidak lagi menganimasikan `width`/`left`. Tidak ada `transition-all`.
+- **Gerak:** hanya `transform`/`opacity`, plus warna untuk kontrol kecil. Sidebar tidak menganimasikan `width`/`left`. Rinciannya di bagian Gerak.
+- **Kelas bersyarat** selalu lewat `cn()`, tidak dengan template string.
 - **Konfirmasi:** aksi merusak atau tidak bisa dibatalkan selalu memakai AlertDialog: `ConfirmButton`, atau `confirmDialog()` dari `components/app/confirm-dialog.tsx` untuk menu. `window.confirm` tidak dipakai.
 - **Keadaan kosong** memberi satu langkah berikutnya: "Hapus filter" bila hasil tersaring kosong, atau aksi utama (tambah/ajukan) bila memang belum ada data.
 
@@ -120,3 +130,19 @@ Semua daftar besar memakai parameter URL yang sama sehingga tautan bisa dibagika
 ### Ukuran performa
 
 Diukur di build produksi dengan 3.000 pegawai dan sekitar 198 ribu rekap harian. Sebagian besar halaman daftar 30–180 ms. Dashboard sekitar 200 ms di layanan (sebelumnya 844 ms). Jadwal Kerja 161 ms / 1,2 MB (sebelumnya 652 ms / 7,3 MB).
+
+## Ponsel
+
+- `viewport-fit=cover`, `theme-color` navy, dan `interactive-widget=resizes-content` agar keyboard tidak menutupi isian.
+- Area bawah memberi ruang `env(safe-area-inset-bottom)` untuk navigasi bawah.
+- Sorotan ketuk bawaan browser dimatikan; tombol dan tautan memakai `touch-action: manipulation` (tanpa jeda ketuk ganda).
+- Select dan input bertulisan 16 px di ponsel agar iOS tidak memperbesar halaman.
+- Efek hover hanya untuk perangkat dengan pointer halus.
+
+## Uji data terburuk
+
+Setiap perubahan tata letak diuji di 1366, 1024, 820, dan 390 px dengan data 3.000 pegawai dan contoh terburuk: nama dan unit sangat panjang, nama satu huruf, dan nama beraksen. Grid yang berisi teks panjang memakai `grid-cols-1` (minmax(0, 1fr)) agar `truncate` bekerja. Sumbu angka grafik melebar mengikuti digit terbesar.
+
+## Skill yang dipakai
+
+Desain ini disusun dengan skill di `.claude/skills`: antislop, antislop-code, antislop-layoutmobile, emil-design-eng, apple-design, animate, animation-vocabulary, improve-animations, find-animation-opportunities, review-animations, ask-sonner, break-ui, mobile-native, pick-ui-library, dan prototype.

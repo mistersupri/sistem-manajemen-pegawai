@@ -27,7 +27,7 @@ export default async function DevicesPage() {
           <Table className="table-stack">
             <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Perangkat</TableHead><TableHead>Koneksi</TableHead><TableHead>Status</TableHead><TableHead>Sinkron terakhir</TableHead><TableHead className="text-right">Diterima / gagal</TableHead><TableHead className="pr-4 text-right lg:pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
             <TableBody>
-              {devices.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Belum ada perangkat" description="Tambahkan mesin LAN (Solution X302), impor berkas USB (P280), atau mesin simulasi untuk mencoba." /></TableCell></TableRow>}
+              {devices.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Belum ada perangkat" description="Tambahkan mesin LAN (Solution X302), impor berkas USB (P280), atau mesin simulasi untuk mencoba." actions={[{ href: '/perangkat/titik-absen', label: 'Pakai titik absen wajah' }]} /></TableCell></TableRow>}
               {devices.map((d) => {
                 const a = ADAPTERS[d.adapter];
                 const run = d.syncRuns[0];

@@ -10,7 +10,7 @@ export const metadata = { title: 'Daftarkan wajah saya' };
 
 export default async function SelfFacePage() {
   const actor = await requirePage(['biometric.enroll_self']);
-  if (!actor.employeeId) return <PageBody><EmptyState title="Akun tidak terhubung dengan data pegawai" /></PageBody>;
+  if (!actor.employeeId) return <PageBody><EmptyState title="Akun tidak terhubung dengan data pegawai" description="Pendaftaran wajah hanya untuk akun pegawai." actions={[{ href: '/dashboard', label: 'Kembali ke beranda' }]} /></PageBody>;
   const [s, bio, emp] = await Promise.all([getSettings(), biometricStatus(actor.employeeId), prisma.employee.findUniqueOrThrow({ where: { id: actor.employeeId } })]);
   const current = bio.find((b) => b.status !== 'REVOKED');
   return (

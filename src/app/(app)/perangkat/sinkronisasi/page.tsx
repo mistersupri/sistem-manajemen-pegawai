@@ -45,7 +45,7 @@ export default async function SyncPage({ searchParams }: { searchParams: Promise
                   </li>
                 ))}
               </ul>
-            ) : <EmptyState title="Semua ID mesin sudah terhubung" />}
+            ) : <EmptyState title="Semua ID mesin sudah terhubung" description="Setiap scan dari mesin sudah masuk ke rekap pegawai yang benar." />}
           </Card>
         </div>
         <Card className="gap-0 py-0">
@@ -81,7 +81,7 @@ export default async function SyncPage({ searchParams }: { searchParams: Promise
                 </TableRow>
               ))}</TableBody>
             </Table>
-          ) : <EmptyState filtered={!!(sp.status || sp.mesin)} title={sp.status || sp.mesin ? 'Tidak ada sinkronisasi yang cocok' : 'Belum ada sinkronisasi'} description={sp.status || sp.mesin ? undefined : 'Tarik data dari halaman perangkat, atau impor berkas USB di atas.'} actions={sp.status || sp.mesin ? [{ href: '/perangkat/sinkronisasi', label: 'Hapus filter' }] : [{ href: '/perangkat', label: 'Buka daftar perangkat' }]} />}
+          ) : <EmptyState title={sp.status || sp.mesin ? 'Tidak ada sinkronisasi yang cocok' : 'Belum ada sinkronisasi'} description={sp.status || sp.mesin ? undefined : 'Tarik data dari halaman perangkat, atau impor berkas USB di atas.'} actions={sp.status || sp.mesin ? [{ href: '/perangkat/sinkronisasi', label: 'Hapus filter' }] : [{ href: '/perangkat', label: 'Buka daftar perangkat' }]} />}
           <Pager total={data.total} page={data.page} pageSize={data.pageSize} params={params} />
         </Card>
       </PageBody>

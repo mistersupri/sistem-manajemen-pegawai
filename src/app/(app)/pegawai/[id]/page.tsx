@@ -16,6 +16,7 @@ import { getSettings } from '@/lib/settings';
 import { METHOD_LABEL } from '@/lib/attendance/engine';
 import { addDays, fmtJam, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, todayIn, toDbDate } from '@/lib/time';
 import { EmployeeActions } from './actions';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Detail pegawai' };
 
@@ -55,7 +56,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
         <nav className="mt-5 flex gap-1 overflow-x-auto" aria-label="Bagian detail pegawai">
           {TABS.map(([k, label]) => (
             <Link key={k} href={`?tab=${k}`} aria-current={tab === k ? 'page' : undefined}
-              className={`inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-medium ${tab === k ? 'bg-highlight text-highlight-foreground' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}>{label}</Link>
+              className={cn('inline-flex min-h-10 shrink-0 items-center rounded-md px-3 text-sm font-medium max-md:min-h-11', tab === k ? 'bg-highlight text-highlight-foreground' : 'text-white/80 hover:bg-white/10 hover:text-white')}>{label}</Link>
           ))}
         </nav>
       </PageHeader>
@@ -137,7 +138,7 @@ async function AttendanceTab({ id, tz }: { id: string; tz: string }) {
               <TableCell data-label="Keterangan" className="pr-6 whitespace-normal text-muted-foreground">{[r.reviewReason, r.note].filter(Boolean).join('; ')}</TableCell>
             </TableRow>
           ))}</TableBody></Table>
-      ) : <EmptyState title="Belum ada absensi 31 hari terakhir" />}
+      ) : <EmptyState title="Belum ada absensi 31 hari terakhir" description="Catatan muncul setelah pegawai absen lewat wajah, mesin, atau input petugas." />}
     </Card>
   );
 }
@@ -167,7 +168,7 @@ async function ScheduleTab({ id, tz }: { id: string; tz: string }) {
 }
 
 async function HistoryTab({ id, tz, allowed }: { id: string; tz: string; allowed: boolean }) {
-  if (!allowed) return <EmptyState title="Riwayat perubahan hanya untuk petugas kepegawaian dan auditor" />;
+  if (!allowed) return <EmptyState title="Riwayat perubahan hanya untuk petugas kepegawaian dan auditor" description="Akun Anda tidak punya izin melihat audit data pegawai." />;
   const rows = await prisma.auditLog.findMany({ where: { OR: [{ entityId: id }, { meta: { path: ['employeeId'], equals: id } }] }, orderBy: { createdAt: 'desc' }, take: 100 });
   return (
     <Card className="gap-0 py-0">
@@ -179,7 +180,7 @@ async function HistoryTab({ id, tz, allowed }: { id: string; tz: string; allowed
             {r.after ? <pre className="overflow-x-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">{JSON.stringify(r.after, null, 1)}</pre> : null}
           </li>
         ))}</ul>
-      ) : <EmptyState title="Belum ada riwayat" />}
+      ) : <EmptyState title="Belum ada riwayat" description="Setiap perubahan data pegawai ini akan tercatat di sini beserta pelakunya." />}
     </Card>
   );
 }

@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { api, newKey } from './api-client';
 import { blinkDetector, detect, draw, fmtClock, fmtDateLong, loadFaceApi, qualityOf, serverClock, startCamera, stopCamera, toArray, type Detection } from '@/lib/face-client';
+import { cn } from '@/lib/utils';
 
-interface Res { outcome: string; message: string; time?: string; status?: string; lateMinutes?: number; similarity?: number | null; schedule?: string | null; employee?: { name: string; employeeNumber: string | null; position: string | null } }
+interface Res { at?: number; outcome: string; message: string; time?: string; status?: string; lateMinutes?: number; similarity?: number | null; schedule?: string | null; employee?: { name: string; employeeNumber: string | null; position: string | null } }
 
 interface KioskProps {
   org: string; logo: string | null; enabled: boolean; requireLiveness: boolean; enrolled: number;
@@ -82,13 +83,13 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled, endpoint 
                     direction: modeRef.current, descriptor: toArray(d.descriptor), quality: qualityOf(video.current, d),
                     liveness: requireLiveness ? { method: 'kedip', passed: true } : undefined, idempotencyKey: newKey(), clientTime: new Date().toISOString(),
                   });
-                  setResult(r);
+                  setResult({ ...r, at: Date.now() });
                   const ok = r.outcome === 'SUCCESS';
                   setLog((l) => [{ t: fmtClock(c.now(), c.tz).slice(0, 5), text: ok ? `${r.employee?.name}, ${modeRef.current === 'IN' ? 'masuk' : 'pulang'} ${r.time}` : r.message.split('.')[0], ok }, ...l].slice(0, 30));
                   setStatus(ok ? `Terima kasih, ${r.employee?.name}.` : r.message);
                   pauseUntil = Date.now() + (ok ? 4000 : 3500);
                 } catch (e) {
-                  setResult({ outcome: 'ERROR', message: (e as Error).message });
+                  setResult({ at: Date.now(), outcome: 'ERROR', message: (e as Error).message });
                   pauseUntil = Date.now() + 3500;
                 }
                 blink.reset();
@@ -129,7 +130,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled, endpoint 
               <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
                 {(['IN', 'OUT'] as const).map((m) => (
                   <button key={m} type="button" aria-pressed={mode === m} onClick={() => pick(m)}
-                    className={`min-h-12 rounded-md text-base font-medium transition-colors ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                    className={cn('min-h-12 rounded-md text-base font-medium transition-[color,background-color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]', mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>
                     {m === 'IN' ? 'Absen masuk' : 'Absen pulang'}
                   </button>
                 ))}
@@ -142,7 +143,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled, endpoint 
               <div className="camera-status" aria-live="polite">{status}</div>
             </div>
             {requireLocation && (
-              <p className={`mt-3 flex items-center gap-2 text-sm ${gpsState === 'denied' ? 'font-medium text-[#ff9b94]' : 'text-muted-foreground'}`} aria-live="polite">
+              <p className={cn('mt-3 flex items-center gap-2 text-sm', gpsState === 'denied' ? 'font-medium text-[#ff9b94]' : 'text-muted-foreground')} aria-live="polite">
                 <MapPin className="size-4 shrink-0" aria-hidden />
                 {gpsState === 'ok' ? `Lokasi aktif (akurasi sekitar ${gpsAcc ?? '?'} m).` : gpsState === 'denied' ? 'Izin lokasi ditolak. Absen dari tautan ini wajib di area kantor; aktifkan lokasi lalu muat ulang.' : 'Mengambil lokasi...'}
               </p>
@@ -159,7 +160,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled, endpoint 
           <div className="grid gap-4">
             <div aria-live="assertive">
               {result ? (
-                <div data-result={ok ? 'ok' : 'gagal'} className={`flex items-center gap-4 rounded-xl border-2 bg-card p-6 ${ok ? 'border-[#7ee2a8]' : 'border-[#ff9b94]'}`}>
+                <div key={result.at} data-result={ok ? 'ok' : 'gagal'} className={cn('enter-rise flex items-center gap-4 rounded-xl border-2 bg-card p-6', ok ? 'border-[#7ee2a8]' : 'border-[#ff9b94]')}>
                   {ok ? <CircleCheck className="size-14 shrink-0 text-[#7ee2a8]" aria-hidden /> : <CircleX className="size-14 shrink-0 text-[#ff9b94]" aria-hidden />}
                   {ok ? (
                     <div>

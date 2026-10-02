@@ -58,7 +58,7 @@ async function UsersTab({ sp, actorId, actor }: { sp: Record<string, string | un
       <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1.2fr_1fr_1fr_auto] lg:items-end" aria-label="Filter pengguna">
         <input type="hidden" name="tab" value="pengguna" />
         <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
-        <div className="grid gap-2"><Label htmlFor="q">Cari</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Username, email, atau nama" className="rounded-full pl-9" /></div></div>
+        <div className="grid gap-2"><Label htmlFor="q">Cari</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Username, email, atau nama" className="pl-9" /></div></div>
         <div className="grid gap-2"><Label htmlFor="role">Peran</Label><NativeSelect id="role" name="role" defaultValue={sp.role ?? ''}><NativeSelectOption value="">Semua peran</NativeSelectOption>{roles.map((r) => <NativeSelectOption key={r.id} value={r.code}>{r.name}</NativeSelectOption>)}</NativeSelect></div>
         <div className="grid gap-2"><Label htmlFor="status">Status</Label><NativeSelect id="status" name="status" defaultValue={sp.status ?? ''}><NativeSelectOption value="">Semua</NativeSelectOption><NativeSelectOption value="aktif">Aktif</NativeSelectOption><NativeSelectOption value="nonaktif">Nonaktif</NativeSelectOption><NativeSelectOption value="terkunci">Terkunci</NativeSelectOption></NativeSelect></div>
         <div className="grid gap-2"><Label htmlFor="mfa">MFA</Label><NativeSelect id="mfa" name="mfa" defaultValue={sp.mfa ?? ''}><NativeSelectOption value="">Semua</NativeSelectOption><NativeSelectOption value="ya">Aktif</NativeSelectOption><NativeSelectOption value="tidak">Tidak aktif</NativeSelectOption></NativeSelect></div>
@@ -76,7 +76,7 @@ async function UsersTab({ sp, actorId, actor }: { sp: Record<string, string | un
             <TableHead>Status</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {users.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada pengguna yang cocok" filtered={filtered} description="Ubah kata kunci atau filter." actions={[{ href: qs({ tab: 'pengguna' }), label: 'Hapus filter' }]} /></TableCell></TableRow>}
+            {users.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada pengguna yang cocok" description="Ubah kata kunci atau filter." actions={[{ href: qs({ tab: 'pengguna' }), label: 'Hapus filter' }]} /></TableCell></TableRow>}
             {users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="stack-head pl-4 lg:pl-6"><span className="font-medium">{u.username}</span><span className="block text-xs text-muted-foreground">{u.employee ? `${u.employee.fullName}${u.employee.unit ? `, ${u.employee.unit.name}` : ''}` : 'Bukan akun pegawai'}</span></TableCell>

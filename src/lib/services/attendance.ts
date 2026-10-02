@@ -168,7 +168,6 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
   const employee = employeeId ? await prisma.employee.findUnique({ where: { id: employeeId } }) : null;
   if (outcome === 'SUCCESS' && (!employee || !employee.isActive || employee.deletedAt)) fail('INACTIVE');
 
-  // Lokasi
   const hasGps = input.latitude != null && input.longitude != null;
   if (hasGps && s['geo.officeLat'] != null && s['geo.officeLng'] != null) {
     distanceToOffice = Math.round(haversineM(input.latitude!, input.longitude!, Number(s['geo.officeLat']), Number(s['geo.officeLng'])));
@@ -184,7 +183,6 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
     else if (!input.note) { throw unprocessable('Isi tujuan atau keterangan tugas.', { note: 'Wajib diisi' }); }
   }
 
-  // Jadwal dan duplikasi
   let workDate: string | null = null;
   if (employeeId) workDate = await resolveWorkDate(employeeId, now, s);
   if (outcome === 'SUCCESS' && employeeId && workDate) {
@@ -242,10 +240,7 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
   return { ...base, status: rec?.status, lateMinutes: rec?.lateMinutes, earlyLeaveMinutes: rec?.earlyLeaveMinutes, schedule: plan.schedule ? `${plan.schedule.name}, ${plan.schedule.checkIn} sampai ${plan.schedule.checkOut}` : null };
 }
 
-// ---------------------------------------------------------------------------
 // Input manual oleh petugas (metode alternatif bila wajah/kamera/mesin bermasalah)
-// ---------------------------------------------------------------------------
-
 export const manualInput = z.object({
   employeeId: z.string().uuid(),
   workDate: z.string().refine(isValidDate, 'Tanggal tidak valid'),

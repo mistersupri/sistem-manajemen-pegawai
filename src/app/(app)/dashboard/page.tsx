@@ -25,6 +25,7 @@ import { CATEGORY_LABEL } from '@/lib/services/reports';
 import { METHOD_LABEL, STATUS_LABEL } from '@/lib/attendance/engine';
 import { BULAN, HARI_PENDEK, fmtJam, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, isValidDate, zonedParts } from '@/lib/time';
 import { OUTCOME_MESSAGE, type Outcome } from '@/lib/services/attendance';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Dashboard' };
 
@@ -79,7 +80,7 @@ async function AdminDashboard({ sp }: { actorId: string; sp: Record<string, stri
     { n: d.pending.biometrics, label: 'Pendaftaran wajah', href: '/pegawai?face=menunggu', show: can(actor, 'biometric.manage') },
   ].filter((x) => x.show);
   const decisions = (className: string) => actions.length > 0 && (
-<Card className={`gap-3 ${className}`}>
+<Card className={cn('gap-3', className)}>
               <CardHeader><CardTitle>Menunggu keputusan Anda</CardTitle></CardHeader>
               <CardContent>
                 <ul className="-mx-2 grid">
@@ -297,12 +298,12 @@ async function EmployeeDashboard() {
               <dl className="grid grid-cols-2 gap-4">
                 <div>
                   <dt className="text-sm text-muted-foreground">Masuk</dt>
-                  <dd className={`clock mt-1 text-[2.75rem] ${checkIn ? '' : 'text-muted-foreground/50'}`}>{checkIn ?? '--:--'}</dd>
+                  <dd className={cn('clock mt-1 text-[2.75rem]', !checkIn && 'text-muted-foreground')}>{checkIn ?? '--:--'}</dd>
                   {rec && rec.lateMinutes > 0 && <dd className="mt-1 text-sm font-medium text-[#b4501f]">Terlambat {rec.lateMinutes} menit</dd>}
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Pulang</dt>
-                  <dd className={`clock mt-1 text-[2.75rem] ${checkOut ? '' : 'text-muted-foreground/50'}`}>{checkOut ?? '--:--'}</dd>
+                  <dd className={cn('clock mt-1 text-[2.75rem]', !checkOut && 'text-muted-foreground')}>{checkOut ?? '--:--'}</dd>
                   {rec && rec.earlyLeaveMinutes > 0 && <dd className="mt-1 text-sm font-medium text-[#b4501f]">Pulang awal {rec.earlyLeaveMinutes} menit</dd>}
                 </div>
               </dl>
@@ -352,7 +353,7 @@ async function EmployeeDashboard() {
                   const isToday = u.date === d.today;
                   const off = u.isOffDay || !u.schedule;
                   return (
-                    <li key={u.date} aria-current={isToday ? 'date' : undefined} className={`rounded-lg border px-0.5 py-2 ${isToday ? 'border-primary bg-accent' : off ? 'bg-muted/60' : ''}`} title={u.holidayName ?? undefined}>
+                    <li key={u.date} aria-current={isToday ? 'date' : undefined} className={cn('rounded-lg border px-0.5 py-2', isToday ? 'border-primary bg-accent' : off && 'bg-muted/60')} title={u.holidayName ?? undefined}>
                       <span className="block text-xs text-muted-foreground">{HARI_PENDEK[dt.getUTCDay()]}</span>
                       <span className="block text-lg font-bold tabular">{dt.getUTCDate()}</span>
                       <span className="block text-[11px] leading-tight text-muted-foreground tabular">{off ? 'Libur' : u.schedule!.checkIn.replace(':', '.')}</span>

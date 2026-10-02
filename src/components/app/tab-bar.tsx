@@ -18,7 +18,7 @@ export function TabBar({ items }: { items: { href: string; label: string; icon: 
           const active = i.href === '/dashboard' ? pathname === i.href : pathname === i.href || pathname.startsWith(i.href + '/');
           return (
             <li key={i.href}>
-              <Link href={i.href} aria-current={active ? 'page' : undefined} className={cn('relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium', active ? 'text-primary' : 'text-muted-foreground')}>
+              <Link href={i.href} aria-current={active ? 'page' : undefined} className={cn('relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium active:bg-accent', active ? 'text-primary' : 'text-muted-foreground')}>
                 {active && <span className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-primary" aria-hidden />}
                 <Icon className="size-5" aria-hidden />
                 {i.label}

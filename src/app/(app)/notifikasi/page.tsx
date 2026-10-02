@@ -21,7 +21,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       <PageBody className="grid max-w-3xl gap-4">
         <Segmented label="Filter" current={unreadOnly ? 'belum' : 'semua'} className="w-fit" items={[{ key: 'semua', label: 'Semua', href: '?' }, { key: 'belum', label: `Belum dibaca (${data.unread})`, href: '?lihat=belum' }]} />
         <div className="rounded-xl border bg-card">
-          {data.rows.length === 0 ? <EmptyState title={unreadOnly ? 'Semua notifikasi sudah dibaca' : 'Belum ada notifikasi'} /> : (
+          {data.rows.length === 0 ? <EmptyState title={unreadOnly ? 'Semua notifikasi sudah dibaca' : 'Belum ada notifikasi'} description={unreadOnly ? undefined : 'Pemberitahuan pengajuan, persetujuan, absensi, dan perangkat akan muncul di sini.'} actions={unreadOnly ? [{ href: '?', label: 'Lihat semua notifikasi' }] : undefined} /> : (
             <ul className="divide-y">
               {data.rows.map((n) => (
                 <li key={n.id}>

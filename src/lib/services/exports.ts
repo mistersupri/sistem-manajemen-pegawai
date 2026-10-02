@@ -116,10 +116,7 @@ function recapPdf(org: string, title: string, rows: RecapRow[]): Promise<Buffer>
   });
 }
 
-// ---------------------------------------------------------------------------
 // Pegawai
-// ---------------------------------------------------------------------------
-
 const CAL_FILL: Record<string, string> = { H: 'FFDCF3E3', T: 'FFFDE7D7', DL: 'FFDCE6FB', I: 'FFD8EFEC', S: 'FFD8EFEC', C: 'FFD8EFEC', A: 'FFF8D9D9', L: 'FFEEF1F6' };
 
 /** Rekap kalender satu bulan: satu baris per pegawai, satu kolom per tanggal (kode, jam masuk, jam pulang). */

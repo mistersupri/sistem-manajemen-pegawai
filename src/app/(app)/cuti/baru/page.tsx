@@ -12,8 +12,8 @@ export const metadata = { title: 'Ajukan cuti/izin' };
 export default async function NewLeave() {
   const actor = await requirePage(['leave.request']);
   const s = await getSettings();
-  if (!actor.employeeId) return <PageBody><EmptyState title="Akun tidak terhubung dengan data pegawai" /></PageBody>;
-  if (!s['modules.leave']) return <PageBody><EmptyState title="Modul cuti dan izin dinonaktifkan" /></PageBody>;
+  if (!actor.employeeId) return <PageBody><EmptyState title="Akun tidak terhubung dengan data pegawai" description="Pengajuan cuti dan izin hanya untuk akun pegawai." actions={[{ href: '/cuti', label: 'Kembali ke Cuti & Izin' }]} /></PageBody>;
+  if (!s['modules.leave']) return <PageBody><EmptyState title="Modul cuti dan izin dinonaktifkan" description="Admin menonaktifkan pengajuan cuti dan izin di Pengaturan. Riwayat pengajuan tetap bisa dilihat." actions={[{ href: '/cuti', label: 'Lihat riwayat pengajuan' }]} /></PageBody>;
   const today = todayIn(s['org.timezone']);
   const year = Number(today.slice(0, 4));
   const [emp, types, balances] = await Promise.all([

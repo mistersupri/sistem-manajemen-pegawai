@@ -9,7 +9,7 @@ export const metadata = { title: 'Ajukan koreksi' };
 
 export default async function NewCorrection({ searchParams }: { searchParams: Promise<{ tanggal?: string }> }) {
   const actor = await requirePage(['correction.request']);
-  if (!actor.employeeId) return <PageBody><EmptyState title="Akun tidak terhubung dengan data pegawai" /></PageBody>;
+  if (!actor.employeeId) return <PageBody><EmptyState title="Akun tidak terhubung dengan data pegawai" description="Pengajuan koreksi hanya untuk akun pegawai. Petugas mengoreksi absensi pegawai dari halaman rincian rekap." actions={[{ href: '/absensi/koreksi', label: 'Kembali ke koreksi' }]} /></PageBody>;
   const s = await getSettings();
   const today = todayIn(s['org.timezone']);
   const t = (await searchParams).tanggal;

@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Field, fieldProps } from './field';
+import { cn } from '@/lib/utils';
 import { api, newKey } from './api-client';
 import { capture, detect, fmtClock, fmtDateLong, getLocation, loadFaceApi, qualityOf, reverseGeocode, serverClock, startCamera, stopCamera, toArray, type Detection } from '@/lib/face-client';
 
@@ -163,10 +164,10 @@ export function FieldDuty({ employee = null, org, storePhoto, geocode, endpoint 
           </Field>
           <fieldset>
             <legend className="mb-2 text-sm font-medium">Jenis absen</legend>
-            <div className="grid grid-cols-2 gap-1 rounded-full border bg-card p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-lg border bg-card p-1">
               {(['IN', 'OUT'] as const).map((d) => (
                 <button key={d} type="button" aria-pressed={direction === d} onClick={() => setDirection(d)}
-                  className={`min-h-10 rounded-full text-sm font-medium ${direction === d ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                  className={cn('min-h-11 rounded-md text-sm font-medium transition-[color,background-color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]', direction === d ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground')}>
                   {d === 'IN' ? 'Masuk' : 'Pulang'}
                 </button>
               ))}
@@ -184,7 +185,7 @@ export function FieldDuty({ employee = null, org, storePhoto, geocode, endpoint 
           )}
           {!storePhoto && <p className="text-xs text-muted-foreground">Pengaturan privasi instansi: foto tidak disimpan di server, hanya hasil verifikasi dan lokasi.</p>}
           <div aria-live="polite">
-            {result && <Alert variant={result.ok ? 'success' : 'destructive'}><AlertTitle>{result.title}</AlertTitle><AlertDescription>{result.message}</AlertDescription></Alert>}
+            {result && <Alert key={`${result.title}|${result.message}`} variant={result.ok ? 'success' : 'destructive'} className="enter-rise"><AlertTitle>{result.title}</AlertTitle><AlertDescription>{result.message}</AlertDescription></Alert>}
           </div>
         </CardContent>
       </Card>

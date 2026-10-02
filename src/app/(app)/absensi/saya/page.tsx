@@ -52,7 +52,7 @@ export default async function MyAttendance({ searchParams }: { searchParams: Pro
         }
       />
       <PageBody className="grid gap-6">
-        {!emp.isActive ? <EmptyState title="Status pegawai nonaktif" /> : !s['methods.faceSelf'] ? (
+        {!emp.isActive ? <EmptyState title="Status pegawai nonaktif" description="Absensi tidak bisa dicatat untuk pegawai nonaktif. Hubungi admin kepegawaian bila ini keliru." /> : !s['methods.faceSelf'] ? (
           <Card><CardContent><EmptyState icon={ScanFace} title="Absen wajah dari perangkat pribadi sedang dinonaktifkan" description="Gunakan kiosk wajah atau mesin absensi di kantor. Bila bertugas di luar, gunakan absen dinas luar." /></CardContent></Card>
         ) : !face ? (
           <Card><CardContent><EmptyState icon={ScanFace} title="Wajah Anda belum terdaftar" description="Daftarkan wajah satu kali untuk bisa absen dari perangkat ini. Anda tetap bisa absen lewat mesin atau petugas." actions={[{ href: '/absensi/saya/wajah', label: 'Daftarkan wajah', primary: true }]} /></CardContent></Card>
@@ -87,7 +87,7 @@ export default async function MyAttendance({ searchParams }: { searchParams: Pro
                 );
               })}</TableBody>
             </Table>
-          ) : <EmptyState title="Belum ada data di bulan ini" />}
+          ) : <EmptyState title="Belum ada data di bulan ini" description="Riwayat muncul setelah absen pertama bulan ini, lewat wajah, mesin, atau petugas." />}
         </Card>
       </PageBody>
     </>

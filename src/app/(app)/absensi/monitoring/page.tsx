@@ -10,6 +10,7 @@ import { PageBody, PageHeader } from '@/components/app/page-header';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
 import { Dayline } from '@/components/app/dayline';
+import { Segmented } from '@/components/app/segmented';
 import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
 import { clampPage, listSchema, sortRows } from '@/lib/list';
 import { requirePage } from '@/lib/guard';
@@ -61,25 +62,17 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
           <div className="grid gap-2"><Label htmlFor="tanggal">Tanggal</Label><Input id="tanggal" name="tanggal" type="date" defaultValue={d.date} /></div>
           <div className="grid gap-2"><Label htmlFor="unit">Unit kerja</Label><NativeSelect id="unit" name="unit" defaultValue={sp.unit ?? ''}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></div>
           <div className="grid gap-2"><Label htmlFor="metode">Metode</Label><NativeSelect id="metode" name="metode" defaultValue={sp.metode ?? ''}><NativeSelectOption value="">Semua metode</NativeSelectOption>{Object.entries(METHOD_LABEL).map(([k, v]) => <NativeSelectOption key={k} value={k}>{v}</NativeSelectOption>)}</NativeSelect></div>
-          <div className="grid gap-2"><Label htmlFor="q">Cari pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama atau NIP" className="rounded-full pl-9" /></div></div>
+          <div className="grid gap-2"><Label htmlFor="q">Cari pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama atau NIP" className="pl-9" /></div></div>
           <input type="hidden" name="kategori" value={sp.kategori ?? ''} />
           <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
           <Button type="submit">Terapkan</Button>
         </form>
         </CollapsibleFilters>
 
-        <nav className="flex max-w-full gap-1 overflow-x-auto rounded-full border bg-card p-1 [scrollbar-width:none] md:w-fit" aria-label="Kategori kehadiran">
-          {[['', 'Semua'], ...Object.entries(CATEGORY_LABEL)].map(([k, label]) => {
-            const active = (sp.kategori ?? '') === k;
-            const n = k ? d.counts[k] ?? 0 : Object.values(d.counts).reduce((a, b) => a + b, 0);
-            return (
-              <Link key={k || 'all'} href={base(k || undefined)} aria-current={active ? 'page' : undefined}
-                className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-medium whitespace-nowrap ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                {label}<span className={`rounded-full px-1.5 text-xs tabular ${active ? 'bg-white/20' : 'bg-muted'}`}>{n}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        <Segmented label="Kategori kehadiran" current={sp.kategori ?? ''} className="md:w-fit"
+          items={[['', 'Semua'], ...Object.entries(CATEGORY_LABEL)].map(([k, label]) => ({
+            key: k, label, href: base(k || undefined), count: k ? d.counts[k] ?? 0 : Object.values(d.counts).reduce((a, b) => a + b, 0),
+          }))} />
 
         <div className="rounded-xl border bg-card">
           <TableToolbar {...sortProps} sorts={[{ value: 'nama', label: 'Nama' }, { value: 'masuk', label: 'Jam masuk' }, { value: 'terlambat', label: 'Menit terlambat' }, { value: 'status', label: 'Status' }, { value: 'unit', label: 'Unit' }]}>
@@ -95,7 +88,7 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
               <TableHead className="pr-4 lg:pr-6">Garis hari kerja</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState filtered={!!(sp.kategori || sp.q || sp.unit || sp.metode)} title="Tidak ada pegawai pada kategori ini" actions={sp.kategori || sp.q || sp.unit || sp.metode ? [{ href: `/absensi/monitoring?tanggal=${d.date}`, label: 'Hapus filter' }] : undefined} /></TableCell></TableRow>}
+              {rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada pegawai pada kategori ini" actions={sp.kategori || sp.q || sp.unit || sp.metode ? [{ href: `/absensi/monitoring?tanggal=${d.date}`, label: 'Hapus filter' }] : undefined} /></TableCell></TableRow>}
               {rows.map(({ employee: e, plan: p, record: r, category }) => (
                 <TableRow key={e.id}>
                   <TableCell className="stack-head pl-4 lg:pl-6">

@@ -31,7 +31,7 @@ export default async function UnitsPage() {
       <PageHeader title="Unit Kerja" description="Struktur organisasi. Hak akses operator dan pimpinan unit mencakup unit beserta sub-unitnya." crumbs={[{ label: 'Pengaturan' }, { label: 'Unit Kerja' }]} actions={manage ? <UnitForm parents={parents} canRoot={canRoot} /> : undefined} />
       <PageBody className="max-w-4xl">
         <Card className="py-0">
-          {flat.length === 0 ? <EmptyState title="Belum ada unit kerja" /> : (
+          {flat.length === 0 ? <EmptyState title="Belum ada unit kerja" description="Pegawai, jadwal, dan cakupan peran dikelompokkan per unit. Tambahkan unit pertama dengan tombol di atas." /> : (
             <ul className="divide-y" aria-label="Struktur unit kerja">
               {flat.map(({ u, depth }) => (
                 <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 py-2 pr-4" style={{ paddingLeft: `${1 + depth * 1.5}rem` }}>

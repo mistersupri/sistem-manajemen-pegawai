@@ -55,7 +55,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <Table className="table-stack">
             <TableHeader><TableRow><SortableHead label="Waktu" value="waktu" {...sortProps} firstDir="desc" className="pl-4 lg:pl-6" /><SortableHead label="Pelaku" value="pelaku" {...sortProps} /><SortableHead label="Aksi" value="aksi" {...sortProps} /><TableHead>Data</TableHead><TableHead>Hasil</TableHead><TableHead className="pr-4 lg:pr-6">Rincian</TableHead></TableRow></TableHeader>
             <TableBody>
-              {data.rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada catatan" filtered={filtered} description={filtered ? 'Ubah kata kunci, area, atau rentang tanggal.' : undefined} actions={filtered ? [{ href: '/pengaturan/audit', label: 'Hapus filter' }] : undefined} /></TableCell></TableRow>}
+              {data.rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada catatan" description={filtered ? 'Ubah kata kunci, area, atau rentang tanggal.' : undefined} actions={filtered ? [{ href: '/pengaturan/audit', label: 'Hapus filter' }] : undefined} /></TableCell></TableRow>}
               {data.rows.map((a) => (
                 <TableRow key={a.id} className="align-top">
                   <TableCell className="stack-head pl-4 tabular lg:pl-6">{fmtWaktu(a.createdAt, tz)}</TableCell>

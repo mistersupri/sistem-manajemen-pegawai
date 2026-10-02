@@ -60,7 +60,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[2fr_1.4fr_1fr_1fr_auto] md:items-end" aria-label="Cari dan filter pegawai">
           <div className="grid gap-2">
             <Label htmlFor="q">Cari</Label>
-            <div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama, NIP, jabatan, atau ID mesin" className="rounded-full pl-9" /></div>
+            <div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama, NIP, jabatan, atau ID mesin" className="pl-9" /></div>
           </div>
           <div className="grid gap-2"><Label htmlFor="unitId">Unit kerja</Label>
             <NativeSelect id="unitId" name="unitId" defaultValue={sp.unitId ?? ''}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect>
@@ -110,7 +110,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
               {data.rows.length === 0 && (
                 <TableRow><TableCell colSpan={7}>
                   {filtered
-                    ? <EmptyState filtered title="Tidak ada pegawai yang cocok" description="Coba kata kunci lain atau hapus filter." actions={[{ href: '/pegawai', label: 'Tampilkan semua pegawai' }]} />
+                    ? <EmptyState title="Tidak ada pegawai yang cocok" description="Coba kata kunci lain atau hapus filter." actions={[{ href: '/pegawai', label: 'Tampilkan semua pegawai' }]} />
                     : <EmptyState title="Belum ada data pegawai" description="Tambahkan satu per satu atau impor dari Excel." actions={can(actor, 'employee.write') ? [{ href: '/pegawai/baru', label: 'Tambah pegawai', primary: true }, { href: '/pegawai/impor', label: 'Impor dari Excel' }] : undefined} />}
                 </TableCell></TableRow>
               )}

@@ -103,7 +103,7 @@ export function FaceCheck({ suggested, requireLiveness, wantGps }: { suggested: 
           <div aria-live="polite">
             {busy && <Alert><AlertDescription>Memverifikasi wajah...</AlertDescription></Alert>}
             {result && (
-              <Alert variant={ok ? 'success' : 'destructive'}>
+              <Alert variant={ok ? 'success' : 'destructive'} className="enter-rise">
                 <AlertTitle>{ok ? `Tercatat pukul ${result.time}` : 'Belum tercatat'}</AlertTitle>
                 <AlertDescription>
                   <p>{ok ? `Status: ${result.status === 'TERLAMBAT' ? `terlambat ${result.lateMinutes} menit` : result.status === 'DINAS_LUAR' ? 'dinas luar' : 'hadir'}.` : result.message}</p>

@@ -74,7 +74,7 @@ export default async function DeviceDetail({ params }: { params: Promise<{ id: s
                 </TableRow>
               ))}</TableBody>
             </Table>
-          ) : <EmptyState title="Belum ada sinkronisasi" />}
+          ) : <EmptyState title="Belum ada sinkronisasi" description="Riwayat muncul setelah tarik data pertama, baik terjadwal maupun lewat tombol Tarik sekarang." />}
         </Card>
       </PageBody>
     </>

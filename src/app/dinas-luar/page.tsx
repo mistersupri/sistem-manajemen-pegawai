@@ -33,7 +33,7 @@ export default async function FieldDutyStandalone() {
         </div>
       </header>
       <div className="mx-auto max-w-6xl px-4 py-6 lg:px-6">
-        {!emp ? <EmptyState title="Akun tidak terhubung dengan data pegawai" />
+        {!emp ? <EmptyState title="Akun tidak terhubung dengan data pegawai" description="Absen dinas luar hanya untuk akun pegawai. Minta admin kepegawaian menghubungkan akun ini ke data Anda." actions={[{ href: '/dashboard', label: 'Kembali ke beranda' }]} />
           : !s['methods.fieldDuty'] ? <EmptyState title="Absen dinas luar sedang dinonaktifkan" description="Ajukan dinas luar lewat menu Cuti & Izin, atau hubungi admin kepegawaian." actions={[{ href: '/cuti/baru', label: 'Ajukan dinas luar' }]} />
           : !face ? <EmptyState title="Wajah Anda belum terdaftar atau belum diverifikasi" description="Foto dinas luar dicocokkan dengan wajah terdaftar. Sementara itu, ajukan dinas luar lewat menu Cuti & Izin." actions={[{ href: '/absensi/saya/wajah', label: 'Daftarkan wajah', primary: true }, { href: '/cuti/baru', label: 'Ajukan dinas luar' }]} />
           : (

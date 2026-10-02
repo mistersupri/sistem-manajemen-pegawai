@@ -43,11 +43,9 @@ export async function adminDashboard(actor: Actor, f: DashboardFilter) {
     prisma.deviceRawEvent.count({ where: { clockSkewSuspect: true, deviceTime: { gte: zonedToUtc(since, '00:00', tz) } } }),
     prisma.deviceRawEvent.count({ where: { employeeId: null } }),
 
-    // Perangkat
     can(actor, 'device.read')
       ? prisma.attendanceDevice.findMany({ where: { deletedAt: null }, select: { id: true, name: true, status: true, lastSyncAt: true, isActive: true, adapter: true }, orderBy: { name: 'asc' } })
       : Promise.resolve([]),
-    // Pengajuan menunggu
     (async () => ({
       corrections: can(actor, 'correction.review') ? await prisma.attendanceCorrection.count({ where: { status: 'PENDING', employee: employeeScopeWhere(actor, 'correction.review'), ...(actor.employeeId ? { NOT: { employeeId: actor.employeeId } } : {}) } }) : 0,
       leave: can(actor, 'leave.approve') || can(actor, 'leave.manage') ? await prisma.leaveApproval.count({ where: await pendingLeaveApprovalWhere(actor) }) : 0,

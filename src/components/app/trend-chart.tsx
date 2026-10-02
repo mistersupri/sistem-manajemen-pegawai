@@ -13,12 +13,15 @@ const config = {
 
 export function TrendChart({ data }: { data: { date: string; hadir: number; terlambat: number; izin: number; tanpaTransaksi: number }[] }) {
   const rows = data.map((d) => ({ ...d, label: `${Number(d.date.slice(8))}/${Number(d.date.slice(5, 7))}` }));
+  // Lebar sumbu Y mengikuti digit total terbesar agar angka ribuan tidak terpotong.
+  const top = Math.max(0, ...data.map((d) => d.hadir + d.terlambat + d.izin + d.tanpaTransaksi));
+  const yWidth = Math.max(40, String(top).length * 8 + 24);
   return (
     <ChartContainer config={config} className="aspect-auto h-60 w-full">
       <BarChart data={rows} margin={{ left: -16, right: 8, top: 8 }} barCategoryGap={3}>
         <CartesianGrid vertical={false} strokeOpacity={0.5} />
         <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={20} />
-        <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={40} />
+        <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={yWidth} />
         <ChartTooltip content={<ChartTooltipContent />} cursor={{ fillOpacity: 0.08 }} />
         <ChartLegend content={<ChartLegendContent />} />
         {(['hadir', 'terlambat', 'izin', 'tanpaTransaksi'] as const).map((k, i, all) => (

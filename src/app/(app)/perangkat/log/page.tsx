@@ -37,7 +37,7 @@ export default async function RawLogPage({ searchParams }: { searchParams: Promi
           <div className="grid gap-2"><Label htmlFor="dari">Dari</Label><Input id="dari" name="dari" type="date" defaultValue={from} /></div>
           <div className="grid gap-2"><Label htmlFor="sampai">Sampai</Label><Input id="sampai" name="sampai" type="date" defaultValue={to} /></div>
           <div className="col-span-2 grid gap-2 md:col-span-1"><Label htmlFor="mesin">Perangkat</Label><NativeSelect id="mesin" name="mesin" defaultValue={sp.mesin ?? ''}><NativeSelectOption value="">Semua</NativeSelectOption>{devices.map((d) => <NativeSelectOption key={d.id} value={d.id}>{d.name}</NativeSelectOption>)}</NativeSelect></div>
-          <div className="col-span-2 grid gap-2 md:col-span-1"><Label htmlFor="q">ID mesin atau nama</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} className="rounded-full pl-9" /></div></div>
+          <div className="col-span-2 grid gap-2 md:col-span-1"><Label htmlFor="q">ID mesin atau nama</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} className="pl-9" /></div></div>
           <div className="col-span-2 grid gap-2 md:col-span-1"><Label htmlFor="keadaan">Keadaan</Label><NativeSelect id="keadaan" name="keadaan" defaultValue={sp.keadaan ?? ''}><NativeSelectOption value="">Semua</NativeSelectOption><NativeSelectOption value="belum">Belum dipetakan</NativeSelectOption><NativeSelectOption value="tertunda">Tertunda</NativeSelectOption><NativeSelectOption value="menyimpang">Jam menyimpang</NativeSelectOption></NativeSelect></div>
           <Button type="submit" className="col-span-2 md:col-span-1">Terapkan</Button>
         </form>
@@ -49,7 +49,7 @@ export default async function RawLogPage({ searchParams }: { searchParams: Promi
           <Table className="table-stack">
             <TableHeader><TableRow><SortableHead label="Waktu perangkat" value="waktu" {...sortProps} firstDir="desc" className="pl-4 lg:pl-6" /><SortableHead label="Diterima server" value="diterima" {...sortProps} firstDir="desc" /><SortableHead label="ID mesin" value="pin" {...sortProps} /><SortableHead label="Pegawai" value="nama" {...sortProps} /><TableHead>Perangkat</TableHead><TableHead className="pr-4 lg:pr-6">Pemrosesan</TableHead></TableRow></TableHeader>
             <TableBody>
-              {data.rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState filtered title="Tidak ada scan pada periode ini" description="Perluas rentang tanggal atau hapus filter." actions={[{ href: '/perangkat/log', label: 'Hapus filter' }]} /></TableCell></TableRow>}
+              {data.rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada scan pada periode ini" description="Perluas rentang tanggal atau hapus filter." actions={[{ href: '/perangkat/log', label: 'Hapus filter' }]} /></TableCell></TableRow>}
               {data.rows.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="stack-head pl-4 tabular lg:pl-6">{fmtWaktu(r.deviceTime, tz)}{r.clockSkewSuspect && <span className="block text-xs text-status-telat-foreground">jam perangkat menyimpang</span>}</TableCell>

@@ -61,7 +61,7 @@ export default async function RulesPage() {
             <Table className="table-stack border-t">
               <TableHeader><TableRow><TableHead className="pl-6">Jenis</TableHead><TableHead>Saldo</TableHead><TableHead>Hitungan</TableHead><TableHead>Persetujuan</TableHead><TableHead>Status</TableHead><TableHead className="pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
               <TableBody>
-                {types.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Belum ada jenis cuti/izin" /></TableCell></TableRow>}
+                {types.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Belum ada jenis cuti/izin" description="Pegawai belum bisa mengajukan cuti atau izin. Tambahkan jenisnya dengan form di bawah tabel ini." /></TableCell></TableRow>}
                 {types.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="stack-head pl-6"><b>{t.code}</b> {t.name}{t.eligibleEmploymentStatuses.length > 0 && <span className="block text-xs text-muted-foreground">Hanya {t.eligibleEmploymentStatuses.join(', ')}</span>}</TableCell>
