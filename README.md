@@ -35,6 +35,8 @@ docker compose up -d --build
 
 Layanan `migrate` menjalankan migrasi skema dan membuat peran serta akun Super Admin pertama, lalu `app` berjalan di port `APP_PORT` (bawaan 3000). Health check: `GET /api/health`.
 
+Lupa password admin atau akun terkunci: isi `ADMIN_USERNAME`/`ADMIN_PASSWORD` di `.env`, lalu `docker compose run --rm migrate npx tsx scripts/reset-admin.ts`.
+
 Pasang aplikasi di belakang reverse proxy HTTPS (kamera dan GPS di browser hanya bekerja lewat HTTPS atau localhost) dan biarkan `COOKIE_SECURE=1`.
 
 **Simpan `BIOMETRIC_ENCRYPTION_KEY` terpisah dari backup.** Tanpa kunci ini template wajah, NIK, secret perangkat, dan secret MFA tidak bisa dibuka.
@@ -54,13 +56,14 @@ npm run dev:local
 2. menyiapkan database dan menerapkan migrasi;
 3. mengisi data demo bertanda "(demo)".
 
-Setelah itu buka http://localhost:3000. Ctrl+C menghentikan aplikasi dan database sekaligus; data tetap tersimpan untuk dijalankan lagi.
+Setelah itu buka http://localhost:3000. Akun untuk masuk ditampilkan di terminal: `superadmin` / `Demo#2026` (akun demo), dan akun `ADMIN_USERNAME`/`ADMIN_PASSWORD` bila diisi di `.env`. Akun dari `.env` dibuat setiap kali aplikasi dijalankan bila username itu belum ada; mengganti password akun yang sudah ada dilakukan dengan `npm run admin:reset`. Ctrl+C menghentikan aplikasi dan database sekaligus; data tetap tersimpan untuk dijalankan lagi.
 
 | Perintah | Fungsi |
 |---|---|
 | `npm run dev:local -- --tanpa-demo` | Tanpa data demo; password sementara Super Admin ditampilkan sekali |
 | `npm run db:local` | Database lokal saja, mis. untuk `npm run dev` di terminal lain atau Prisma Studio |
 | `npm run db:local -- --reset` | Hapus database lokal lalu buat ulang |
+| `npm run admin:reset` | Terapkan `ADMIN_USERNAME`/`ADMIN_PASSWORD` dari `.env`: buat akun bila belum ada, atau ganti password, buka kunci, dan pastikan berperan Super Admin. `-- --hapus-mfa` juga melepas MFA. |
 
 Database lokal hanya untuk pengembangan dan uji coba. Untuk produksi pakai Docker Compose atau PostgreSQL sendiri: isi `DATABASE_URL` di `.env`, lalu `npm run db:deploy` dan `npm run db:seed`.
 

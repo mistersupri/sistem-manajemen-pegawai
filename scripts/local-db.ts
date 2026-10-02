@@ -101,16 +101,24 @@ async function main() {
     const client = pg.getPgClient(DB);
     await client.connect();
     const users = Number((await client.query('SELECT count(*) FROM users')).rows[0].count);
+    const hasDemo = Number((await client.query("SELECT count(*) FROM organization_units WHERE code = 'DEMO'")).rows[0].count) > 0;
     await client.end();
-    if (!users) {
-      const demo = !args.includes('--tanpa-demo');
-      log(demo ? 'mengisi data demo (bertanda "(demo)")...' : 'membuat peran dan akun Super Admin...');
-      const fileEnv = parse(existsSync(path.join(ROOT, '.env')) ? readFileSync(path.join(ROOT, '.env'), 'utf8') : '');
-      // Tanpa demo dan tanpa ADMIN_PASSWORD: buat password sementara (wajib diganti saat masuk pertama).
-      const tempPassword = !demo && !process.env.ADMIN_PASSWORD && !fileEnv.ADMIN_PASSWORD ? `Lokal-${randomBytes(6).toString('base64url')}9` : undefined;
-      await run([bin('tsx/dist/cli.mjs'), 'prisma/seed.ts'], { ...env, SEED_DEMO: demo ? '1' : '0', DISABLE_SCHEDULER: '1', ...(tempPassword ? { ADMIN_PASSWORD: tempPassword } : {}) });
-      if (tempPassword) log(`password sementara Super Admin: ${tempPassword} (catat sekarang, hanya tampil sekali)`);
-    }
+    // Pertama kali: demo kecuali --tanpa-demo. Berikutnya: ikuti isi database (demo tidak ditambahkan diam-diam).
+    const demo = users ? hasDemo : !args.includes('--tanpa-demo');
+    const fileEnv = parse(existsSync(path.join(ROOT, '.env')) ? readFileSync(path.join(ROOT, '.env'), 'utf8') : '');
+    const envPassword = process.env.ADMIN_PASSWORD || fileEnv.ADMIN_PASSWORD;
+    const envUser = (process.env.ADMIN_USERNAME || fileEnv.ADMIN_USERNAME || 'superadmin').trim().toLowerCase();
+    // Tanpa demo dan tanpa ADMIN_PASSWORD saat pertama kali: password sementara, wajib diganti saat masuk.
+    const tempPassword = !users && !demo && !envPassword ? `Lokal-${randomBytes(6).toString('base64url')}9` : undefined;
+    if (!users) log(demo ? 'mengisi data demo (bertanda "(demo)")...' : 'membuat peran dan akun Super Admin...');
+    // Seed dijalankan setiap start agar akun ADMIN_USERNAME/ADMIN_PASSWORD di .env ikut dibuat bila belum ada.
+    await run([bin('tsx/dist/cli.mjs'), 'prisma/seed.ts'], { ...env, SEED_DEMO: demo ? '1' : '0', DISABLE_SCHEDULER: '1', ...(tempPassword ? { ADMIN_PASSWORD: tempPassword } : {}) });
+    log('akun untuk masuk:');
+    if (envPassword) log(`  ${envUser} / (ADMIN_PASSWORD di .env)`);
+    if (tempPassword) log(`  ${envUser} / ${tempPassword}  (password sementara, catat sekarang)`);
+    if (demo && !(envPassword && envUser === 'superadmin')) log('  superadmin / Demo#2026  (akun demo)');
+    log('lupa password atau akun terkunci: jalankan npm run admin:reset di terminal lain');
+    if (fileEnv.DATABASE_URL && fileEnv.DATABASE_URL !== LOCAL_URL) log(`catatan: DATABASE_URL di .env menunjuk database lain; npm run admin:reset dan npm run dev memakai database itu, bukan database lokal ini.`);
   } catch (err) {
     console.error((err as Error).message);
     return stop(1);

@@ -6,6 +6,7 @@ import { prisma } from '../src/lib/db';
 import { syncRbac } from '../src/lib/auth/sync';
 import { systemActor } from '../src/lib/auth/system';
 import { hashPassword } from '../src/lib/auth/password';
+import { ensureSuperAdmin } from '../src/lib/auth/admin-account';
 import { addDays, todayIn, toDbDate } from '../src/lib/time';
 import { createSchedule, createAssignment, createHoliday } from '../src/lib/services/schedules';
 import { createEmployee } from '../src/lib/services/employees';
@@ -15,16 +16,27 @@ import { rebuildRange } from '../src/lib/attendance/record';
 
 const DEMO_PASSWORD = 'Demo#2026';
 
-async function bootstrapAdmin() {
-  if (await prisma.user.count()) return;
-  const username = (process.env.ADMIN_USERNAME || 'superadmin').toLowerCase();
-  const password = process.env.ADMIN_PASSWORD || (process.env.SEED_DEMO === '1' ? DEMO_PASSWORD : '');
-  if (!password) throw new Error('Set ADMIN_PASSWORD untuk membuat akun Super Admin pertama.');
-  const role = await prisma.role.findUniqueOrThrow({ where: { code: 'SUPER_ADMIN' } });
-  await prisma.user.create({
-    data: { username, passwordHash: await hashPassword(password), mustChangePassword: process.env.SEED_DEMO !== '1', roles: { create: { roleId: role.id } } },
-  });
-  console.log(`Akun Super Admin dibuat: ${username}${process.env.SEED_DEMO === '1' ? ` / ${DEMO_PASSWORD} (demo)` : ' (password dari ADMIN_PASSWORD, wajib diganti saat masuk pertama)'}`);
+/**
+ * Akun Super Admin dari .env (ADMIN_USERNAME, ADMIN_PASSWORD). Dibuat bila username tersebut belum
+ * ada, juga setelah database berisi data. Password akun yang sudah ada tidak pernah ditimpa seed;
+ * untuk mengganti atau membuka kunci pakai `npm run admin:reset`.
+ */
+async function ensureAdmins() {
+  const isDemo = process.env.SEED_DEMO === '1';
+  const username = (process.env.ADMIN_USERNAME || 'superadmin').trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD || '';
+  if (password) {
+    const r = await ensureSuperAdmin(prisma, { username, password, mustChangePassword: !isDemo });
+    console.log(r === 'created'
+      ? `Akun Super Admin dibuat dari .env: ${username}${isDemo ? '' : ' (wajib ganti password saat masuk pertama)'}`
+      : `Akun ${username} sudah ada; password tidak diubah. Untuk memakai ADMIN_PASSWORD dari .env jalankan: npm run admin:reset`);
+  }
+  if (isDemo) {
+    const r = await ensureSuperAdmin(prisma, { username: 'superadmin', password: DEMO_PASSWORD, mustChangePassword: false });
+    if (r === 'created') console.log(`Akun demo Super Admin dibuat: superadmin / ${DEMO_PASSWORD}`);
+  }
+  const admins = await prisma.user.count({ where: { isActive: true, deletedAt: null, roles: { some: { role: { code: 'SUPER_ADMIN' }, unitId: null } } } });
+  if (!admins) throw new Error('Belum ada akun Super Admin. Isi ADMIN_PASSWORD di .env lalu jalankan seed lagi.');
 }
 
 async function demo() {
@@ -88,6 +100,7 @@ async function demo() {
   // Akun demo untuk setiap peran
   const roles = Object.fromEntries((await prisma.role.findMany()).map((r) => [r.code, r.id]));
   const account = async (username: string, employeeNip: string | null, assignments: [string, string | null][]) => {
+    if (await prisma.user.findUnique({ where: { username } })) return;
     await prisma.user.create({
       data: {
         username, passwordHash: await hashPassword(DEMO_PASSWORD), employeeId: employeeNip ? ids[employeeNip] : null,
@@ -141,7 +154,7 @@ async function demo() {
 
 async function main() {
   await syncRbac();
-  await bootstrapAdmin();
+  await ensureAdmins();
   if (process.env.SEED_DEMO === '1') await demo();
 }
 

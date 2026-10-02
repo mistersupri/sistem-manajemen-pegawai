@@ -17,6 +17,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "admin:reset": "tsx scripts/reset-admin.ts",
     "db:reset": "prisma migrate reset --force",
     "db:local": "tsx scripts/local-db.ts",
     "migrate:sqlite": "tsx scripts/migrate-sqlite.ts",
