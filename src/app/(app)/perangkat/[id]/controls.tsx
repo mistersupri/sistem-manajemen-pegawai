@@ -16,7 +16,7 @@ export function DeviceControls({ id, pull, active, canSync, canManage }: { id: s
   const { pending, run } = useAction();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [recon, setRecon] = useState<{ date: string; stored: number; unmatched: number }[] | null>(null);
-  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
+  const [weekAgo] = useState(() => new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10));
   return (
     <Card>
       <CardHeader><CardTitle>Tindakan</CardTitle><CardDescription>Setiap tindakan tercatat di audit log.</CardDescription></CardHeader>

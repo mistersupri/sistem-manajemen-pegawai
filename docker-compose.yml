@@ -1,0 +1,70 @@
+# SIMPEG: aplikasi + PostgreSQL. Salin .env.example menjadi .env lalu isi rahasia sebelum menjalankan.
+#   docker compose up -d --build
+# Redis/antrian tidak dipakai: sinkronisasi perangkat dan pembersihan retensi berjalan di proses
+# aplikasi (satu instance). Lihat docs/ARSITEKTUR.md bila perlu lebih dari satu instance.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-simpeg}
+      POSTGRES_USER: ${POSTGRES_USER:-simpeg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Isi POSTGRES_PASSWORD di .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Menjalankan migrasi skema dan seed peran/akun admin pertama, lalu selesai.
+  migrate:
+    build: { context: ., target: tools }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-simpeg}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-simpeg}
+      SEED_DEMO: ${SEED_DEMO:-0}
+      DISABLE_SCHEDULER: "1"
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  app:
+    build: { context: ., target: runner }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-simpeg}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-simpeg}
+      STORAGE_DIR: /data/storage
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+
+  # Backup sesuai jadwal Anda (cron host):  docker compose --profile ops run --rm backup
+  # Pemulihan:  docker compose stop app && docker compose --profile ops run --rm backup sh /scripts/restore.sh /backups/simpeg-YYYYMMDD-HHMMSS
+  backup:
+    image: postgres:16-alpine
+    profiles: ["ops"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-simpeg}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-simpeg}
+      STORAGE_DIR: /storage
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./backups:/backups
+      - storage:/storage
+    depends_on:
+      db: { condition: service_healthy }
+    entrypoint: ["sh"]
+    command: ["/scripts/backup.sh"]
+
+volumes:
+  pgdata:
+  storage:

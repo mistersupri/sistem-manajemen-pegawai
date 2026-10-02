@@ -213,7 +213,8 @@ export async function decideLeave(actor: Actor, requestId: string, raw: unknown)
   if (!v.approve && !v.note) throw unprocessable('Tuliskan alasan penolakan.', { note: 'Wajib diisi saat menolak' });
   const last = req.approvals.every((a) => a.level <= current.level);
   await prisma.$transaction(async (tx) => {
-    await tx.leaveApproval.update({ where: { id: current.id }, data: { decision: v.approve ? 'APPROVED' : 'REJECTED', decidedById: actor.userId, decidedAt: new Date(), note: v.note ?? null } });
+    const done = await tx.leaveApproval.updateMany({ where: { id: current.id, decision: 'PENDING' }, data: { decision: v.approve ? 'APPROVED' : 'REJECTED', decidedById: actor.userId, decidedAt: new Date(), note: v.note ?? null } });
+    if (!done.count) throw conflict('Pengajuan ini sudah diputuskan.');
     if (!v.approve) await tx.leaveRequest.update({ where: { id: req.id }, data: { status: 'REJECTED' } });
     else if (last) await tx.leaveRequest.update({ where: { id: req.id }, data: { status: 'APPROVED' } });
     else await tx.leaveRequest.update({ where: { id: req.id }, data: { currentLevel: current.level + 1 } });

@@ -130,7 +130,7 @@ export async function reviewCorrection(actor: Actor, id: string, raw: unknown) {
   if (!v.approve && !v.note) throw unprocessable('Tuliskan alasan penolakan.', { note: 'Wajib diisi saat menolak' });
   const tz = (await getSettings())['org.timezone'];
   const workDate = fromDbDate(c.workDate);
-  const update: Prisma.AttendanceCorrectionUpdateInput = {
+  const update: Prisma.AttendanceCorrectionUpdateManyMutationInput & { reviewedById: string } = {
     status: v.approve ? 'APPROVED' : 'REJECTED', reviewedById: actor.userId, reviewedAt: new Date(), reviewNote: v.note ?? null,
   };
   if (v.approve) {
@@ -140,7 +140,9 @@ export async function reviewCorrection(actor: Actor, id: string, raw: unknown) {
     if (v.proposedStatus) update.proposedStatus = v.proposedStatus;
     if (v.dispensation !== undefined) update.dispensation = v.dispensation;
   }
-  await prisma.attendanceCorrection.update({ where: { id }, data: update });
+  // Bersyarat agar dua peninjau yang memutus bersamaan tidak sama-sama berhasil.
+  const done = await prisma.attendanceCorrection.updateMany({ where: { id, status: 'PENDING' }, data: update });
+  if (!done.count) throw conflict('Pengajuan ini sudah diproses.');
   let applied = null;
   if (v.approve) {
     const rec = await rebuildRecord(c.employeeId, workDate);

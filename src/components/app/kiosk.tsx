@@ -25,6 +25,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: 
 
   useEffect(() => {
     if (!enabled) return;
+    const el = video.current;
     let stop = false;
     let busy = false;
     let pauseUntil = 0;
@@ -84,7 +85,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: 
         setStatus((e as Error).message);
       }
     })();
-    return () => { stop = true; clearInterval(timer); stopCamera(video.current); };
+    return () => { stop = true; clearInterval(timer); stopCamera(el); };
   }, [enabled, requireLiveness]);
 
   const ok = result?.outcome === 'SUCCESS';

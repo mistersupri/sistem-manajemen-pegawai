@@ -41,8 +41,25 @@ export function FaceEnroll({ employeeId, employeeName, consentText, consentVersi
   const buf = useRef<number[][]>([]);
   const rec = useRef(false);
 
+  async function submit() {
+    setStatus('Menyimpan data wajah...');
+    try {
+      const r = await api<{ status: string }>('POST', `/api/v1/employees/${employeeId}/face`, { descriptors: buf.current, consentAccepted: true, consentVersion });
+      setResult(r);
+      setStep('done');
+      stopCamera(video.current);
+      router.refresh();
+    } catch (e) {
+      setError((e as Error).message);
+      buf.current = [];
+      setSamples(0);
+      setStatus('Gagal menyimpan. Ulangi perekaman.');
+    }
+  }
+
   useEffect(() => {
     if (step !== 'capture') return;
+    const el = video.current;
     let stop = false;
     let last = 0;
     const blink = blinkDetector();
@@ -85,25 +102,9 @@ export function FaceEnroll({ employeeId, employeeName, consentText, consentVersi
         setStatus('Tidak dapat memulai kamera.');
       }
     })();
-    return () => { stop = true; stopCamera(video.current); };
+    return () => { stop = true; stopCamera(el); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
-
-  async function submit() {
-    setStatus('Menyimpan data wajah...');
-    try {
-      const r = await api<{ status: string }>('POST', `/api/v1/employees/${employeeId}/face`, { descriptors: buf.current, consentAccepted: true, consentVersion });
-      setResult(r);
-      setStep('done');
-      stopCamera(video.current);
-      router.refresh();
-    } catch (e) {
-      setError((e as Error).message);
-      buf.current = [];
-      setSamples(0);
-      setStatus('Gagal menyimpan. Ulangi perekaman.');
-    }
-  }
 
   if (step === 'consent') {
     return (

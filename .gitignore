@@ -13,3 +13,4 @@ backups/
 uploads/
 .env
 .env.local
+backups

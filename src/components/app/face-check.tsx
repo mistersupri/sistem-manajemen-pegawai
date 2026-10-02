@@ -27,6 +27,7 @@ export function FaceCheck({ suggested, requireLiveness, wantGps }: { suggested: 
   const [fatal, setFatal] = useState<string | null>(null);
 
   useEffect(() => {
+    const el = video.current;
     let stop = false;
     const blink = blinkDetector();
     let timer: ReturnType<typeof setInterval> | undefined;
@@ -56,7 +57,7 @@ export function FaceCheck({ suggested, requireLiveness, wantGps }: { suggested: 
         setStatus('Kamera atau model tidak tersedia.');
       }
     })();
-    return () => { stop = true; clearInterval(timer); stopCamera(video.current); };
+    return () => { stop = true; clearInterval(timer); stopCamera(el); };
   }, [requireLiveness, wantGps]);
 
   async function submit(direction: 'IN' | 'OUT') {

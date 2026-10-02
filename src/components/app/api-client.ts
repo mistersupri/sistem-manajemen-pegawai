@@ -27,6 +27,8 @@ export async function api<T = unknown>(method: string, url: string, body?: unkno
   const ct = res.headers.get('content-type') || '';
   const data = ct.includes('application/json') ? await res.json() : null;
   if (!res.ok) {
+    // Sesi habis: muat ulang penuh ke halaman masuk agar state klien ikut dibersihkan.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     if (res.status === 401 && typeof window !== 'undefined' && !url.includes('/auth/')) window.location.href = '/login';
     throw new ApiError(data?.error?.message || `Permintaan gagal (${res.status}).`, res.status, data?.error?.fields);
   }

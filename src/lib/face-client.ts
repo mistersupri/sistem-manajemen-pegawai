@@ -3,7 +3,6 @@
 // Utilitas kamera dan deteksi wajah di browser (face-api.js). Model dimuat dari server sendiri.
 // Descriptor (128 angka) dikirim ke server untuk dicocokkan; template wajah tidak pernah dikirim ke browser.
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 type FaceApi = any;
 declare global {
   interface Window { faceapi?: FaceApi }

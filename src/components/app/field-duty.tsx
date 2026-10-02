@@ -54,6 +54,7 @@ export function FieldDuty({ employee, org, storePhoto, geocode }: { employee: { 
   }
 
   useEffect(() => {
+    const el = video.current;
     let stopped = false;
     (async () => {
       clock.current = await serverClock();
@@ -66,7 +67,7 @@ export function FieldDuty({ employee, org, storePhoto, geocode }: { employee: { 
         setStatus((e as Error).message);
       }
     })();
-    return () => { stopped = true; stopCamera(video.current); };
+    return () => { stopped = true; stopCamera(el); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

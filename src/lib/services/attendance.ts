@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { prisma } from '../db';
 import { audit } from '../audit';
 import { can, getEmployeeInScope, scopeOf, type Actor } from '../auth/actor';
-import { forbidden, unprocessable } from '../errors';
+import { conflict, forbidden, unprocessable } from '../errors';
 import { getSettings, type Settings } from '../settings';
 import { rateLimit } from '../rate-limit';
 import { addDays, fmtJam, isValidDate, isValidTime, toDbDate, todayIn, zonedToUtc } from '../time';
@@ -103,6 +103,7 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
   // Idempotensi: kirim ulang dengan kunci yang sama mengembalikan hasil sebelumnya.
   const prior = await prisma.attendanceEvent.findUnique({ where: { idempotencyKey: input.idempotencyKey }, include: { verification: true, employee: true } });
   if (prior) {
+    if (prior.actorUserId !== realUserId(actor)) throw conflict('Kunci transaksi sudah dipakai. Muat ulang halaman lalu coba lagi.');
     const o = (prior.verification?.outcome ?? 'SERVICE_UNAVAILABLE') as Outcome;
     return { outcome: o, message: prior.verification?.message ?? OUTCOME_MESSAGE[o], eventId: prior.id, time: fmtJam(prior.occurredAt, tz) ?? undefined };
   }
