@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Field, fieldProps } from '@/components/app/field';
 import { api, useAction } from '@/components/app/api-client';
+import { confirmDialog } from '@/components/app/confirm-dialog';
 
 type Opt = { id: string; name: string };
 
@@ -52,7 +53,7 @@ export function RoleChip({ userId, urId, label }: { userId: string; urId: string
     <Badge variant="netral" className="h-auto max-w-full gap-1 py-0.5 pr-0.5 text-left whitespace-normal">
       {label}
       <button type="button" disabled={pending} className="inline-flex size-6 items-center justify-center rounded-full hover:bg-black/10" aria-label={`Cabut peran ${label}`}
-        onClick={() => { if (confirm(`Cabut peran ${label}?`)) run(() => api('DELETE', `/api/v1/users/${userId}/roles/${urId}`), { success: 'Peran dicabut.' }); }}>
+        onClick={async () => { if (await confirmDialog({ title: `Cabut peran ${label}?`, description: 'Izin dari peran ini langsung hilang saat pengguna memuat halaman berikutnya.', confirmLabel: 'Cabut peran', destructive: true })) run(() => api('DELETE', `/api/v1/users/${userId}/roles/${urId}`), { success: 'Peran dicabut.' }); }}>
         <X className="size-3.5" />
       </button>
     </Badge>
@@ -73,8 +74,8 @@ export function UserActions({ id, username, isActive, mfaEnabled, roles, units, 
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => setMode('role')}>Berikan peran</DropdownMenuItem>
           <DropdownMenuItem onSelect={async () => { const r = await run(() => api<{ username: string; password: string }>('POST', `/api/v1/users/${id}/reset-password`), { success: 'Password direset.' }); if (r) { setCred(r); setMode('cred'); } }}>Reset password</DropdownMenuItem>
-          {mfaEnabled && <DropdownMenuItem onSelect={() => { if (confirm(`Reset MFA ${username}? Pengguna harus memasang ulang aplikasi autentikator.`)) run(() => api('POST', `/api/v1/users/${id}/reset-mfa`), { success: 'MFA direset.' }); }}>Reset MFA</DropdownMenuItem>}
-          {!self && <><DropdownMenuSeparator /><DropdownMenuItem variant={isActive ? 'destructive' : 'default'} onSelect={() => { if (confirm(isActive ? `Nonaktifkan ${username}? Sesi aktifnya diakhiri.` : `Aktifkan ${username}?`)) run(() => api('POST', `/api/v1/users/${id}/status`, { active: !isActive }), { success: 'Status pengguna diperbarui.' }); }}>{isActive ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem></>}
+          {mfaEnabled && <DropdownMenuItem onSelect={async () => { if (await confirmDialog({ title: `Reset MFA ${username}?`, description: 'Pengguna harus memasang ulang aplikasi autentikator saat masuk berikutnya.', confirmLabel: 'Reset MFA', destructive: true })) run(() => api('POST', `/api/v1/users/${id}/reset-mfa`), { success: 'MFA direset.' }); }}>Reset MFA</DropdownMenuItem>}
+          {!self && <><DropdownMenuSeparator /><DropdownMenuItem variant={isActive ? 'destructive' : 'default'} onSelect={async () => { if (await confirmDialog(isActive ? { title: `Nonaktifkan ${username}?`, description: 'Semua sesi aktifnya langsung diakhiri dan ia tidak bisa masuk sampai diaktifkan lagi.', confirmLabel: 'Nonaktifkan', destructive: true } : { title: `Aktifkan ${username}?`, confirmLabel: 'Aktifkan' })) run(() => api('POST', `/api/v1/users/${id}/status`, { active: !isActive }), { success: 'Status pengguna diperbarui.' }); }}>{isActive ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem></>}
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={mode === 'role'} onOpenChange={(o) => setMode(o ? 'role' : null)}>

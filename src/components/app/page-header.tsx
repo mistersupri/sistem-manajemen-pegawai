@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 
@@ -34,8 +35,8 @@ export function PageHeader({ title, description, crumbs, actions, children }: {
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-[1.625rem] leading-tight font-bold tracking-tight text-balance">{title}</h1>
-          {description && <p className="mt-1 max-w-[70ch] text-sm text-muted-foreground">{description}</p>}
+          <h1 className="text-2xl leading-tight font-bold text-balance">{title}</h1>
+          {description && <p className="mt-1 max-w-prose text-sm text-pretty text-muted-foreground">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
@@ -46,5 +47,5 @@ export function PageHeader({ title, description, crumbs, actions, children }: {
 
 /** Area isi halaman di bawah pita judul. */
 export function PageBody({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`px-4 py-6 lg:px-8 ${className}`}>{children}</div>;
+  return <div className={cn('px-4 py-6 lg:px-8', className)}>{children}</div>;
 }

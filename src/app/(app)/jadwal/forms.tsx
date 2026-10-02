@@ -10,6 +10,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, fieldProps } from '@/components/app/field';
+import { confirmDialog } from '@/components/app/confirm-dialog';
 import { api, useAction } from '@/components/app/api-client';
 import { cn } from '@/lib/utils';
 
@@ -158,7 +159,7 @@ export function EndAssignment({ id, startDate }: { id: string; startDate: string
         </Field>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" disabled={pending || !date} onClick={async () => { if (await run(() => api('PATCH', `/api/v1/schedules/assignments/${id}`, { endDate: date }), { success: 'Penugasan diakhiri.' }) !== undefined) setOpen(false); }}>Simpan</Button>
-          <Button size="sm" variant="outline-destructive" disabled={pending} onClick={async () => { if (await run(() => api('PATCH', `/api/v1/schedules/assignments/${id}`, { remove: true }), { success: 'Penugasan dihapus.' }) !== undefined) setOpen(false); }}>Hapus penugasan</Button>
+          <Button size="sm" variant="outline-destructive" disabled={pending} onClick={async () => { if (!(await confirmDialog({ title: 'Hapus penugasan ini?', description: 'Pakai bila penugasan salah input. Rekap yang terdampak dihitung ulang.', confirmLabel: 'Hapus penugasan', destructive: true }))) return; if (await run(() => api('PATCH', `/api/v1/schedules/assignments/${id}`, { remove: true }), { success: 'Penugasan dihapus.' }) !== undefined) setOpen(false); }}>Hapus penugasan</Button>
         </div>
         <p className="text-xs text-muted-foreground">Hapus dipakai bila penugasan salah input. Rekap terdampak dihitung ulang.</p>
       </PopoverContent>
@@ -378,7 +379,7 @@ export function ScheduleGrid({ dates, rows: initialRows, schedules, editable, to
                 const title = `${r.employee.fullName}, ${c.date}: ${c.isOffDay ? (c.holidayName ?? OFF_TEXT[c.offReason ?? ''] ?? 'Libur') : s ? `${s.code} ${s.checkIn} sampai ${s.checkOut}` : 'Tanpa jadwal'}${c.overridden ? ' (diubah harian)' : ''}`;
                 const body = (
                   <span
-                    className={cn('flex h-9 w-full items-center justify-center overflow-hidden rounded-sm text-[11px] font-semibold tracking-tight', c.isOffDay && 'text-muted-foreground', c.overridden && 'ring-1 ring-primary ring-inset')}
+                    className={cn('flex h-9 w-full items-center justify-center overflow-hidden rounded-sm text-[11px] font-semibold', c.isOffDay && 'text-muted-foreground', c.overridden && 'ring-1 ring-primary ring-inset')}
                     style={!c.isOffDay && c.scheduleId ? { background: `${color.get(c.scheduleId) ?? '#888888'}26`, boxShadow: `inset 0 -3px 0 ${color.get(c.scheduleId) ?? '#888888'}` } : undefined}
                   >
                     {c.isOffDay ? (c.offReason === 'HARI_LIBUR' ? 'LN' : 'L') : (c.code ?? '-')}

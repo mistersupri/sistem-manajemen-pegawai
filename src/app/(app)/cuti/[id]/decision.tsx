@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, fieldProps } from '@/components/app/field';
+import { confirmDialog } from '@/components/app/confirm-dialog';
 import { api, useAction } from '@/components/app/api-client';
 
 export function LeaveDecision({ id, level, last }: { id: string; level: number; last: boolean }) {
@@ -22,7 +23,7 @@ export function LeaveDecision({ id, level, last }: { id: string; level: number; 
           <Field id="note" label="Catatan" error={fields.note} hint="Wajib diisi bila menolak. Terlihat oleh pegawai."><Textarea {...fieldProps('note', fields.note, true)} rows={2} /></Field>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={pending}>Setujui</Button>
-            <Button type="button" variant="outline-destructive" disabled={pending} onClick={(e) => decide(e.currentTarget.form!, false)}>Tolak</Button>
+            <Button type="button" variant="outline-destructive" disabled={pending} onClick={async (e) => { const form = e.currentTarget.form!; if (await confirmDialog({ title: 'Tolak pengajuan ini?', description: 'Keputusan tidak bisa diubah. Pastikan catatan untuk pegawai sudah diisi.', confirmLabel: 'Tolak', destructive: true })) decide(form, false); }}>Tolak</Button>
           </div>
         </form>
       </CardContent>

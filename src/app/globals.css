@@ -154,12 +154,14 @@
 @layer base {
   * { @apply border-border outline-ring/50; }
   body { @apply bg-background text-foreground font-sans antialiased; }
-  h1, h2, h3 { letter-spacing: -0.01em; }
+  /* Judul seimbang, paragraf rapi (baseline-ui). */
+  h1, h2, h3, h4, [data-slot$="-title"] { text-wrap: balance; }
+  p, [data-slot$="-description"] { text-wrap: pretty; }
   :focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
   input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline-offset: 0; }
   .tabular, td { font-variant-numeric: tabular-nums; }
   /* Jam adalah isi utama aplikasi ini: angka tabular, tebal, rapat. */
-  .clock { font-variant-numeric: tabular-nums; font-weight: 750; letter-spacing: -0.02em; line-height: 1; }
+  .clock { font-variant-numeric: tabular-nums; font-weight: 750; line-height: 1; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   }
@@ -168,7 +170,7 @@
 
 @layer components {
   .page-head { position: relative; isolation: isolate; color: var(--foreground); color-scheme: dark; }
-  .page-head::before { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(165deg, #0e1b3d 0%, #13286a 70%, #183489 100%); }
+  .page-head::before { content: ''; position: absolute; z-index: -1; inset: 0; background: var(--navy); }
   .page-head [role=menu], .page-head [role=dialog], .page-head [role=listbox] { color: var(--popover-foreground); color-scheme: light; }
 
   /* Garis hari kerja 05.00 sampai 22.00 */
@@ -185,7 +187,7 @@
   .board-axis, .board-track { position: relative; }
   .board-track { height: 28px; }
   .board-track .shift { position: absolute; top: 9px; height: 10px; border-radius: 3px; background: #d5def0; }
-  .board-track .shift.off { background: repeating-linear-gradient(135deg, #e7ebf2 0 4px, transparent 4px 8px); }
+  .board-track .shift.off { background: transparent; box-shadow: inset 0 0 0 1px #d5def0; }
   .board-track .tick { position: absolute; top: 4px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: #2a78d6; }
   .board-track .tick.late { background: #eb6834; }
   .board-track .tick.out { background: var(--navy); }

@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Field, fieldProps } from '@/components/app/field';
+import { confirmDialog } from '@/components/app/confirm-dialog';
 import { api, useAction } from '@/components/app/api-client';
 
 export function ReviewForm({ id, proposed }: { id: string; proposed: { checkIn: string | null; checkOut: string | null } }) {
@@ -37,7 +38,7 @@ export function ReviewForm({ id, proposed }: { id: string; proposed: { checkIn: 
           <Field id="note" label="Catatan untuk pegawai" error={fields.note} hint="Wajib diisi bila menolak."><Textarea {...fieldProps('note', fields.note, true)} rows={2} /></Field>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={pending}>Setujui</Button>
-            <Button type="button" variant="outline-destructive" disabled={pending} onClick={(e) => decide(e.currentTarget.form!, false)}>Tolak</Button>
+            <Button type="button" variant="outline-destructive" disabled={pending} onClick={async (e) => { const form = e.currentTarget.form!; if (await confirmDialog({ title: 'Tolak koreksi ini?', description: 'Keputusan tidak bisa diubah. Pastikan catatan untuk pegawai sudah diisi.', confirmLabel: 'Tolak', destructive: true })) decide(form, false); }}>Tolak</Button>
           </div>
         </form>
       </CardContent>

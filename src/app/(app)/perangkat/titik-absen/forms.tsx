@@ -14,6 +14,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Field, fieldProps } from '@/components/app/field';
 import { api, useAction } from '@/components/app/api-client';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/components/app/confirm-dialog';
 
 type Opt = { id: string; name: string };
 type Values = { name: string; unitId: string | null; allowFieldDuty: boolean; requireLocation: boolean };
@@ -118,13 +119,13 @@ export function StationActions({ station, units, canAllUnits, used }: { station:
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => setEdit(true)}>Ubah</DropdownMenuItem>
           <DropdownMenuItem onSelect={async () => {
-            if (!confirm(`Ganti tautan ${station.name}? Tautan lama langsung tidak berlaku; perangkat yang memakainya perlu dibuka ulang dengan tautan baru.`)) return;
+            if (!(await confirmDialog({ title: `Ganti tautan ${station.name}?`, description: 'Tautan lama langsung tidak berlaku; perangkat yang memakainya perlu dibuka ulang dengan tautan baru.', confirmLabel: 'Ganti tautan', destructive: true }))) return;
             const r = await run(() => api<{ token: string }>('POST', `/api/v1/stations/${station.id}/token`), { success: 'Tautan baru dibuat.' });
             if (r) setToken(r.token);
           }}>Ganti tautan</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant={station.isActive ? 'destructive' : 'default'} onSelect={() => run(() => api('PATCH', `/api/v1/stations/${station.id}`, { isActive: !station.isActive }), { success: station.isActive ? 'Titik absen dinonaktifkan.' : 'Titik absen diaktifkan.' })}>{station.isActive ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem>
-          {!used && <DropdownMenuItem variant="destructive" onSelect={() => { if (confirm(`Hapus ${station.name}?`)) run(() => api('DELETE', `/api/v1/stations/${station.id}`), { success: 'Titik absen dihapus.' }); }}>Hapus</DropdownMenuItem>}
+          <DropdownMenuItem variant={station.isActive ? 'destructive' : 'default'} onSelect={async () => { if (station.isActive && !(await confirmDialog({ title: `Nonaktifkan ${station.name}?`, description: 'Tautan dan QR titik absen ini langsung tidak bisa dipakai sampai diaktifkan lagi.', confirmLabel: 'Nonaktifkan', destructive: true }))) return; run(() => api('PATCH', `/api/v1/stations/${station.id}`, { isActive: !station.isActive }), { success: station.isActive ? 'Titik absen dinonaktifkan.' : 'Titik absen diaktifkan.' }); }}>{station.isActive ? 'Nonaktifkan' : 'Aktifkan'}</DropdownMenuItem>
+          {!used && <DropdownMenuItem variant="destructive" onSelect={async () => { if (await confirmDialog({ title: `Hapus ${station.name}?`, description: 'Titik absen ini belum punya transaksi dan akan dihapus permanen.', confirmLabel: 'Hapus', destructive: true })) run(() => api('DELETE', `/api/v1/stations/${station.id}`), { success: 'Titik absen dihapus.' }); }}>Hapus</DropdownMenuItem>}
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={edit} onOpenChange={setEdit}>
