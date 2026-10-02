@@ -33,7 +33,7 @@ export default async function DevicesPage() {
                 const run = d.syncRuns[0];
                 return (
                   <TableRow key={d.id}>
-                    <TableCell className="stack-head pl-4 lg:pl-6"><Link className="font-medium text-primary hover:underline" href={`/perangkat/${d.id}`}>{d.name}</Link><span className="block text-xs text-muted-foreground">{[d.vendor, d.model, d.location, d.unit?.name].filter(Boolean).join(' · ')}</span></TableCell>
+                    <TableCell className="stack-head pl-4 lg:pl-6"><Link className="font-medium text-primary hover:underline" href={`/perangkat/${d.id}`}>{d.name}</Link><span className="block text-xs text-muted-foreground">{[d.vendor, d.model, d.location, d.unit?.name].filter(Boolean).join(', ')}</span></TableCell>
                     <TableCell data-label="Koneksi" className="whitespace-normal">{a?.label ?? d.adapter}{d.host && <span className="block text-xs text-muted-foreground tabular">{d.host}{d.port ? `:${d.port}` : ''}</span>}{a?.maturity === 'BELUM_DIUJI' && <span className="block text-xs text-status-telat-foreground">Belum diuji dengan unit fisik</span>}</TableCell>
                     <TableCell data-label="Status">{d.isActive ? <StatusBadge status={d.status} /> : <StatusBadge status="CANCELLED" label="Nonaktif" />}</TableCell>
                     <TableCell data-label="Sinkron terakhir">{d.lastSyncAt ? fmtWaktu(d.lastSyncAt, tz) : 'Belum pernah'}{run && <span className="block"><StatusBadge status={run.status} /></span>}</TableCell>

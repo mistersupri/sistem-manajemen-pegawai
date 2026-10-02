@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CollapsibleFilters } from '@/components/app/collapsible-filters';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,7 @@ export default async function RawLogPage({ searchParams }: { searchParams: Promi
     <>
       <PageHeader title="Log Perangkat" description="Transaksi mentah dari perangkat. Data ini tidak bisa diubah atau dihapus." crumbs={[{ href: '/perangkat', label: 'Perangkat Absensi' }, { label: 'Log' }]} />
       <PageBody className="grid gap-4">
+        <CollapsibleFilters active={Object.entries(sp).filter(([k, v]) => v && !['page', 'sort', 'lihat', 'kategori', 'status', 'tab'].includes(k)).length}>
         <form method="get" className="grid grid-cols-2 gap-3 rounded-xl border bg-card p-4 md:grid-cols-[1fr_1fr_1.5fr_1.5fr_auto] md:items-end">
           <div className="grid gap-2"><Label htmlFor="dari">Dari</Label><Input id="dari" name="dari" type="date" defaultValue={from} /></div>
           <div className="grid gap-2"><Label htmlFor="sampai">Sampai</Label><Input id="sampai" name="sampai" type="date" defaultValue={to} /></div>
@@ -36,6 +38,7 @@ export default async function RawLogPage({ searchParams }: { searchParams: Promi
           <div className="col-span-2 grid gap-2 md:col-span-1"><Label htmlFor="q">ID mesin atau nama</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} className="rounded-full pl-9" /></div></div>
           <Button type="submit" className="col-span-2 md:col-span-1">Terapkan</Button>
         </form>
+        </CollapsibleFilters>
         <div className="rounded-xl border bg-card">
           <Table className="table-stack">
             <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Waktu perangkat</TableHead><TableHead>Diterima server</TableHead><TableHead>ID mesin</TableHead><TableHead>Pegawai</TableHead><TableHead>Perangkat</TableHead><TableHead className="pr-4 lg:pr-6">Pemrosesan</TableHead></TableRow></TableHeader>

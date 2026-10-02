@@ -7,7 +7,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
 
 export const metadata: Metadata = {
-  title: { default: 'SIMPEG', template: '%s · SIMPEG' },
+  title: { default: 'SIMPEG', template: '%s | SIMPEG' },
   description: 'Sistem Informasi Manajemen Pegawai',
 };
 

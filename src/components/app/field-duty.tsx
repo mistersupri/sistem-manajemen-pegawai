@@ -88,7 +88,7 @@ export function FieldDuty({ employee, org, storePhoto, geocode }: { employee: { 
     const fs = Math.max(13, Math.round(W / 40));
     ctx.font = `${fs}px sans-serif`;
     const lines: { text: string; bold?: boolean; small?: boolean }[] = [
-      { text: `DINAS LUAR · ${employee.name}${employee.nip ? ` (${employee.nip})` : ''}`, bold: true },
+      { text: `Dinas luar: ${employee.name}${employee.nip ? ` (${employee.nip})` : ''}`, bold: true },
       { text: `Waktu: ${fmtDateLong(now, c.tz)} ${fmtClock(now, c.tz)} ${c.label}` },
       { text: `Lokasi: ${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)} (±${gps.accuracy} m)` },
     ];

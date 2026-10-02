@@ -7,7 +7,8 @@ const pos = (hhmm: string | null | undefined) => {
   return Math.min(100, Math.max(0, ((h * 60 + m - START) / SPAN) * 100));
 };
 
-export function Dayline({ scheduleIn, scheduleOut, checkIn, checkOut, late, label }: { scheduleIn?: string | null; scheduleOut?: string | null; checkIn?: string | null; checkOut?: string | null; late?: boolean; label?: string }) {
+export function Dayline({ scheduleIn, scheduleOut, checkIn, checkOut, late, label, now }: { scheduleIn?: string | null; scheduleOut?: string | null; checkIn?: string | null; checkOut?: string | null; late?: boolean; label?: string; now?: string | null }) {
+  const n = pos(now);
   const a = pos(scheduleIn);
   const b = scheduleOut && scheduleIn && scheduleOut <= scheduleIn ? 100 : pos(scheduleOut);
   const i = pos(checkIn);
@@ -18,6 +19,7 @@ export function Dayline({ scheduleIn, scheduleOut, checkIn, checkOut, late, labe
       {a != null && b != null && <span className="shift" style={{ left: `${a}%`, width: `${Math.max(1, b - a)}%` }} />}
       {i != null && <span className={`dot in ${late ? 'late' : ''}`} style={{ left: `${i}%` }} />}
       {o != null && <span className="dot out" style={{ left: `${o}%` }} />}
+      {n != null && <span className="now" style={{ left: `${n}%` }} />}
     </div>
   );
 }

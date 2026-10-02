@@ -136,7 +136,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: 
                   {ok ? (
                     <div>
                       <div className="text-2xl font-bold">{result.employee?.name}</div>
-                      <div className="text-muted-foreground">{[result.employee?.employeeNumber, result.employee?.position].filter(Boolean).join(' · ')}</div>
+                      <div className="text-muted-foreground">{[result.employee?.employeeNumber, result.employee?.position].filter(Boolean).join(', ')}</div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">Absen <b>{mode === 'IN' ? 'MASUK' : 'PULANG'}</b> pukul <b className="tabular">{result.time}</b>
                         {result.status === 'TERLAMBAT' ? <Badge variant="terlambat">Terlambat {result.lateMinutes} menit</Badge> : <Badge variant="hadir">{mode === 'IN' ? 'Tepat waktu' : 'Tercatat'}</Badge>}
                       </div>

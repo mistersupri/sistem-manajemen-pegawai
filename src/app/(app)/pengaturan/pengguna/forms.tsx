@@ -119,7 +119,7 @@ export function RolePermissions({ role, groups, locked }: { role: { id: string; 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{role.name} <span className="text-sm font-normal text-muted-foreground">· {role.users} penugasan</span></CardTitle>
+        <CardTitle>{role.name} <span className="block text-sm font-normal text-muted-foreground">{role.users} penugasan</span></CardTitle>
         <CardDescription>{role.description}{locked ? ' Izin peran ini tidak bisa diubah.' : ''}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">

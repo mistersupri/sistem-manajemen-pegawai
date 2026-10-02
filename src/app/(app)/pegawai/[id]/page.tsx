@@ -41,7 +41,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
     <>
       <PageHeader
         title={name}
-        description={[e.employeeNumber && `NIP ${e.employeeNumber}`, e.position, e.unit?.name].filter(Boolean).join(' · ')}
+        description={[e.employeeNumber && `NIP ${e.employeeNumber}`, e.position, e.unit?.name].filter(Boolean).join(', ')}
         crumbs={[{ href: '/pegawai', label: 'Data Pegawai' }, { label: e.fullName }]}
         actions={
           <>
@@ -158,7 +158,7 @@ async function ScheduleTab({ id, tz }: { id: string; tz: string }) {
         <CardHeader className="border-b py-4"><CardTitle>Penugasan jadwal pegawai</CardTitle></CardHeader>
         {assignments.length ? (
           <ul className="divide-y text-sm">{assignments.map((a) => (
-            <li key={a.id} className="px-6 py-3"><b>{a.schedule ? `${a.schedule.code} ${a.schedule.name}` : 'Libur'}</b> · {a.kind === 'TETAP' ? 'Tetap' : 'Sementara'}<span className="block text-muted-foreground">{fmtTglPendek(fromDbDate(a.startDate))} sampai {a.endDate ? fmtTglPendek(fromDbDate(a.endDate)) : 'seterusnya'}{a.note ? ` · ${a.note}` : ''}</span></li>
+            <li key={a.id} className="px-6 py-3"><b>{a.schedule ? `${a.schedule.code} ${a.schedule.name}` : 'Libur'}</b>, {a.kind === 'TETAP' ? 'Tetap' : 'Sementara'}<span className="block text-muted-foreground">{fmtTglPendek(fromDbDate(a.startDate))} sampai {a.endDate ? fmtTglPendek(fromDbDate(a.endDate)) : 'seterusnya'}{a.note ? `, ${a.note}` : ''}</span></li>
           ))}</ul>
         ) : <EmptyState title="Tidak ada penugasan khusus" description="Pegawai mengikuti jadwal unit kerjanya." actions={[{ href: '/jadwal?tab=penugasan', label: 'Atur penugasan' }]} />}
       </Card>
@@ -175,7 +175,7 @@ async function HistoryTab({ id, tz, allowed }: { id: string; tz: string; allowed
       {rows.length ? (
         <ul className="divide-y text-sm">{rows.map((r) => (
           <li key={r.id} className="grid gap-1 px-6 py-3">
-            <div className="flex flex-wrap justify-between gap-2"><b>{r.action}</b><span className="text-muted-foreground">{fmtWaktu(r.createdAt, tz)} · {r.actorLabel}</span></div>
+            <div className="flex flex-wrap justify-between gap-2"><b>{r.action}</b><span className="text-muted-foreground">{fmtWaktu(r.createdAt, tz)}, {r.actorLabel}</span></div>
             {r.after ? <pre className="overflow-x-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">{JSON.stringify(r.after, null, 1)}</pre> : null}
           </li>
         ))}</ul>

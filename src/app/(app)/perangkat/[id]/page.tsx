@@ -31,7 +31,7 @@ export default async function DeviceDetail({ params }: { params: Promise<{ id: s
     <>
       <PageHeader
         title={d.name}
-        description={[d.vendor, d.model, d.location].filter(Boolean).join(' · ') || a?.label}
+        description={[d.vendor, d.model, d.location].filter(Boolean).join(', ') || a?.label}
         crumbs={[{ href: '/perangkat', label: 'Perangkat Absensi' }, { label: d.name }]}
         actions={can(actor, 'device.manage') ? <DeviceForm adapters={adapterList()} units={units} initial={d} /> : undefined}
       />

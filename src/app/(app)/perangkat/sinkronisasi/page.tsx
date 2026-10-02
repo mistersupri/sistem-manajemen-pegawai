@@ -32,7 +32,7 @@ export default async function SyncPage() {
               <ul className="max-h-[28rem] divide-y overflow-y-auto">
                 {pins.map((p) => (
                   <li key={p.pin} className="grid gap-2 px-6 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                    <span><b className="tabular">ID {p.pin}</b> {p.name && `· ${p.name}`}<span className="block text-xs text-muted-foreground">{[p.department, p.device, `${p.scans} scan`, p.lastScan && `terakhir ${fmtWaktu(p.lastScan, tz)}`].filter(Boolean).join(' · ')}</span></span>
+                    <span><b className="tabular">ID {p.pin}</b> {p.name && `(${p.name})`}<span className="block text-xs text-muted-foreground">{[p.department, p.device, `${p.scans} scan`, p.lastScan && `terakhir ${fmtWaktu(p.lastScan, tz)}`].filter(Boolean).join(', ')}</span></span>
                     {canMap && <MapPin pin={p.pin} name={p.name} employees={employees} />}
                   </li>
                 ))}

@@ -9,6 +9,8 @@ import { pendingAccountStep, requirePage } from '@/lib/guard';
 import { getSettings } from '@/lib/settings';
 import { ROLES } from '@/lib/auth/catalog';
 import { navBadges } from '@/lib/services/badges';
+import { TabBar } from '@/components/app/tab-bar';
+import { can } from '@/lib/auth/actor';
 
 function visible(items: NavItem[], actor: Actor, badges: Record<string, number>): SidebarItem[] {
   return items
@@ -29,6 +31,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [settings, badges] = await Promise.all([getSettings(), navBadges(actor)]);
   const items = visible(NAV, actor, badges);
   const roles = actor.roleCodes.map((c) => ROLES[c]?.name ?? c).join(', ');
+  // Pegawai tanpa peran pengelola memakai navigasi bawah di ponsel.
+  const selfService = !can(actor, 'dashboard.view') && can(actor, 'attendance.self');
+  const tabs = selfService ? [
+    { href: '/dashboard', label: 'Beranda', icon: 'home', show: true },
+    { href: '/absensi/saya', label: 'Absen', icon: 'absen', show: true },
+    { href: '/jadwal', label: 'Jadwal', icon: 'jadwal', show: true },
+    { href: '/absensi/koreksi', label: 'Koreksi', icon: 'koreksi', show: can(actor, 'correction.request') },
+    { href: '/cuti', label: 'Cuti', icon: 'cuti', show: can(actor, 'leave.request') && !!settings['modules.leave'] },
+  ].filter((t) => t.show) : null;
   return (
     <SidebarProvider>
       <AppSidebar
@@ -46,7 +57,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {badges['/notifikasi'] ? <span className="absolute top-1 right-1 min-w-4 rounded-full bg-highlight px-1 text-center text-[0.65rem] font-bold text-highlight-foreground">{badges['/notifikasi']}</span> : null}
           </Link>
         </header>
-        <main id="konten" className="flex-1">{children}</main>
+        <main id="konten" className={tabs ? 'flex-1 pb-20 md:pb-0' : 'flex-1'}>{children}</main>
+        {tabs && <TabBar items={tabs} />}
       </SidebarInset>
     </SidebarProvider>
   );

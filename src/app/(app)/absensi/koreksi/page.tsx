@@ -32,15 +32,15 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
       <PageBody className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {canReview && actor.employeeId && (
-            <nav className="flex gap-1 rounded-full border bg-card p-1" aria-label="Tampilan">
+            <nav className="flex max-w-full gap-1 overflow-x-auto rounded-full border bg-card p-1 [scrollbar-width:none]" aria-label="Tampilan">
               {[['saya', 'Pengajuan saya'], ['tinjau', 'Perlu ditinjau']].map(([k, l]) => (
-                <Link key={k} href={`?lihat=${k}`} aria-current={view === k ? 'page' : undefined} className={`inline-flex min-h-10 items-center rounded-full px-4 text-sm font-medium ${view === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{l}</Link>
+                <Link key={k} href={`?lihat=${k}`} aria-current={view === k ? 'page' : undefined} className={`inline-flex min-h-10 shrink-0 items-center rounded-full whitespace-nowrap px-4 text-sm font-medium ${view === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{l}</Link>
               ))}
             </nav>
           )}
-          <nav className="flex flex-wrap gap-1 rounded-full border bg-card p-1" aria-label="Filter status">
+          <nav className="flex max-w-full gap-1 overflow-x-auto rounded-full border bg-card p-1 [scrollbar-width:none]" aria-label="Filter status">
             {['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL'].map((k) => (
-              <Link key={k} href={link({ status: k })} aria-current={status === k ? 'page' : undefined} className={`inline-flex min-h-10 items-center rounded-full px-3 text-sm font-medium ${status === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{k === 'ALL' ? 'Semua' : REQUEST_LABEL[k]}</Link>
+              <Link key={k} href={link({ status: k })} aria-current={status === k ? 'page' : undefined} className={`inline-flex min-h-10 shrink-0 items-center rounded-full whitespace-nowrap px-3 text-sm font-medium ${status === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{k === 'ALL' ? 'Semua' : REQUEST_LABEL[k]}</Link>
             ))}
           </nav>
         </div>

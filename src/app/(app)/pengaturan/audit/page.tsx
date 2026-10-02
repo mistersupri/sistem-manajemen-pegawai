@@ -1,3 +1,4 @@
+import { CollapsibleFilters } from '@/components/app/collapsible-filters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
@@ -33,6 +34,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader title="Audit Log" description="Catatan siapa melakukan apa dan kapan. Hanya bisa ditambah; tidak bisa diubah atau dihapus dari aplikasi maupun database." crumbs={[{ label: 'Pengaturan' }, { label: 'Audit Log' }]} />
       <PageBody className="grid gap-4">
+        <CollapsibleFilters active={Object.entries(sp).filter(([k, v]) => v && !['page', 'sort', 'lihat', 'kategori', 'status', 'tab'].includes(k)).length}>
         <form className="flex flex-wrap items-end gap-2 rounded-xl border bg-card p-4">
           <label className="grid gap-1 text-sm font-medium" htmlFor="q">Cari<Input id="q" name="q" defaultValue={q.q ?? ''} placeholder="Pelaku, aksi, atau ID data" className="w-60" /></label>
           <label className="grid gap-1 text-sm font-medium" htmlFor="action">Area<NativeSelect id="action" name="action" defaultValue={q.action ?? ''} className="min-w-44"><NativeSelectOption value="">Semua</NativeSelectOption>{AREAS.map(([v, l]) => <NativeSelectOption key={v} value={v}>{l}</NativeSelectOption>)}</NativeSelect></label>
@@ -41,6 +43,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <label className="grid gap-1 text-sm font-medium" htmlFor="to">Sampai<Input id="to" name="to" type="date" defaultValue={q.to ?? ''} /></label>
           <Button type="submit" variant="outline">Terapkan</Button>
         </form>
+        </CollapsibleFilters>
         <div className="rounded-xl border bg-card">
           <Table className="table-stack">
             <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Waktu</TableHead><TableHead>Pelaku</TableHead><TableHead>Aksi</TableHead><TableHead>Data</TableHead><TableHead>Hasil</TableHead><TableHead className="pr-4 lg:pr-6">Rincian</TableHead></TableRow></TableHeader>

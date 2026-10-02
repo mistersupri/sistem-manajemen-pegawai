@@ -1,7 +1,7 @@
 import { prisma } from '../db';
 import { can, employeeScopeWhere, scopeOf, type Actor } from '../auth/actor';
 import { getSettings } from '../settings';
-import { addDays, dateRange, fromDbDate, toDbDate, todayIn, zonedToUtc } from '../time';
+import { addDays, dateRange, fromDbDate, toDbDate, todayIn, zonedParts, zonedToUtc } from '../time';
 import { loadPlanContext, isScheduledWorkday } from '../attendance/plan';
 import { categoryOf } from './reports';
 import { balancesFor, pendingLeaveApprovalWhere } from './leave';
@@ -114,7 +114,7 @@ export async function employeeDashboard(actor: Actor) {
   const [todayRec, yesterdayRec, recent, monthRecs, corrections, leaves] = await Promise.all([
     prisma.attendanceRecord.findUnique({ where: { employeeId_workDate: { employeeId: empId, workDate: toDbDate(today) } } }),
     prisma.attendanceRecord.findUnique({ where: { employeeId_workDate: { employeeId: empId, workDate: toDbDate(addDays(today, -1)) } } }),
-    prisma.attendanceRecord.findMany({ where: { employeeId: empId }, orderBy: { workDate: 'desc' }, take: 10 }),
+    prisma.attendanceRecord.findMany({ where: { employeeId: empId, workDate: { lte: toDbDate(today) } }, orderBy: { workDate: 'desc' }, take: 7 }),
     prisma.attendanceRecord.findMany({ where: { employeeId: empId, workDate: { gte: toDbDate(monthStart), lte: toDbDate(today) } } }),
     prisma.attendanceCorrection.findMany({ where: { employeeId: empId }, orderBy: { createdAt: 'desc' }, take: 5 }),
     s['modules.leave'] ? prisma.leaveRequest.findMany({ where: { employeeId: empId }, include: { leaveType: true }, orderBy: { createdAt: 'desc' }, take: 5 }) : Promise.resolve([]),
@@ -123,7 +123,7 @@ export async function employeeDashboard(actor: Actor) {
   const scheduled = dateRange(monthStart, today).filter((d) => isScheduledWorkday(monthPlans.planFor(empId, d)));
   const recDates = new Set(monthRecs.map((r) => fromDbDate(r.workDate)));
   return {
-    today, tz, employee: emp,
+    today, tz, employee: emp, now: zonedParts(new Date(), tz).time.slice(0, 5),
     plan: ctx.planFor(empId, today),
     todayRec,
     openOvernight: yesterdayRec?.checkInAt && !yesterdayRec.checkOutAt ? yesterdayRec : null,

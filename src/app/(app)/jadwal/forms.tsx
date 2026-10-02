@@ -129,7 +129,7 @@ export function AssignmentForm({ schedules, employees, units, canAllUnits }: { s
           <Field id="scheduleId" label="Jadwal" error={fields.scheduleId} required={kind === 'TETAP'}>
             <NativeSelect {...fieldProps('scheduleId', fields.scheduleId)} defaultValue="">
               <NativeSelectOption value="" disabled={kind === 'TETAP'}>{kind === 'TETAP' ? 'Pilih jadwal' : 'Libur (tanpa jadwal)'}</NativeSelectOption>
-              {schedules.map((s) => <NativeSelectOption key={s.id} value={s.id}>{s.code} · {s.name}</NativeSelectOption>)}
+              {schedules.map((s) => <NativeSelectOption key={s.id} value={s.id}>{s.name} ({s.code})</NativeSelectOption>)}
             </NativeSelect>
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">

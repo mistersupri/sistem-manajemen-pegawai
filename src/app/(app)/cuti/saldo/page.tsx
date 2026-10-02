@@ -58,7 +58,7 @@ export default async function BalancesPage({ searchParams }: { searchParams: Pro
                 {data.rows.length === 0 && <TableRow><TableCell colSpan={data.types.length + 1}><EmptyState title="Tidak ada pegawai" filtered={!!(sp.q || unit)} /></TableCell></TableRow>}
                 {data.rows.map((r) => (
                   <TableRow key={r.employee.id}>
-                    <TableCell className="stack-head pl-4 lg:pl-6"><span className="font-medium">{r.employee.fullName}</span><span className="block text-xs text-muted-foreground">{[r.employee.employeeNumber, r.employee.unit?.name].filter(Boolean).join(' · ')}</span></TableCell>
+                    <TableCell className="stack-head pl-4 lg:pl-6"><span className="font-medium">{r.employee.fullName}</span><span className="block text-xs text-muted-foreground">{[r.employee.employeeNumber, r.employee.unit?.name].filter(Boolean).join(', ')}</span></TableCell>
                     {r.cells.map((c, i) => (
                       <TableCell key={c.leaveTypeId} data-label={data.types[i].name}>
                         <div className="flex items-center gap-3">

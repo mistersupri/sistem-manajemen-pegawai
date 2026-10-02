@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CollapsibleFilters } from '@/components/app/collapsible-filters';
 import { ScanFace, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,7 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
         }
       />
       <PageBody className="grid gap-4">
+        <CollapsibleFilters active={[sp.unit, sp.metode, sp.q, sp.tanggal].filter(Boolean).length}>
         <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[1fr_1.4fr_1.2fr_1.6fr_auto] md:items-end" aria-label="Filter monitoring">
           <div className="grid gap-2"><Label htmlFor="tanggal">Tanggal</Label><Input id="tanggal" name="tanggal" type="date" defaultValue={d.date} /></div>
           <div className="grid gap-2"><Label htmlFor="unit">Unit kerja</Label><NativeSelect id="unit" name="unit" defaultValue={sp.unit ?? ''}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></div>
@@ -50,14 +52,15 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
           <input type="hidden" name="kategori" value={sp.kategori ?? ''} />
           <Button type="submit">Terapkan</Button>
         </form>
+        </CollapsibleFilters>
 
-        <nav className="flex flex-wrap gap-1 rounded-full border bg-card p-1" aria-label="Kategori kehadiran">
+        <nav className="flex max-w-full gap-1 overflow-x-auto rounded-full border bg-card p-1 [scrollbar-width:none] md:w-fit" aria-label="Kategori kehadiran">
           {[['', 'Semua'], ...Object.entries(CATEGORY_LABEL)].map(([k, label]) => {
             const active = (sp.kategori ?? '') === k;
             const n = k ? d.counts[k] ?? 0 : Object.values(d.counts).reduce((a, b) => a + b, 0);
             return (
               <Link key={k || 'all'} href={base(k || undefined)} aria-current={active ? 'page' : undefined}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-sm font-medium ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-medium whitespace-nowrap ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
                 {label}<span className={`rounded-full px-1.5 text-xs tabular ${active ? 'bg-white/20' : 'bg-muted'}`}>{n}</span>
               </Link>
             );
@@ -71,11 +74,20 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
               {d.rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState filtered={!!(sp.kategori || sp.q || sp.unit || sp.metode)} title="Tidak ada pegawai pada kategori ini" /></TableCell></TableRow>}
               {d.rows.map(({ employee: e, plan: p, record: r, category }) => (
                 <TableRow key={e.id}>
-                  <TableCell className="stack-head pl-4 lg:pl-6"><Link href={`/absensi/rekap/${e.id}/${d.date}`} className="font-medium text-primary hover:underline">{e.fullName}</Link><span className="block text-xs text-muted-foreground">{e.unit?.name ?? ''}</span></TableCell>
-                  <TableCell data-label="Jadwal" className="tabular text-muted-foreground">{p.isOffDay ? p.holidayName ?? 'Libur' : p.schedule ? `${p.schedule.code} ${p.schedule.checkIn}-${p.schedule.checkOut}` : 'Tanpa jadwal'}</TableCell>
-                  <TableCell data-label="Masuk" className="tabular">{fmtJam(r?.checkInAt, d.tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r?.checkInMethod ?? ''] ?? ''}</span></TableCell>
-                  <TableCell data-label="Pulang" className="tabular">{fmtJam(r?.checkOutAt, d.tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r?.checkOutMethod ?? ''] ?? ''}</span></TableCell>
-                  <TableCell data-label="Status">{r ? <StatusBadge status={r.status} /> : <StatusBadge status="TANPA_TRANSAKSI" label={CATEGORY_LABEL[category]} />}{r && r.lateMinutes > 0 && <span className="block text-xs text-muted-foreground">{r.lateMinutes} mnt</span>}</TableCell>
+                  <TableCell className="stack-head pl-4 lg:pl-6">
+                    <span className="flex items-start justify-between gap-3">
+                      <span className="min-w-0"><Link href={`/absensi/rekap/${e.id}/${d.date}`} className="font-medium text-primary hover:underline">{e.fullName}</Link><span className="block text-xs text-muted-foreground">{e.unit?.name ?? ''}</span></span>
+                      <span className="shrink-0 md:hidden">{r ? <StatusBadge status={r.status} /> : <StatusBadge status="TANPA_TRANSAKSI" label={CATEGORY_LABEL[category]} />}</span>
+                    </span>
+                    <span className="mt-1 block text-sm tabular md:hidden">
+                      Masuk <b>{fmtJam(r?.checkInAt, d.tz) ?? '--:--'}</b>{r && r.lateMinutes > 0 && <span className="text-[#b4501f]"> (+{r.lateMinutes} mnt)</span>}, pulang <b>{fmtJam(r?.checkOutAt, d.tz) ?? '--:--'}</b>
+                      <span className="block text-xs text-muted-foreground">{p.isOffDay ? p.holidayName ?? 'Libur' : p.schedule ? `Jadwal ${p.schedule.code} ${p.schedule.checkIn} sampai ${p.schedule.checkOut}` : 'Tanpa jadwal'}</span>
+                    </span>
+                  </TableCell>
+                  <TableCell data-label="Jadwal" className="max-md:hidden! tabular text-muted-foreground">{p.isOffDay ? p.holidayName ?? 'Libur' : p.schedule ? `${p.schedule.code} ${p.schedule.checkIn}-${p.schedule.checkOut}` : 'Tanpa jadwal'}</TableCell>
+                  <TableCell data-label="Masuk" className="max-md:hidden! tabular">{fmtJam(r?.checkInAt, d.tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r?.checkInMethod ?? ''] ?? ''}</span></TableCell>
+                  <TableCell data-label="Pulang" className="max-md:hidden! tabular">{fmtJam(r?.checkOutAt, d.tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r?.checkOutMethod ?? ''] ?? ''}</span></TableCell>
+                  <TableCell data-label="Status" className="max-md:hidden!">{r ? <StatusBadge status={r.status} /> : <StatusBadge status="TANPA_TRANSAKSI" label={CATEGORY_LABEL[category]} />}{r && r.lateMinutes > 0 && <span className="block text-xs text-muted-foreground">{r.lateMinutes} mnt</span>}</TableCell>
                   <TableCell className="pr-4 max-md:hidden lg:pr-6"><Dayline scheduleIn={p.schedule?.checkIn} scheduleOut={p.schedule?.checkOut} checkIn={fmtJam(r?.checkInAt, d.tz)} checkOut={fmtJam(r?.checkOutAt, d.tz)} late={(r?.lateMinutes ?? 0) > 0} /></TableCell>
                 </TableRow>
               ))}

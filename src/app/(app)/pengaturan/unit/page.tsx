@@ -38,7 +38,7 @@ export default async function UnitsPage() {
                   <div className="min-w-0">
                     <span className="font-medium">{depth > 0 && <span className="mr-1.5 text-muted-foreground" aria-hidden>└</span>}{u.name}</span>
                     <span className="block text-xs text-muted-foreground" style={{ paddingLeft: depth > 0 ? '1.1rem' : 0 }}>
-                      {u.code} · <Link className="hover:underline" href={`/pegawai?unitId=${u.id}`}>{u._count.employees} pegawai aktif</Link>{u.timezone ? ` · ${u.timezone}` : ''}
+                      {u.code}, <Link className="hover:underline" href={`/pegawai?unitId=${u.id}`}>{u._count.employees} pegawai aktif</Link>{u.timezone ? `, ${u.timezone}` : ''}
                     </span>
                   </div>
                   {manage && (

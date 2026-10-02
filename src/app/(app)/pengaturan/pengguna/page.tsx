@@ -59,11 +59,11 @@ async function UsersTab({ q, actorId, actor }: { q?: string; actorId: string; ac
             {users.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada pengguna" filtered={!!q} /></TableCell></TableRow>}
             {users.map((u) => (
               <TableRow key={u.id}>
-                <TableCell className="stack-head pl-4 lg:pl-6"><span className="font-medium">{u.username}</span><span className="block text-xs text-muted-foreground">{u.employee ? `${u.employee.fullName}${u.employee.unit ? ` · ${u.employee.unit.name}` : ''}` : 'Bukan akun pegawai'}</span></TableCell>
+                <TableCell className="stack-head pl-4 lg:pl-6"><span className="font-medium">{u.username}</span><span className="block text-xs text-muted-foreground">{u.employee ? `${u.employee.fullName}${u.employee.unit ? `, ${u.employee.unit.name}` : ''}` : 'Bukan akun pegawai'}</span></TableCell>
                 <TableCell data-label="Peran" className="whitespace-normal">
                   <div className="flex flex-wrap gap-1">
                     {u.roles.length === 0 && <span className="text-sm text-muted-foreground">Belum ada peran</span>}
-                    {u.roles.map((r) => <RoleChip key={r.id} userId={u.id} urId={r.id} label={`${r.role.name}${r.unit ? ` · ${r.unit.name}${r.includeSubunits ? '+' : ''}` : r.role.code === 'PEGAWAI' ? '' : ' · semua unit'}`} />)}
+                    {u.roles.map((r) => <RoleChip key={r.id} userId={u.id} urId={r.id} label={`${r.role.name}${r.unit ? `, ${r.unit.name}${r.includeSubunits ? '+' : ''}` : r.role.code === 'PEGAWAI' ? '' : ', semua unit'}`} />)}
                   </div>
                 </TableCell>
                 <TableCell data-label="MFA">{u.mfaEnabled ? 'Aktif' : <span className="text-muted-foreground">Tidak</span>}</TableCell>

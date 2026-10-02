@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, fieldProps } from '@/components/app/field';
@@ -41,14 +40,14 @@ export function LoginForm({ initialError, initialStep }: { initialError: string 
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl">{step === 'password' ? 'Masuk' : 'Verifikasi dua langkah'}</CardTitle>
-        <CardDescription>
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">{step === 'password' ? 'Masuk' : 'Verifikasi dua langkah'}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           {step === 'password' ? 'Pegawai masuk dengan NIP. Password awal sama dengan NIP dan wajib diganti saat masuk pertama.' : 'Masukkan 6 angka dari aplikasi autentikator di ponsel Anda.'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </p>
+      </div>
+      <div>
         {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
         <form onSubmit={submit} method="post" action={step === 'password' ? '/api/v1/auth/login' : '/api/v1/auth/mfa'} className="grid gap-5" noValidate>
           {step === 'password' ? (
@@ -68,7 +67,7 @@ export function LoginForm({ initialError, initialStep }: { initialError: string 
           <Button type="submit" size="lg" disabled={pending}>{pending ? 'Memeriksa...' : step === 'password' ? 'Masuk' : 'Verifikasi'}</Button>
           {step === 'mfa' && <Button type="button" variant="ghost" onClick={() => { setStep('password'); setError(null); }}>Kembali</Button>}
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

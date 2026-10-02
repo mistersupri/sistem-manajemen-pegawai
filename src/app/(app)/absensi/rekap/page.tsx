@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CollapsibleFilters } from '@/components/app/collapsible-filters';
 import { Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +66,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
         }
       />
       <PageBody className="grid gap-4">
+        <CollapsibleFilters active={Object.entries(sp).filter(([k, v]) => v && !['page', 'sort', 'lihat', 'kategori', 'status', 'tab'].includes(k)).length}>
         <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr_1fr_1fr_1.3fr_auto] lg:items-end" aria-label="Filter rekap">
           <div className="grid gap-2"><Label htmlFor="dari">Dari</Label><Input id="dari" name="dari" type="date" defaultValue={from} /></div>
           <div className="grid gap-2"><Label htmlFor="sampai">Sampai</Label><Input id="sampai" name="sampai" type="date" defaultValue={to} /></div>
@@ -81,6 +83,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
             {presets.map(([label, a, b]) => <Button key={label} asChild size="sm" variant={from === a && to === b ? 'secondary' : 'ghost'}><Link href={qs({ dari: a, sampai: b, page: undefined })}>{label}</Link></Button>)}
           </div>
         </form>
+        </CollapsibleFilters>
 
         <nav className="flex w-fit gap-1 rounded-full border bg-card p-1" aria-label="Tampilan">
           {[['rekap', 'Rekap per pegawai'], ['harian', 'Detail harian']].map(([k, label]) => (
@@ -99,7 +102,7 @@ async function RecapTable({ actorPromise }: { actorPromise: ReturnType<typeof re
   const { rows, filter } = await actorPromise;
   return (
     <div className="rounded-xl border bg-card">
-      <Table className="table-stack">
+      <Table className="table-stack stack-grid">
         <TableHeader><TableRow>
           <TableHead className="pl-4 lg:pl-6">Pegawai</TableHead><TableHead className="text-right">Hari kerja</TableHead><TableHead className="text-right">Hadir</TableHead><TableHead className="text-right">Terlambat</TableHead>
           <TableHead className="text-right">Pulang awal</TableHead><TableHead className="text-right">Dinas luar</TableHead><TableHead className="text-right">Izin/sakit/cuti</TableHead><TableHead className="text-right">Tidak hadir</TableHead><TableHead className="text-right">Tanpa transaksi</TableHead><TableHead className="pr-4 text-right lg:pr-6">Kehadiran</TableHead>
@@ -129,19 +132,19 @@ async function RecapTable({ actorPromise }: { actorPromise: ReturnType<typeof re
 function DailyTable({ data, tz, params }: { data: Awaited<ReturnType<typeof dailyRecords>>; tz: string; params: Record<string, string | undefined> }) {
   return (
     <div className="rounded-xl border bg-card">
-      <Table className="table-stack">
+      <Table className="table-stack stack-grid">
         <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Tanggal</TableHead><TableHead>Pegawai</TableHead><TableHead>Jadwal</TableHead><TableHead>Masuk</TableHead><TableHead>Pulang</TableHead><TableHead>Status</TableHead><TableHead className="pr-4 lg:pr-6">Catatan</TableHead></TableRow></TableHeader>
         <TableBody>
           {data.rows.length === 0 && <TableRow><TableCell colSpan={7}><EmptyState filtered title="Tidak ada catatan absensi untuk filter ini" /></TableCell></TableRow>}
           {data.rows.map((r) => (
             <TableRow key={r.id}>
               <TableCell className="stack-head pl-4 lg:pl-6"><Link className="font-medium text-primary hover:underline" href={`/absensi/rekap/${r.employeeId}/${fromDbDate(r.workDate)}`}>{fmtTglPendek(fromDbDate(r.workDate))}</Link></TableCell>
-              <TableCell data-label="Pegawai">{r.employee.fullName}<span className="block text-xs text-muted-foreground">{r.employee.unit?.name ?? ''}</span></TableCell>
+              <TableCell data-label="Pegawai" className="span-all">{r.employee.fullName}<span className="block text-xs text-muted-foreground">{r.employee.unit?.name ?? ''}</span></TableCell>
               <TableCell data-label="Jadwal" className="tabular text-muted-foreground">{r.schedule ? `${r.schedule.code} ${r.schedule.checkIn}-${r.schedule.checkOut}` : '-'}</TableCell>
               <TableCell data-label="Masuk" className="tabular">{fmtJam(r.checkInAt, tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r.checkInMethod ?? ''] ?? ''}</span></TableCell>
               <TableCell data-label="Pulang" className="tabular">{fmtJam(r.checkOutAt, tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r.checkOutMethod ?? ''] ?? ''}</span></TableCell>
               <TableCell data-label="Status"><StatusBadge status={r.status} />{r.lateMinutes > 0 && <span className="block text-xs text-muted-foreground">{r.lateMinutes} mnt</span>}</TableCell>
-              <TableCell data-label="Catatan" className="pr-4 whitespace-normal text-sm text-muted-foreground lg:pr-6">{[r.dispensation && 'Dispensasi', r.reviewReason, r.note].filter(Boolean).join('; ')}</TableCell>
+              <TableCell data-label="Catatan" className="span-all pr-4 whitespace-normal text-sm text-muted-foreground lg:pr-6">{[r.dispensation && 'Dispensasi', r.reviewReason, r.note].filter(Boolean).join('; ')}</TableCell>
             </TableRow>
           ))}
         </TableBody>

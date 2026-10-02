@@ -78,3 +78,18 @@ Semua komponen mengikuti [shadcn/ui](https://ui.shadcn.com/) gaya new-york-v4, d
 ## Logo
 
 Logo instansi diunggah admin di Pengaturan. Bila belum ada, yang tampil hanya nama instansi sebagai teks, tanpa ikon pengganti.
+
+## Revisi desain Oktober 2026
+
+Bahan utama aplikasi ini adalah **waktu**: jam masuk, jam pulang, jadwal, dan "sekarang". Desain dibangun di sekitar itu.
+
+- **Kuning jam** (`#F2B11E`) hanya punya dua arti: *sekarang* (garis waktu sekarang di papan dan garis hari) dan aksi absen utama pegawai. Bukan warna dekorasi.
+- **Jam sebagai tipografi utama**: kelas `.clock` (angka tabular, tebal 750, rapat). Dipakai untuk jam masuk/pulang di beranda pegawai dan jam server di halaman masuk.
+- **Dashboard admin**: judulnya tanggal, bukan kata "Dashboard". Enam kartu angka diganti satu batang proporsional (`RegisterBar`) dengan jumlah sebagai teks. Elemen khasnya **Papan hari ini** (`TodayBoard`): satu baris per pegawai pada sumbu 05.00 sampai 24.00, pita jadwal, tanda masuk (biru, oranye bila terlambat), tanda pulang (navy), dan garis kuning waktu sekarang. Yang belum ada transaksi dan terlambat di atas.
+- **Warna kategori** satu sumber (`attendance-colors.ts`) untuk batang dan grafik tren. "Belum ada transaksi" abu netral karena belum tentu tidak hadir.
+- **Beranda pegawai**: satu kartu "Absensi hari ini" dengan jam besar, garis hari, satu tombol kuning untuk aksi berikutnya, lalu aksi lain sebagai baris di bawahnya. Jadwal minggu ini sebagai strip 7 hari.
+- **Navigasi bawah** di ponsel untuk pegawai tanpa peran pengelola: Beranda, Absen, Jadwal, Koreksi, Cuti.
+- **Daftar di ponsel**: filter dilipat di balik tombol "Filter" (`CollapsibleFilters`); baris tabel dipadatkan (nama dan status di baris pertama, jam dalam satu kalimat); tabel banyak angka memakai varian `stack-grid` (tiga kolom, label di atas nilai). Navigasi pil menjadi satu baris yang bisa digeser.
+- **Kartu** tanpa bayangan (cukup garis), padding 16 px di ponsel dan 24 px di layar lebar. Metadata ditulis sebagai kalimat atau baris terpisah, bukan dipisah titik tengah.
+- **Keadaan halaman**: kerangka saat memuat (`loading.tsx`), halaman galat dengan langkah berikutnya, dan halaman tidak ditemukan. Animasi dinonaktifkan bila pengguna memilih *reduced motion*; grafik tidak beranimasi.
+- **Halaman masuk**: panel kiri menampilkan jam server berjalan dalam zona waktu instansi, karena itu yang dipakai untuk semua absensi.

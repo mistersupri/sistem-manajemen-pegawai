@@ -23,7 +23,7 @@ export default async function LeaveDetail({ params }: { params: Promise<{ id: st
     <>
       <PageHeader
         title={r.leaveType.name}
-        description={own ? undefined : `${r.employee.fullName}${r.employee.unit ? ` · ${r.employee.unit.name}` : ''}`}
+        description={own ? undefined : `${r.employee.fullName}${r.employee.unit ? `, ${r.employee.unit.name}` : ''}`}
         crumbs={[{ href: '/cuti', label: 'Cuti & Izin' }, { label: 'Rincian' }]}
         actions={r.canCancel ? (
           <ConfirmButton label="Batalkan pengajuan" title="Batalkan pengajuan ini?" description={r.status === 'APPROVED' ? 'Status absensi pada tanggal tersebut akan dihitung ulang dari transaksi yang ada.' : 'Pengajuan tidak akan diproses lagi.'}

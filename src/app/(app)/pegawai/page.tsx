@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CollapsibleFilters } from '@/components/app/collapsible-filters';
 import { Download, Plus, Search, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +54,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         }
       />
       <PageBody className="grid gap-4">
+        <CollapsibleFilters active={Object.entries(sp).filter(([k, v]) => v && !['page', 'sort', 'lihat', 'kategori', 'status', 'tab'].includes(k)).length}>
         <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[2fr_1.4fr_1fr_1fr_auto] md:items-end" aria-label="Cari dan filter pegawai">
           <div className="grid gap-2">
             <Label htmlFor="q">Cari</Label>
@@ -69,6 +71,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="flex gap-2"><Button type="submit">Terapkan</Button>{filtered && <Button asChild variant="outline"><Link href="/pegawai">Reset</Link></Button>}</div>
         </form>
+        </CollapsibleFilters>
 
         {sp.face === 'menunggu' && pending.length > 0 && (
           <div className="rounded-xl border bg-card">
@@ -76,7 +79,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
             <ul className="divide-y">
               {pending.map((b) => (
                 <li key={b.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-6">
-                  <span><Link href={`/pegawai/${b.employee.id}`} className="font-medium hover:underline">{b.employee.fullName}</Link><span className="block text-sm text-muted-foreground">{b.employee.unit?.name ?? 'Tanpa unit'} · {b.sampleCount} sampel</span></span>
+                  <span><Link href={`/pegawai/${b.employee.id}`} className="font-medium hover:underline">{b.employee.fullName}</Link><span className="block text-sm text-muted-foreground">{b.employee.unit?.name ?? 'Tanpa unit'}, {b.sampleCount} sampel</span></span>
                   {can(actor, 'biometric.manage') && <VerifyButtons id={b.id} name={b.employee.fullName} />}
                 </li>
               ))}
@@ -107,13 +110,19 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
               )}
               {data.rows.map((e) => (
                 <TableRow key={e.id}>
-                  <TableCell className="stack-head pl-4 lg:pl-6"><Link href={`/pegawai/${e.id}`} className="font-medium text-primary hover:underline">{[e.frontTitle, e.fullName].filter(Boolean).join(' ')}{e.backTitle ? `, ${e.backTitle}` : ''}</Link>{e.email && <span className="block text-xs text-muted-foreground">{e.email}</span>}</TableCell>
-                  <TableCell data-label="NIP" className="tabular">{e.employeeNumber ?? '-'}{e.machinePin && <span className="block text-xs text-muted-foreground">ID mesin {e.machinePin}</span>}</TableCell>
-                  <TableCell data-label="Jabatan" className="whitespace-normal">{e.position ?? '-'}{e.rank && <span className="block text-xs text-muted-foreground">{e.rank}</span>}</TableCell>
-                  <TableCell data-label="Unit" className="whitespace-normal">{e.unit?.name ?? '-'}</TableCell>
-                  <TableCell data-label="Status kepegawaian">{e.employmentStatus ?? '-'}</TableCell>
-                  <TableCell data-label="Wajah">{e.faceStatus ? <StatusBadge status={e.faceStatus} /> : <span className="text-sm text-muted-foreground">Belum</span>}</TableCell>
-                  <TableCell data-label="Status" className="pr-4 lg:pr-6"><StatusBadge status={e.isActive ? 'APPROVED' : 'CANCELLED'} label={e.isActive ? 'Aktif' : 'Nonaktif'} /></TableCell>
+                  <TableCell className="stack-head pl-4 lg:pl-6"><Link href={`/pegawai/${e.id}`} className="font-medium text-primary hover:underline">{[e.frontTitle, e.fullName].filter(Boolean).join(' ')}{e.backTitle ? `, ${e.backTitle}` : ''}</Link>{e.email && <span className="block text-xs text-muted-foreground max-md:hidden">{e.email}</span>}
+                    <span className="mt-1 block text-sm md:hidden">
+                      {[e.position, e.unit?.name].filter(Boolean).join(', ') || 'Jabatan dan unit belum diisi'}
+                      <span className="block text-xs text-muted-foreground tabular">{[e.employeeNumber ? `NIP ${e.employeeNumber}` : null, e.employmentStatus, e.faceStatus === 'ACTIVE' ? 'wajah terdaftar' : e.faceStatus === 'PENDING_VERIFICATION' ? 'wajah menunggu verifikasi' : 'wajah belum terdaftar'].filter(Boolean).join(', ')}</span>
+                      {!e.isActive && <StatusBadge status="CANCELLED" label="Nonaktif" className="mt-1" />}
+                    </span>
+                  </TableCell>
+                  <TableCell data-label="NIP" className="max-md:hidden! tabular">{e.employeeNumber ?? '-'}{e.machinePin && <span className="block text-xs text-muted-foreground">ID mesin {e.machinePin}</span>}</TableCell>
+                  <TableCell data-label="Jabatan" className="max-md:hidden! whitespace-normal">{e.position ?? '-'}{e.rank && <span className="block text-xs text-muted-foreground">{e.rank}</span>}</TableCell>
+                  <TableCell data-label="Unit" className="max-md:hidden! whitespace-normal">{e.unit?.name ?? '-'}</TableCell>
+                  <TableCell data-label="Status kepegawaian" className="max-md:hidden!">{e.employmentStatus ?? '-'}</TableCell>
+                  <TableCell data-label="Wajah" className="max-md:hidden!">{e.faceStatus ? <StatusBadge status={e.faceStatus} /> : <span className="text-sm text-muted-foreground">Belum</span>}</TableCell>
+                  <TableCell data-label="Status" className="max-md:hidden! pr-4 lg:pr-6"><StatusBadge status={e.isActive ? 'APPROVED' : 'CANCELLED'} label={e.isActive ? 'Aktif' : 'Nonaktif'} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>

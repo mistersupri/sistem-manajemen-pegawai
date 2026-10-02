@@ -29,7 +29,7 @@ export default async function TracePage({ params }: { params: Promise<{ employee
     <>
       <PageHeader
         title={t.employee.fullName}
-        description={`${fmtTanggal(date)}${t.employee.employeeNumber ? ` · NIP ${t.employee.employeeNumber}` : ''}`}
+        description={`${fmtTanggal(date)}${t.employee.employeeNumber ? `, NIP ${t.employee.employeeNumber}` : ''}`}
         crumbs={isSelf && !can(actor, 'attendance.report') ? [{ href: '/absensi/saya', label: 'Absensi Saya' }, { label: 'Rincian' }] : [{ href: '/absensi/rekap', label: 'Rekapitulasi' }, { label: 'Rincian' }]}
         actions={
           <>
@@ -56,7 +56,7 @@ export default async function TracePage({ params }: { params: Promise<{ employee
             )}
             <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[12rem_1fr]">
               <dt className="text-muted-foreground">Jadwal</dt>
-              <dd>{p.isOffDay ? `Libur${p.holidayName ? ` (${p.holidayName})` : p.offReason === 'BUKAN_HARI_KERJA' ? ' (bukan hari kerja)' : ''}` : p.schedule ? `${p.schedule.name} ${p.schedule.checkIn} sampai ${p.schedule.checkOut}, toleransi ${p.schedule.lateToleranceMin} menit` : 'Tanpa jadwal'}{` · dari ${SRC[p.source]}`}</dd>
+              <dd>{p.isOffDay ? `Libur${p.holidayName ? ` (${p.holidayName})` : p.offReason === 'BUKAN_HARI_KERJA' ? ' (bukan hari kerja)' : ''}` : p.schedule ? `${p.schedule.name} ${p.schedule.checkIn} sampai ${p.schedule.checkOut}, toleransi ${p.schedule.lateToleranceMin} menit` : 'Tanpa jadwal'}{`, dari ${SRC[p.source]}`}</dd>
               <dt className="text-muted-foreground">Versi aturan dipakai</dt><dd>{r?.scheduleRevision ? `${r.schedule?.code} versi ${r.scheduleRevision.version}` : '-'}</dd>
               {r?.reviewReason && <><dt className="text-muted-foreground">Perlu ditinjau</dt><dd>{r.reviewReason}</dd></>}
               {r?.note && <><dt className="text-muted-foreground">Catatan</dt><dd>{r.note}</dd></>}
@@ -76,8 +76,8 @@ export default async function TracePage({ params }: { params: Promise<{ employee
                   <TableCell data-label="Metode">{METHOD_LABEL[e.method] ?? e.method}</TableCell>
                   <TableCell data-label="Hasil"><StatusBadge status={e.verification?.outcome === 'SUCCESS' ? 'SUCCESS' : 'FAILED'} label={e.verification?.outcome === 'SUCCESS' ? 'Berhasil' : (OUTCOME_MESSAGE[e.verification?.outcome as Outcome] ?? e.verification?.outcome ?? '-').split('.')[0]} /></TableCell>
                   <TableCell data-label="Detail" className="pr-6 whitespace-normal text-sm text-muted-foreground">
-                    {[e.verification?.distance != null && `jarak wajah ${e.verification.distance.toFixed(3)} (ambang ${e.verification.threshold})`, e.verification?.distanceToOfficeM != null && `${e.verification.distanceToOfficeM} m dari kantor`, e.latitude != null && `GPS ${e.latitude.toFixed(5)}, ${e.longitude?.toFixed(5)}`, e.note, e.verification?.message !== OUTCOME_MESSAGE.SUCCESS && e.verification?.message].filter(Boolean).join(' · ')}
-                    {e.hasPhoto && <> · <a className="text-primary underline" href={`/api/v1/attendance/photo/${e.id}`} target="_blank" rel="noopener">foto</a></>}
+                    {[e.verification?.distance != null && `jarak wajah ${e.verification.distance.toFixed(3)} (ambang ${e.verification.threshold})`, e.verification?.distanceToOfficeM != null && `${e.verification.distanceToOfficeM} m dari kantor`, e.latitude != null && `GPS ${e.latitude.toFixed(5)}, ${e.longitude?.toFixed(5)}`, e.note, e.verification?.message !== OUTCOME_MESSAGE.SUCCESS && e.verification?.message].filter(Boolean).join(', ')}
+                    {e.hasPhoto && <>, <a className="text-primary underline" href={`/api/v1/attendance/photo/${e.id}`} target="_blank" rel="noopener">foto</a></>}
                   </TableCell>
                 </TableRow>
               ))}</TableBody></Table>

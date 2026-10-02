@@ -2,29 +2,28 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { CATEGORY_COLOR } from './attendance-colors';
 
-// Slot kategori 1-4 dari palet referensi dataviz (tervalidasi untuk pasangan bersebelahan).
 const config = {
-  hadir: { label: 'Hadir', color: '#2a78d6' },
-  terlambat: { label: 'Terlambat', color: '#eb6834' },
-  izin: { label: 'Izin, sakit, cuti', color: '#1baf7a' },
-  tanpaTransaksi: { label: 'Belum ada transaksi', color: '#eda100' },
+  hadir: { label: 'Hadir dan dinas luar', color: CATEGORY_COLOR.HADIR },
+  terlambat: { label: 'Terlambat', color: CATEGORY_COLOR.TERLAMBAT },
+  izin: { label: 'Izin, sakit, cuti', color: CATEGORY_COLOR.IZIN_CUTI },
+  tanpaTransaksi: { label: 'Belum ada transaksi', color: CATEGORY_COLOR.BELUM_ABSEN },
 } satisfies ChartConfig;
 
 export function TrendChart({ data }: { data: { date: string; hadir: number; terlambat: number; izin: number; tanpaTransaksi: number }[] }) {
   const rows = data.map((d) => ({ ...d, label: `${Number(d.date.slice(8))}/${Number(d.date.slice(5, 7))}` }));
   return (
-    <ChartContainer config={config} className="aspect-auto h-64 w-full">
-      <BarChart data={rows} margin={{ left: -16, right: 8, top: 8 }} barCategoryGap={2}>
+    <ChartContainer config={config} className="aspect-auto h-60 w-full">
+      <BarChart data={rows} margin={{ left: -16, right: 8, top: 8 }} barCategoryGap={3}>
         <CartesianGrid vertical={false} strokeOpacity={0.5} />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={16} />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={20} />
         <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={40} />
         <ChartTooltip content={<ChartTooltipContent />} cursor={{ fillOpacity: 0.08 }} />
         <ChartLegend content={<ChartLegendContent />} />
-        <Bar dataKey="hadir" stackId="a" fill="var(--color-hadir)" stroke="var(--card)" strokeWidth={1} />
-        <Bar dataKey="terlambat" stackId="a" fill="var(--color-terlambat)" stroke="var(--card)" strokeWidth={1} />
-        <Bar dataKey="izin" stackId="a" fill="var(--color-izin)" stroke="var(--card)" strokeWidth={1} />
-        <Bar dataKey="tanpaTransaksi" stackId="a" fill="var(--color-tanpaTransaksi)" stroke="var(--card)" strokeWidth={1} radius={[4, 4, 0, 0]} />
+        {(['hadir', 'terlambat', 'izin', 'tanpaTransaksi'] as const).map((k, i, all) => (
+          <Bar key={k} dataKey={k} stackId="a" fill={`var(--color-${k})`} stroke="var(--card)" strokeWidth={1} isAnimationActive={false} radius={i === all.length - 1 ? [3, 3, 0, 0] : undefined} />
+        ))}
       </BarChart>
     </ChartContainer>
   );

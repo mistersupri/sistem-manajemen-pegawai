@@ -146,7 +146,7 @@ async function SchedulesTab({ manage, revFor, tz }: { manage: boolean; revFor?: 
                 return (
                   <li key={r.id} className="rounded-lg border p-3 text-sm">
                     <div className="flex flex-wrap justify-between gap-2"><b>Versi {r.version}</b><span className="text-muted-foreground">{fmtWaktu(r.createdAt, tz)}{users.find((u) => u.id === r.changedById) ? ` oleh ${users.find((u) => u.id === r.changedById)!.username}` : ''}</span></div>
-                    <p className="mt-1 tabular">{String(x.checkIn)} sampai {String(x.checkOut)} · toleransi {String(x.lateToleranceMin)}/{String(x.earlyLeaveToleranceMin)} mnt · {workdayText((x.workdays as number[]) ?? [])}</p>
+                    <p className="mt-1 tabular">{String(x.checkIn)} sampai {String(x.checkOut)}, toleransi {String(x.lateToleranceMin)}/{String(x.earlyLeaveToleranceMin)} mnt, {workdayText((x.workdays as number[]) ?? [])}</p>
                     {r.changeNote && <p className="mt-1 text-muted-foreground">{r.changeNote}</p>}
                   </li>
                 );
@@ -183,7 +183,7 @@ async function AssignmentsTab({ actor, manage }: { actor: Actor; manage: boolean
             {visible.map((a) => (
               <TableRow key={a.id}>
                 <TableCell className="stack-head pl-4 lg:pl-6">{a.employee ? <Link className="font-medium text-primary hover:underline" href={`/pegawai/${a.employee.id}`}>{a.employee.fullName}</Link> : <span className="font-medium">Unit: {a.unit?.name}</span>}</TableCell>
-                <TableCell data-label="Jadwal">{a.schedule ? <span className="inline-flex items-center gap-2"><span className="size-3 rounded-sm" style={{ background: a.schedule.color }} aria-hidden />{a.schedule.code} · {a.schedule.name}</span> : 'Libur'}</TableCell>
+                <TableCell data-label="Jadwal">{a.schedule ? <span className="inline-flex items-center gap-2"><span className="size-3 rounded-sm" style={{ background: a.schedule.color }} aria-hidden />{a.schedule.code}, {a.schedule.name}</span> : 'Libur'}</TableCell>
                 <TableCell data-label="Jenis">{a.kind === 'TETAP' ? 'Tetap' : 'Sementara'}</TableCell>
                 <TableCell data-label="Berlaku" className="tabular">{fmtTglPendek(fromDbDate(a.startDate))} sampai {a.endDate ? fmtTglPendek(fromDbDate(a.endDate)) : 'seterusnya'}</TableCell>
                 <TableCell data-label="Catatan" className="whitespace-normal text-muted-foreground">{a.note || '-'}</TableCell>
@@ -252,7 +252,7 @@ async function MySchedule({ actor, month, today }: { actor: Actor; month: string
                   <li key={p.date} className={`flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 lg:px-6 ${p.date === today ? 'bg-accent/50' : ''}`} aria-current={p.date === today ? 'date' : undefined}>
                     <span className="min-w-44"><span className="font-medium">{HARI[wd]}, {fmtTglPendek(p.date, false)}</span>{p.date === today && <span className="ml-2 text-xs font-semibold text-primary">Hari ini</span>}</span>
                     <span className={p.isOffDay || !p.schedule ? 'text-muted-foreground' : 'tabular'}>
-                      {p.isOffDay ? (p.holidayName ?? OFF[p.offReason ?? ''] ?? 'Libur') : p.schedule ? `${p.schedule.code} · ${p.schedule.checkIn} sampai ${p.schedule.checkOut}` : 'Tanpa jadwal'}
+                      {p.isOffDay ? (p.holidayName ?? OFF[p.offReason ?? ''] ?? 'Libur') : p.schedule ? `${p.schedule.code}, ${p.schedule.checkIn} sampai ${p.schedule.checkOut}` : 'Tanpa jadwal'}
                     </span>
                   </li>
                 );
