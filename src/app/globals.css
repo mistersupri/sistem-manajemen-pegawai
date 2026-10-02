@@ -1,0 +1,199 @@
+/* Token tema shadcn/ui diisi palet SIMPEG (lihat DESIGN.md). */
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant pointer-coarse (@media (pointer: coarse));
+
+@theme inline {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-navy: var(--navy);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-status-hadir: var(--status-hadir);
+  --color-status-hadir-foreground: var(--status-hadir-foreground);
+  --color-status-telat: var(--status-telat);
+  --color-status-telat-foreground: var(--status-telat-foreground);
+  --color-status-alpa: var(--status-alpa);
+  --color-status-alpa-foreground: var(--status-alpa-foreground);
+  --color-status-dinas: var(--status-dinas);
+  --color-status-dinas-foreground: var(--status-dinas-foreground);
+  --color-status-izin: var(--status-izin);
+  --color-status-izin-foreground: var(--status-izin-foreground);
+}
+
+:root,
+.page-head [role=menu],
+.page-head [role=dialog],
+.page-head [role=listbox] {
+  --radius: 0.75rem;
+  --background: #f7f8fb;
+  --foreground: #0f1b3d;
+  --card: #ffffff;
+  --card-foreground: #0f1b3d;
+  --popover: #ffffff;
+  --popover-foreground: #0f1b3d;
+  --primary: #1a3a8f;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f6;
+  --secondary-foreground: #0f1b3d;
+  --muted: #eef1f6;
+  --muted-foreground: #556079;
+  --accent: #e9eefa;
+  --accent-foreground: #0c1a45;
+  --destructive: #b42318;
+  --border: #e2e7f0;
+  --input: #cbd3e1;
+  --ring: #1a3a8f;
+  --navy: #0c1a45;
+  --highlight: #f4b92b;
+  --highlight-foreground: #0c1a45;
+  /* Grafik: biru tua, kuning tindakan, hijau hadir, merah tidak hadir, abu izin */
+  --chart-1: #1a3a8f;
+  --chart-2: #e0a21a;
+  --chart-3: #2f855a;
+  --chart-4: #c53030;
+  --chart-5: #8a94a8;
+  /* Sidebar navy */
+  --sidebar: #0c1a45;
+  --sidebar-foreground: #dbe3f5;
+  --sidebar-primary: #f4b92b;
+  --sidebar-primary-foreground: #0c1a45;
+  --sidebar-accent: #17296a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1d3175;
+  --sidebar-ring: #ffd36b;
+  --status-hadir: #dcfce7;
+  --status-hadir-foreground: #14532d;
+  --status-telat: #fdf1d8;
+  --status-telat-foreground: #6e4400;
+  --status-alpa: #fde2e2;
+  --status-alpa-foreground: #991b1b;
+  --status-dinas: #e3edf9;
+  --status-dinas-foreground: #1e4a80;
+  --status-izin: #eceff4;
+  --status-izin-foreground: #3d475c;
+}
+
+/* Pita judul halaman: token ditimpa agar komponen di atas navy otomatis menyesuaikan. */
+.page-head {
+  --background: #0c1a45;
+  --foreground: #ffffff;
+  --card: rgb(255 255 255 / 0.08);
+  --card-foreground: #ffffff;
+  --primary: var(--highlight);
+  --primary-foreground: var(--highlight-foreground);
+  --secondary: rgb(255 255 255 / 0.12);
+  --secondary-foreground: #ffffff;
+  --muted: rgb(255 255 255 / 0.1);
+  --muted-foreground: #c9d4ee;
+  --accent: rgb(255 255 255 / 0.12);
+  --accent-foreground: #ffffff;
+  --border: rgb(255 255 255 / 0.2);
+  --input: rgb(255 255 255 / 0.3);
+  --ring: #ffd36b;
+  --destructive: #ffb4ab;
+}
+
+/* Kiosk: tema gelap tetap (layar bersama sepanjang hari). */
+.dark {
+  --background: #0a1640;
+  --foreground: #ffffff;
+  --card: #12245c;
+  --card-foreground: #ffffff;
+  --popover: #12245c;
+  --popover-foreground: #ffffff;
+  --primary: var(--highlight);
+  --primary-foreground: var(--highlight-foreground);
+  --secondary: #1a2f6e;
+  --secondary-foreground: #ffffff;
+  --muted: #1a2f6e;
+  --muted-foreground: #c0cbe6;
+  --accent: #1a2f6e;
+  --accent-foreground: #ffffff;
+  --border: #2a4186;
+  --input: #3a54a0;
+  --ring: #ffd36b;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+  h1, h2, h3 { letter-spacing: -0.01em; }
+  :focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline-offset: 0; }
+  .tabular, td { font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
+}
+
+@layer components {
+  .page-head { position: relative; isolation: isolate; color: var(--foreground); color-scheme: dark; }
+  .page-head::before { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(165deg, #0c1a45 0%, #12276b 60%, #1a3590 100%); }
+  .page-head [role=menu], .page-head [role=dialog], .page-head [role=listbox] { color: var(--popover-foreground); color-scheme: light; }
+
+  /* Garis hari kerja 05.00 sampai 22.00 */
+  .dayline { position: relative; height: 18px; min-width: 140px; }
+  .dayline .track { position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: var(--border); }
+  .dayline .shift { position: absolute; top: 5px; height: 8px; border-radius: 4px; background: #c8d4f0; }
+  .dayline .dot { position: absolute; top: 3px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; border: 2px solid var(--card); }
+  .dayline .dot.in { background: var(--primary); }
+  .dayline .dot.in.late { background: #c27803; }
+  .dayline .dot.out { background: var(--navy); }
+
+  /* Kamera */
+  .camera-wrap { position: relative; width: 100%; max-width: 640px; margin: 0 auto; background: #0a1640; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; }
+  .camera-wrap video, .camera-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .camera-wrap.mirror video, .camera-wrap.mirror canvas { transform: scaleX(-1); }
+  .camera-status { position: absolute; left: 0; right: 0; bottom: 0; padding: .6rem .85rem; background: rgb(10 22 64 / .85); color: #fff; font-size: .9rem; }
+  .face-guide { position: absolute; left: 50%; top: 48%; width: 46%; aspect-ratio: 3 / 4; transform: translate(-50%, -50%); border: 3px dashed rgb(255 255 255 / .7); border-radius: 50%; pointer-events: none; }
+
+  /* Tabel menjadi kartu berlabel di HP */
+  @media (max-width: 767.98px) {
+    .table-stack thead { display: none; }
+    .table-stack, .table-stack tbody, .table-stack tr, .table-stack td { display: block; width: 100%; }
+    .table-stack tr { padding: .8rem 1rem; }
+    .table-stack td { padding: .2rem 0 !important; white-space: normal !important; }
+    .table-stack td[data-label] { position: relative; padding-left: 42% !important; overflow-wrap: anywhere; min-height: 1.6em; }
+    .table-stack td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: .2rem; width: 40%; color: var(--muted-foreground); font-size: .8rem; }
+    .table-stack td[data-label]:empty { display: none; }
+    .table-stack td.stack-head { font-size: 1rem; padding-bottom: .35rem !important; }
+  }
+
+  .schedule-grid th, .schedule-grid td { min-width: 40px; text-align: center; }
+  .schedule-grid .name { position: sticky; left: 0; z-index: 1; min-width: 170px; text-align: left; background: var(--card); }
+  .schedule-grid .off { background: #f1f4fa; }
+}

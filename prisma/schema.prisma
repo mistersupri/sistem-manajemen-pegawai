@@ -1,0 +1,729 @@
+// Skema SIMPEG. Waktu kejadian disimpan sebagai timestamptz (UTC); tanggal kerja sebagai DATE
+// menurut zona waktu unit/sistem. Tidak ada tabel dokumen pegawai (batasan PRD).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Pengguna, peran, izin
+// ---------------------------------------------------------------------------
+
+model User {
+  id                 String    @id @default(uuid()) @db.Uuid
+  username           String    @unique
+  email              String?
+  passwordHash       String    @map("password_hash")
+  isActive           Boolean   @default(true) @map("is_active")
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  mfaSecretEnc       String?   @map("mfa_secret_enc")
+  mfaEnabled         Boolean   @default(false) @map("mfa_enabled")
+  failedLoginCount   Int       @default(0) @map("failed_login_count")
+  lockedUntil        DateTime? @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt        DateTime? @map("last_login_at") @db.Timestamptz(3)
+  employeeId         String?   @unique @map("employee_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  employee      Employee?      @relation(fields: [employeeId], references: [id])
+  roles         UserRole[]
+  sessions      Session[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Session {
+  id          String   @id // hash SHA-256 dari token; token mentah hanya ada di cookie
+  userId      String   @map("user_id") @db.Uuid
+  mfaPending  Boolean  @default(false) @map("mfa_pending")
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  ip          String?
+  userAgent   String?  @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique
+  name        String
+  group       String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// Penugasan peran ke pengguna beserta cakupan unit. unitId kosong = semua unit.
+model UserRole {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  roleId          String   @map("role_id") @db.Uuid
+  unitId          String?  @map("unit_id") @db.Uuid
+  includeSubunits Boolean  @default(true) @map("include_subunits")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  unit OrganizationUnit? @relation(fields: [unitId], references: [id])
+
+  @@unique([userId, roleId, unitId])
+  @@index([userId])
+  @@map("user_roles")
+}
+
+// ---------------------------------------------------------------------------
+// Organisasi dan pegawai
+// ---------------------------------------------------------------------------
+
+model OrganizationUnit {
+  id        String    @id @default(uuid()) @db.Uuid
+  code      String    @unique
+  name      String
+  parentId  String?   @map("parent_id") @db.Uuid
+  timezone  String?
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  parent      OrganizationUnit?            @relation("UnitTree", fields: [parentId], references: [id])
+  children    OrganizationUnit[]           @relation("UnitTree")
+  employees   Employee[]
+  unitHistory EmployeeUnitHistory[]
+  userRoles   UserRole[]
+  devices     AttendanceDevice[]
+  assignments EmployeeScheduleAssignment[]
+  holidays    Holiday[]
+
+  @@map("organization_units")
+}
+
+model Employee {
+  id                  String    @id @default(uuid()) @db.Uuid
+  employeeNumber      String?   @unique @map("employee_number") // NIP / nomor pegawai
+  nikEnc              String?   @map("nik_enc") // NIK terenkripsi (data sensitif)
+  fullName            String    @map("full_name")
+  frontTitle          String?   @map("front_title")
+  backTitle           String?   @map("back_title")
+  birthPlace          String?   @map("birth_place")
+  birthDate           DateTime? @map("birth_date") @db.Date
+  gender              String?
+  address             String?
+  phone               String?
+  email               String?
+  profilePhoto        String?   @map("profile_photo") // foto profil nonbiometrik
+  employmentStatus    String?   @map("employment_status")
+  position            String?
+  rank                String? // pangkat/golongan
+  unitId              String?   @map("unit_id") @db.Uuid
+  supervisorId        String?   @map("supervisor_id") @db.Uuid
+  startDate           DateTime? @map("start_date") @db.Date
+  isActive            Boolean   @default(true) @map("is_active")
+  activeEffectiveDate DateTime? @map("active_effective_date") @db.Date
+  machinePin          String?   @unique @map("machine_pin") // ID pengguna di mesin absensi
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  unit            OrganizationUnit?            @relation(fields: [unitId], references: [id])
+  supervisor      Employee?                    @relation("Supervisor", fields: [supervisorId], references: [id])
+  subordinates    Employee[]                   @relation("Supervisor")
+  user            User?
+  positionHistory EmployeePositionHistory[]
+  unitHistory     EmployeeUnitHistory[]
+  biometrics      EmployeeBiometric[]
+  assignments     EmployeeScheduleAssignment[]
+  attendance      AttendanceRecord[]
+  events          AttendanceEvent[]
+  corrections     AttendanceCorrection[]
+  leaveBalances   LeaveBalance[]
+  leaveRequests   LeaveRequest[]
+  rawEvents       DeviceRawEvent[]
+
+  @@index([fullName])
+  @@index([unitId])
+  @@index([isActive, deletedAt])
+  @@map("employees")
+}
+
+model EmployeePositionHistory {
+  id               String    @id @default(uuid()) @db.Uuid
+  employeeId       String    @map("employee_id") @db.Uuid
+  position         String?
+  rank             String?
+  employmentStatus String?   @map("employment_status")
+  startDate        DateTime  @map("start_date") @db.Date
+  endDate          DateTime? @map("end_date") @db.Date
+  note             String?
+  createdById      String?   @map("created_by_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, startDate])
+  @@map("employee_position_history")
+}
+
+model EmployeeUnitHistory {
+  id          String    @id @default(uuid()) @db.Uuid
+  employeeId  String    @map("employee_id") @db.Uuid
+  unitId      String?   @map("unit_id") @db.Uuid
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  note        String?
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  employee Employee          @relation(fields: [employeeId], references: [id])
+  unit     OrganizationUnit? @relation(fields: [unitId], references: [id])
+
+  @@index([employeeId, startDate])
+  @@map("employee_unit_history")
+}
+
+enum BiometricStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  REVOKED
+}
+
+// Template wajah terenkripsi (AES-256-GCM). Tidak pernah dikirim ke browser.
+model EmployeeBiometric {
+  id               String          @id @default(uuid()) @db.Uuid
+  employeeId       String          @map("employee_id") @db.Uuid
+  modality         String          @default("FACE")
+  model            String // nama model pembuat embedding
+  templateEnc      String          @map("template_enc")
+  sampleCount      Int             @map("sample_count")
+  status           BiometricStatus
+  consentVersion   String          @map("consent_version")
+  consentAt        DateTime        @map("consent_at") @db.Timestamptz(3)
+  consentById      String?         @map("consent_by_id") @db.Uuid // pengguna yang merekam persetujuan
+  enrolledById     String?         @map("enrolled_by_id") @db.Uuid
+  verifiedById     String?         @map("verified_by_id") @db.Uuid
+  verifiedAt       DateTime?       @map("verified_at") @db.Timestamptz(3)
+  revokedAt        DateTime?       @map("revoked_at") @db.Timestamptz(3)
+  revokedById      String?         @map("revoked_by_id") @db.Uuid
+  revokedReason    String?         @map("revoked_reason")
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, status])
+  @@map("employee_biometrics")
+}
+
+// ---------------------------------------------------------------------------
+// Perangkat absensi
+// ---------------------------------------------------------------------------
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  UNKNOWN
+}
+
+model AttendanceDevice {
+  id                  String       @id @default(uuid()) @db.Uuid
+  name                String
+  vendor              String?
+  model               String?
+  serialNumber        String?      @unique @map("serial_number")
+  adapter             String // MOCK | SOLUTION_SOAP | FILE_IMPORT
+  connection          String // LAN | USB | API
+  host                String?
+  port                Int?
+  secretEnc           String?      @map("secret_enc") // Comm Key / API key, terenkripsi
+  location            String?
+  unitId              String?      @map("unit_id") @db.Uuid
+  isActive            Boolean      @default(true) @map("is_active")
+  status              DeviceStatus @default(UNKNOWN)
+  syncIntervalMinutes Int          @default(0) @map("sync_interval_minutes")
+  timeoutMs           Int          @default(10000) @map("timeout_ms")
+  maxRetries          Int          @default(2) @map("max_retries")
+  lastSyncAt          DateTime?    @map("last_sync_at") @db.Timestamptz(3)
+  lastSyncCursor      String?      @map("last_sync_cursor")
+  lastSeenAt          DateTime?    @map("last_seen_at") @db.Timestamptz(3)
+  receivedCount       Int          @default(0) @map("received_count")
+  failedCount         Int          @default(0) @map("failed_count")
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt           DateTime?    @map("deleted_at") @db.Timestamptz(3)
+
+  unit      OrganizationUnit? @relation(fields: [unitId], references: [id])
+  syncRuns  DeviceSyncRun[]
+  rawEvents DeviceRawEvent[]
+  users     DeviceUser[]
+
+  @@map("attendance_devices")
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+model DeviceSyncRun {
+  id            String     @id @default(uuid()) @db.Uuid
+  deviceId      String?    @map("device_id") @db.Uuid
+  trigger       String // MANUAL | SCHEDULED | FILE | RETRY | RECONCILE
+  status        SyncStatus
+  attempt       Int        @default(1)
+  startedAt     DateTime   @default(now()) @map("started_at") @db.Timestamptz(3)
+  finishedAt    DateTime?  @map("finished_at") @db.Timestamptz(3)
+  received      Int        @default(0)
+  inserted      Int        @default(0)
+  duplicates    Int        @default(0)
+  failed        Int        @default(0)
+  cursorBefore  String?    @map("cursor_before")
+  cursorAfter   String?    @map("cursor_after")
+  fileName      String?    @map("file_name")
+  errorMessage  String?    @map("error_message")
+  details       Json?
+  triggeredById String?    @map("triggered_by_id") @db.Uuid
+
+  device    AttendanceDevice? @relation(fields: [deviceId], references: [id])
+  rawEvents DeviceRawEvent[]
+
+  @@index([deviceId, startedAt])
+  @@map("device_sync_runs")
+}
+
+// Transaksi mentah dari perangkat. Kolom inti dikunci oleh trigger database (immutable).
+model DeviceRawEvent {
+  id                String    @id @default(uuid()) @db.Uuid
+  deviceId          String?   @map("device_id") @db.Uuid
+  syncRunId         String?   @map("sync_run_id") @db.Uuid
+  devicePin         String    @map("device_pin")
+  deviceTime        DateTime  @map("device_time") @db.Timestamptz(3) // waktu menurut jam perangkat
+  receivedAt        DateTime  @default(now()) @map("received_at") @db.Timestamptz(3) // waktu diterima server
+  verifyMode        String?   @map("verify_mode")
+  statusCode        String?   @map("status_code")
+  payload           Json?
+  idempotencyKey    String    @unique @map("idempotency_key")
+  clockSkewSuspect  Boolean   @default(false) @map("clock_skew_suspect")
+  // Kolom hasil pemrosesan (boleh diisi ulang saat pemetaan PIN atau proses ulang)
+  employeeId        String?   @map("employee_id") @db.Uuid
+  workDate          DateTime? @map("work_date") @db.Date
+  processedAt       DateTime? @map("processed_at") @db.Timestamptz(3)
+  processingNote    String?   @map("processing_note")
+
+  device   AttendanceDevice? @relation(fields: [deviceId], references: [id])
+  syncRun  DeviceSyncRun?    @relation(fields: [syncRunId], references: [id])
+  employee Employee?         @relation(fields: [employeeId], references: [id])
+
+  @@index([devicePin, deviceTime])
+  @@index([employeeId, deviceTime])
+  @@index([employeeId, workDate])
+  @@index([deviceTime])
+  @@map("device_raw_events")
+}
+
+// Daftar pengguna yang terbaca dari mesin, untuk memetakan ID mesin ke pegawai.
+model DeviceUser {
+  id         String   @id @default(uuid()) @db.Uuid
+  deviceId   String?  @map("device_id") @db.Uuid
+  pin        String   @unique
+  name       String?
+  department String?
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  device AttendanceDevice? @relation(fields: [deviceId], references: [id])
+
+  @@map("device_users")
+}
+
+// ---------------------------------------------------------------------------
+// Absensi
+// ---------------------------------------------------------------------------
+
+enum EventDirection {
+  IN
+  OUT
+}
+
+// Transaksi absensi mentah dari web/kiosk/manual (selain perangkat). Immutable.
+model AttendanceEvent {
+  id             String         @id @default(uuid()) @db.Uuid
+  employeeId     String?        @map("employee_id") @db.Uuid
+  direction      EventDirection
+  workDate       DateTime?      @map("work_date") @db.Date // tanggal kerja (shift malam bisa milik hari sebelumnya)
+  method         String // FACE_SELF | FACE_KIOSK | FIELD_DUTY | MANUAL | DEVICE
+  occurredAt     DateTime       @default(now()) @map("occurred_at") @db.Timestamptz(3) // waktu server
+  clientTime     DateTime?      @map("client_time") @db.Timestamptz(3)
+  idempotencyKey String?        @unique @map("idempotency_key")
+  latitude       Float?
+  longitude      Float?
+  accuracyM      Float?         @map("accuracy_m")
+  address        String?
+  photoPath      String?        @map("photo_path")
+  note           String?
+  actorUserId    String?        @map("actor_user_id") @db.Uuid
+  userAgent      String?        @map("user_agent")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  employee     Employee?               @relation(fields: [employeeId], references: [id])
+  verification AttendanceVerification?
+
+  @@index([employeeId, occurredAt])
+  @@index([employeeId, workDate])
+  @@map("attendance_events")
+}
+
+// Hasil verifikasi untuk satu transaksi, disimpan terpisah dari transaksi mentah.
+model AttendanceVerification {
+  id               String   @id @default(uuid()) @db.Uuid
+  eventId          String   @unique @map("event_id") @db.Uuid
+  outcome          String // SUCCESS | NOT_RECOGNIZED | LOW_QUALITY | LIVENESS_FAILED | OUTSIDE_SCHEDULE | LOCATION_MISMATCH | DEVICE_NOT_ALLOWED | SERVICE_UNAVAILABLE | DUPLICATE | ALREADY_RECORDED | NOT_ENROLLED | INACTIVE
+  matcher          String?
+  distance         Float?
+  threshold        Float?
+  quality          Json?
+  livenessPassed   Boolean? @map("liveness_passed")
+  distanceToOfficeM Float?  @map("distance_to_office_m")
+  message          String?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  event AttendanceEvent @relation(fields: [eventId], references: [id])
+
+  @@map("attendance_verifications")
+}
+
+model AttendanceRecord {
+  id                 String    @id @default(uuid()) @db.Uuid
+  employeeId         String    @map("employee_id") @db.Uuid
+  workDate           DateTime  @map("work_date") @db.Date
+  scheduleId         String?   @map("schedule_id") @db.Uuid
+  scheduleRevisionId String?   @map("schedule_revision_id") @db.Uuid
+  isOffDay           Boolean   @default(false) @map("is_off_day")
+  checkInAt          DateTime? @map("check_in_at") @db.Timestamptz(3)
+  checkOutAt         DateTime? @map("check_out_at") @db.Timestamptz(3)
+  checkInMethod      String?   @map("check_in_method")
+  checkOutMethod     String?   @map("check_out_method")
+  checkInSourceId    String?   @map("check_in_source_id") // id AttendanceEvent atau DeviceRawEvent
+  checkOutSourceId   String?   @map("check_out_source_id")
+  status             String // HADIR | TERLAMBAT | DINAS_LUAR | IZIN | SAKIT | CUTI | TIDAK_HADIR
+  statusLocked       Boolean   @default(false) @map("status_locked") // ditetapkan cuti/koreksi, tidak dihitung ulang dari jam
+  lateMinutes        Int       @default(0) @map("late_minutes")
+  earlyLeaveMinutes  Int       @default(0) @map("early_leave_minutes")
+  dispensation       Boolean   @default(false)
+  note               String?
+  needsReview        Boolean   @default(false) @map("needs_review")
+  reviewReason       String?   @map("review_reason")
+  leaveRequestId     String?   @map("leave_request_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  employee         Employee               @relation(fields: [employeeId], references: [id])
+  schedule         WorkSchedule?          @relation(fields: [scheduleId], references: [id])
+  scheduleRevision WorkScheduleRevision?  @relation(fields: [scheduleRevisionId], references: [id])
+  corrections      AttendanceCorrection[]
+
+  @@unique([employeeId, workDate])
+  @@index([workDate, status])
+  @@map("attendance_records")
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// Koreksi absensi: menyimpan nilai awal dan nilai usulan; data mentah tidak pernah dihapus.
+model AttendanceCorrection {
+  id                  String        @id @default(uuid()) @db.Uuid
+  employeeId          String        @map("employee_id") @db.Uuid
+  attendanceRecordId  String?       @map("attendance_record_id") @db.Uuid
+  workDate            DateTime      @map("work_date") @db.Date
+  kind                String // LUPA_MASUK | LUPA_PULANG | LUPA_KEDUANYA | TERLAMBAT | PULANG_CEPAT | LAINNYA | KOREKSI_ADMIN
+  originalValues      Json?         @map("original_values")
+  proposedCheckIn     String?       @map("proposed_check_in") // HH:MM
+  proposedCheckOut    String?       @map("proposed_check_out")
+  proposedStatus      String?       @map("proposed_status")
+  dispensation        Boolean       @default(false)
+  reason              String
+  attachmentPath      String?       @map("attachment_path")
+  status              RequestStatus @default(PENDING)
+  requestedById       String        @map("requested_by_id") @db.Uuid
+  reviewedById        String?       @map("reviewed_by_id") @db.Uuid
+  reviewedAt          DateTime?     @map("reviewed_at") @db.Timestamptz(3)
+  reviewNote          String?       @map("review_note")
+  appliedValues       Json?         @map("applied_values")
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  employee Employee          @relation(fields: [employeeId], references: [id])
+  record   AttendanceRecord? @relation(fields: [attendanceRecordId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([employeeId, workDate])
+  @@map("attendance_corrections")
+}
+
+// ---------------------------------------------------------------------------
+// Jadwal kerja
+// ---------------------------------------------------------------------------
+
+model WorkSchedule {
+  id                  String    @id @default(uuid()) @db.Uuid
+  code                String    @unique
+  name                String
+  kind                String // REGULER | SHIFT
+  checkIn             String    @map("check_in") // HH:MM
+  checkOut            String    @map("check_out")
+  breakStart          String?   @map("break_start")
+  breakEnd            String?   @map("break_end")
+  lateToleranceMin    Int       @default(0) @map("late_tolerance_min")
+  earlyLeaveToleranceMin Int    @default(0) @map("early_leave_tolerance_min")
+  workdays            Int[]     @default([1, 2, 3, 4, 5]) // 0 = Minggu
+  color               String    @default("#1a3a8f")
+  isActive            Boolean   @default(true) @map("is_active")
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  revisions   WorkScheduleRevision[]
+  assignments EmployeeScheduleAssignment[]
+  records     AttendanceRecord[]
+
+  @@map("work_schedules")
+}
+
+// Riwayat aturan jadwal: setiap perubahan menyimpan salinan aturan dengan nomor versi.
+model WorkScheduleRevision {
+  id          String   @id @default(uuid()) @db.Uuid
+  scheduleId  String   @map("schedule_id") @db.Uuid
+  version     Int
+  rules       Json
+  changedById String?  @map("changed_by_id") @db.Uuid
+  changeNote  String?  @map("change_note")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  schedule WorkSchedule       @relation(fields: [scheduleId], references: [id])
+  records  AttendanceRecord[]
+
+  @@unique([scheduleId, version])
+  @@map("work_schedule_revisions")
+}
+
+// Penugasan jadwal ke pegawai atau unit dengan tanggal efektif.
+// scheduleId kosong = libur pada rentang tersebut (hanya untuk penugasan SEMENTARA).
+model EmployeeScheduleAssignment {
+  id          String    @id @default(uuid()) @db.Uuid
+  scheduleId  String?   @map("schedule_id") @db.Uuid
+  employeeId  String?   @map("employee_id") @db.Uuid
+  unitId      String?   @map("unit_id") @db.Uuid
+  kind        String // TETAP | SEMENTARA
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  note        String?
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  schedule WorkSchedule?     @relation(fields: [scheduleId], references: [id])
+  employee Employee?         @relation(fields: [employeeId], references: [id])
+  unit     OrganizationUnit? @relation(fields: [unitId], references: [id])
+
+  @@index([employeeId, startDate])
+  @@index([unitId, startDate])
+  @@map("employee_schedule_assignments")
+}
+
+model Holiday {
+  id        String   @id @default(uuid()) @db.Uuid
+  date      DateTime @db.Date
+  name      String
+  unitId    String?  @map("unit_id") @db.Uuid // kosong = berlaku untuk semua unit
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  unit OrganizationUnit? @relation(fields: [unitId], references: [id])
+
+  @@unique([date, unitId])
+  @@index([date])
+  @@map("holidays")
+}
+
+// ---------------------------------------------------------------------------
+// Cuti dan izin
+// ---------------------------------------------------------------------------
+
+model LeaveType {
+  id                        String   @id @default(uuid()) @db.Uuid
+  code                      String   @unique
+  name                      String
+  attendanceStatus          String   @map("attendance_status") // CUTI | IZIN | SAKIT | DINAS_LUAR
+  usesBalance               Boolean  @default(false) @map("uses_balance")
+  defaultAnnualQuota        Int?     @map("default_annual_quota")
+  eligibleEmploymentStatuses String[] @default([]) @map("eligible_employment_statuses") // kosong = semua
+  maxDaysPerRequest         Int?     @map("max_days_per_request")
+  minNoticeDays             Int      @default(0) @map("min_notice_days")
+  approvalLevels            Int      @default(1) @map("approval_levels") // 1 = atasan, 2 = atasan lalu admin kepegawaian
+  countWorkdaysOnly         Boolean  @default(true) @map("count_workdays_only")
+  allowAttachment           Boolean  @default(true) @map("allow_attachment")
+  isActive                  Boolean  @default(true) @map("is_active")
+  createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  balances LeaveBalance[]
+  requests LeaveRequest[]
+
+  @@map("leave_types")
+}
+
+model LeaveBalance {
+  id          String   @id @default(uuid()) @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  leaveTypeId String   @map("leave_type_id") @db.Uuid
+  year        Int
+  entitled    Int
+  carriedOver Int      @default(0) @map("carried_over")
+  adjustment  Int      @default(0)
+  note        String?
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  employee  Employee  @relation(fields: [employeeId], references: [id])
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@map("leave_balances")
+}
+
+model LeaveRequest {
+  id             String        @id @default(uuid()) @db.Uuid
+  employeeId     String        @map("employee_id") @db.Uuid
+  leaveTypeId    String        @map("leave_type_id") @db.Uuid
+  startDate      DateTime      @map("start_date") @db.Date
+  endDate        DateTime      @map("end_date") @db.Date
+  days           Int
+  reason         String
+  attachmentPath String?       @map("attachment_path")
+  status         RequestStatus @default(PENDING)
+  currentLevel   Int           @default(1) @map("current_level")
+  requestedById  String        @map("requested_by_id") @db.Uuid
+  cancelledAt    DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+  cancelReason   String?       @map("cancel_reason")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  employee  Employee        @relation(fields: [employeeId], references: [id])
+  leaveType LeaveType       @relation(fields: [leaveTypeId], references: [id])
+  approvals LeaveApproval[]
+
+  @@index([employeeId, startDate])
+  @@index([status])
+  @@map("leave_requests")
+}
+
+model LeaveApproval {
+  id             String        @id @default(uuid()) @db.Uuid
+  leaveRequestId String        @map("leave_request_id") @db.Uuid
+  level          Int
+  approverKind   String        @map("approver_kind") // ATASAN | ADMIN_KEPEGAWAIAN
+  approverUserId String?       @map("approver_user_id") @db.Uuid // diisi bila approver tertentu (atasan langsung)
+  decision       RequestStatus @default(PENDING)
+  decidedById    String?       @map("decided_by_id") @db.Uuid
+  decidedAt      DateTime?     @map("decided_at") @db.Timestamptz(3)
+  note           String?
+
+  request LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([leaveRequestId, level])
+  @@map("leave_approvals")
+}
+
+// ---------------------------------------------------------------------------
+// Notifikasi, audit, pengaturan
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+// Audit log hanya bisa ditambah (UPDATE/DELETE ditolak trigger database).
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  actorLabel  String?  @map("actor_label")
+  action      String
+  entityType  String?  @map("entity_type")
+  entityId    String?  @map("entity_id")
+  result      String   @default("SUCCESS")
+  before      Json?
+  after       Json?
+  meta        Json?
+  ip          String?
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  key         String   @id
+  value       Json
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("system_settings")
+}

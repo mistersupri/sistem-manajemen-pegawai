@@ -1,9 +1,0 @@
-<% const qs = `dari=${f.dari}&sampai=${f.sampai}&unit=${encodeURIComponent(f.unit)}&status=${f.status}&q=${encodeURIComponent(f.q)}`; %>
-<div class="relative">
-  <button type="button" class="<%= ui.button({ variant: 'outline' }) %>" data-dropdown aria-controls="mEksporAbsensi" aria-expanded="false" aria-haspopup="menu"><%- ui.icon('download') %> Ekspor periode ini <%- ui.icon('chevron-down') %></button>
-  <div id="mEksporAbsensi" role="menu" class="<%= ui.dropdownContent('absolute right-0 top-full mt-1 w-60') %>">
-    <a role="menuitem" class="<%= ui.dropdownItem() %>" href="/admin/absensi/export?format=xlsx&<%= qs %>">Excel (rekap dan detail)</a>
-    <a role="menuitem" class="<%= ui.dropdownItem() %>" href="/admin/absensi/export?format=csv&<%= qs %>">CSV detail</a>
-    <a role="menuitem" class="<%= ui.dropdownItem() %>" href="/admin/absensi/export?format=rekap-csv&<%= qs %>">CSV rekap</a>
-  </div>
-</div>
