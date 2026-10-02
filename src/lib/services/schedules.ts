@@ -114,6 +114,58 @@ export async function createAssignment(actor: Actor, raw: unknown, db: Db = pris
   return a;
 }
 
+export const bulkAssignmentInput = z.object({
+  employeeIds: z.array(z.string().uuid()).min(1, 'Pilih minimal satu pegawai').max(2000, 'Maksimal 2.000 pegawai sekali proses'),
+  scheduleId: z.string().uuid().nullable(),
+  kind: z.enum(['TETAP', 'SEMENTARA']),
+  startDate: date,
+  endDate: date.nullable().optional(),
+  // Hanya untuk SEMENTARA: berlaku pada hari tertentu saja (0 = Minggu), mis. piket Sabtu.
+  weekdays: z.array(z.number().int().min(0).max(6)).max(7).optional().nullable(),
+  note: z.string().trim().max(300).optional().nullable(),
+}).refine((v) => !v.endDate || v.endDate >= v.startDate, { message: 'Tanggal selesai harus setelah tanggal mulai', path: ['endDate'] })
+  .refine((v) => v.scheduleId || v.kind === 'SEMENTARA', { message: 'Penugasan tetap harus memilih jadwal', path: ['scheduleId'] })
+  .refine((v) => v.kind === 'TETAP' || !!v.endDate, { message: 'Penugasan sementara wajib punya tanggal selesai', path: ['endDate'] })
+  .refine((v) => !v.weekdays?.length || v.kind === 'SEMENTARA', { message: 'Pilihan hari hanya untuk penugasan sementara', path: ['weekdays'] });
+
+/**
+ * Tugaskan satu jadwal ke banyak pegawai sekaligus dalam satu transaksi.
+ * Dengan `weekdays`, dibuat penugasan sementara satu hari untuk setiap tanggal yang cocok (mis. setiap Sabtu bulan ini).
+ */
+export async function createAssignmentsBulk(actor: Actor, raw: unknown) {
+  assertCan(actor, 'schedule.manage');
+  const v = bulkAssignmentInput.parse(raw);
+  const ids = [...new Set(v.employeeIds)];
+  const allowed = await prisma.employee.findMany({ where: { id: { in: ids }, deletedAt: null, ...employeeScopeWhere(actor, 'schedule.manage') }, select: { id: true } });
+  if (allowed.length !== ids.length) throw forbidden('Sebagian pegawai yang dipilih di luar kewenangan Anda atau sudah dihapus.');
+  if (v.scheduleId && !(await prisma.workSchedule.findFirst({ where: { id: v.scheduleId, deletedAt: null, isActive: true } }))) throw unprocessable('Jadwal tidak aktif.', { scheduleId: 'Pilih jadwal aktif' });
+
+  let ranges: { start: string; end: string | null }[];
+  if (v.weekdays?.length) {
+    const days = dateRange(v.startDate, v.endDate!);
+    if (days.length > 366) throw unprocessable('Rentang hari tertentu maksimal satu tahun.', { endDate: 'Terlalu panjang' });
+    ranges = days.filter((d) => v.weekdays!.includes(new Date(`${d}T00:00:00Z`).getUTCDay())).map((d) => ({ start: d, end: d }));
+    if (!ranges.length) throw unprocessable('Tidak ada tanggal yang cocok dengan hari yang dipilih.', { weekdays: 'Tidak ada tanggal cocok' });
+  } else ranges = [{ start: v.startDate, end: v.endDate ?? null }];
+  const total = ranges.length * ids.length;
+  if (total > 20000) throw unprocessable(`Terlalu banyak penugasan sekaligus (${total}). Perkecil rentang tanggal atau jumlah pegawai.`);
+
+  const createdById = realUserId(actor);
+  await prisma.$transaction(async (tx) => {
+    await tx.employeeScheduleAssignment.createMany({
+      data: ids.flatMap((employeeId) => ranges.map((r) => ({
+        scheduleId: v.scheduleId, employeeId, unitId: null, kind: v.kind, startDate: toDbDate(r.start), endDate: r.end ? toDbDate(r.end) : null, note: v.note ?? null, createdById,
+      }))),
+    });
+    await audit(actor, { action: 'schedule.assign_bulk', entityType: 'EmployeeScheduleAssignment', after: { ...v, employeeIds: undefined, employees: ids.length, assignments: total }, meta: { employeeIds: ids } }, tx);
+  }, { timeout: 60_000 });
+
+  const today = todayIn(await getSetting('org.timezone'));
+  const end = v.endDate && v.endDate < today ? v.endDate : today;
+  if (v.startDate <= end) await rebuildActive(ids, v.startDate, end);
+  return { employees: ids.length, assignments: total };
+}
+
 export async function endAssignment(actor: Actor, id: string, raw: unknown) {
   assertCan(actor, 'schedule.manage');
   const a = await prisma.employeeScheduleAssignment.findFirst({ where: { id, deletedAt: null } });

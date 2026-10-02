@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
@@ -51,7 +51,11 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   ];
   return (
     <>
-      <PageHeader title="Jadwal Kerja" description="Jenis jadwal, penugasan ke pegawai atau unit, perubahan harian, dan hari libur. Setiap perubahan aturan tersimpan sebagai versi baru." />
+      <PageHeader
+        title="Jadwal Kerja"
+        description="Jenis jadwal, penugasan ke pegawai atau unit, perubahan harian, dan hari libur. Setiap perubahan aturan tersimpan sebagai versi baru."
+        actions={manage ? <Button asChild variant="highlight"><Link href="/jadwal/atur"><Users />Atur banyak pegawai</Link></Button> : undefined}
+      />
       <PageBody className="grid gap-4">
         <Segmented items={tabs} current={tab} label="Bagian jadwal" className="w-fit" />
         {tab === 'kalender' && <GridTab actor={actor} month={month} unitId={sp.unit} today={today} manage={manage} />}

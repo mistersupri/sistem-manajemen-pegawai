@@ -5,6 +5,8 @@ import { enrollFace } from '@/lib/services/biometrics';
 import { createStation, rotateStationToken, stationAttendance, updateStation } from '@/lib/services/stations';
 import { applyHolidays, setHolidayDisabled } from '@/lib/services/holidays';
 import { calendarRecap } from '@/lib/services/reports';
+import { createAssignmentsBulk, createSchedule } from '@/lib/services/schedules';
+import { loadPlanContext } from '@/lib/attendance/plan';
 import { systemActor } from '@/lib/auth/system';
 import { toDbDate } from '@/lib/time';
 import { actorOf, pastWorkday, seedFixture } from './helpers';
@@ -124,5 +126,33 @@ describe('rekap kalender', () => {
     const r = await calendarRecap(op, { month: pastWorkday(1).slice(0, 7) }).catch((e) => e);
     if (r instanceof Error) return expect(r.message).toMatch(/izin|akses/i);
     expect(r.rows.every((x: { employee: { id: string } }) => x.employee.id === f.stafB.id)).toBe(true);
+  });
+});
+
+describe('atur jadwal banyak pegawai', () => {
+  it('menerapkan jadwal tetap ke beberapa pegawai sekaligus', async () => {
+    const sys = systemActor('uji');
+    const pagi = await createSchedule(sys, { code: 'PG', name: 'Pagi uji', kind: 'SHIFT', checkIn: '06:00', checkOut: '14:00', lateToleranceMin: 0, earlyLeaveToleranceMin: 0, workdays: [1, 2, 3, 4, 5, 6], color: '#2a78d6' });
+    const r = await createAssignmentsBulk(await actorOf(f.users.admin.id), { employeeIds: [f.stafA.id, f.stafB.id], scheduleId: pagi.id, kind: 'TETAP', startDate: '2032-01-05' });
+    expect(r).toEqual({ employees: 2, assignments: 2 });
+    const ctx = await loadPlanContext([f.stafA.id, f.stafB.id], '2032-01-05', '2032-01-05');
+    expect(ctx.planFor(f.stafA.id, '2032-01-05').schedule?.code).toBe('PG');
+    expect(ctx.planFor(f.stafB.id, '2032-01-05').schedule?.code).toBe('PG');
+  });
+
+  it('hari tertentu membuat penugasan sementara per tanggal yang cocok', async () => {
+    const sys = systemActor('uji');
+    const piket = await prisma.workSchedule.findFirstOrThrow({ where: { code: 'PG' } });
+    // Januari 2032: Sabtu jatuh pada 3, 10, 17, 24, 31.
+    const r = await createAssignmentsBulk(sys, { employeeIds: [f.stafA.id], scheduleId: piket.id, kind: 'SEMENTARA', startDate: '2032-01-01', endDate: '2032-01-31', weekdays: [6] });
+    expect(r.assignments).toBe(5);
+  });
+
+  it('pegawai di luar kewenangan menggagalkan seluruh proses', async () => {
+    const op = await actorOf(f.users.operatorB.id);
+    const reg = await prisma.workSchedule.findFirstOrThrow({ where: { code: 'REG' } });
+    const before = await prisma.employeeScheduleAssignment.count();
+    await expect(createAssignmentsBulk(op, { employeeIds: [f.stafA.id, f.stafB.id], scheduleId: reg.id, kind: 'TETAP', startDate: '2032-02-01' })).rejects.toThrow(/kewenangan/);
+    expect(await prisma.employeeScheduleAssignment.count()).toBe(before);
   });
 });
