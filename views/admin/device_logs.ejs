@@ -1,13 +1,13 @@
 <%- include('../partials/header') %>
 <% const devName = f.device_id && (devices.find((d) => d.id === f.device_id) || {}).nama; %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
+    <%- include('../partials/breadcrumb', { items: [['/admin/mesin', 'Mesin fingerprint'], [null, 'Log scan']] }) %>
     <h1 class="text-2xl font-bold tracking-tight">Log scan fingerprint</h1>
     <p class="mt-1 text-sm text-muted-foreground">Scan mentah dari semua mesin, sebelum diolah menjadi absensi harian.</p>
   </div>
   <div class="flex flex-wrap gap-2">
     <a class="<%= ui.button({ variant: 'outline' }) %>" href="/admin/mesin/log/export?dari=<%= f.dari %>&sampai=<%= f.sampai %>&device_id=<%= f.device_id %>&q=<%= encodeURIComponent(f.q) %>"><%- ui.icon('download') %> Ekspor CSV</a>
-    <a href="/admin/mesin" class="<%= ui.button({ variant: 'outline' }) %>"><%- ui.icon('arrow-left') %> Kembali ke mesin</a>
   </div>
 </div>
 <details data-collapsible class="<%= ui.card('mb-4 gap-0 py-0') %>">
@@ -23,7 +23,7 @@
         <% devices.forEach((d) => { %><option value="<%= d.id %>" <%= f.device_id === d.id ? 'selected' : '' %>><%= d.nama %></option><% }) %>
       </select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
     </div>
-    <div class="col-span-2 grid gap-2 md:col-span-1"><label class="<%= ui.label() %>" for="lq">ID mesin atau nama</label><input id="lq" name="q" class="<%= ui.input() %>" value="<%= f.q %>"></div>
+    <div class="col-span-2 grid gap-2 md:col-span-1"><label class="<%= ui.label() %>" for="lq">ID mesin atau nama</label><div class="relative"><%- ui.icon('search', ui.searchIcon) %><input type="search" id="lq" name="q" class="<%= ui.searchInput() %>" placeholder="Cari..." value="<%= f.q %>"></div></div>
     <button class="<%= ui.button({}, 'col-span-2 md:col-span-1') %>">Terapkan</button>
   </form>
 </details>

@@ -52,29 +52,30 @@
   --color-status-izin-foreground: var(--status-izin-foreground);
 }
 
-:root {
+:root,
+.page-head [role=menu] {
   --radius: 0.75rem;
-  --background: #f6f4ef;
-  --foreground: #1f2733;
+  --background: #f7f8fb;
+  --foreground: #0f1b3d;
   --card: #ffffff;
-  --card-foreground: #1f2733;
+  --card-foreground: #0f1b3d;
   --popover: #ffffff;
-  --popover-foreground: #1f2733;
-  --primary: #1d5fa8;
+  --popover-foreground: #0f1b3d;
+  --primary: #1a3a8f;
   --primary-foreground: #ffffff;
-  --secondary: #efece5;
-  --secondary-foreground: #1f2733;
-  --muted: #efece5;
-  --muted-foreground: #565e6b;
-  --accent: #e8f0fa;
-  --accent-foreground: #123b6d;
+  --secondary: #eef1f6;
+  --secondary-foreground: #0f1b3d;
+  --muted: #eef1f6;
+  --muted-foreground: #556079;
+  --accent: #e9eefa;
+  --accent-foreground: #0c1a45;
   --destructive: #b42318;
-  --border: #e4e0d6;
-  --input: #cfc9bb;
-  --ring: #1d5fa8;
-  --navy: #123b6d;
-  --highlight: #f2b33d;
-  --highlight-foreground: #4a2f00;
+  --border: #e2e7f0;
+  --input: #cbd3e1;
+  --ring: #1a3a8f;
+  --navy: #0c1a45;
+  --highlight: #f4b92b;
+  --highlight-foreground: #0c1a45;
   --status-hadir: #dcfce7;
   --status-hadir-foreground: #14532d;
   --status-telat: #fdf1d8;
@@ -83,29 +84,52 @@
   --status-alpa-foreground: #991b1b;
   --status-dinas: #e3edf9;
   --status-dinas-foreground: #1e4a80;
-  --status-izin: #eceae4;
-  --status-izin-foreground: #3f4654;
+  --status-izin: #eceff4;
+  --status-izin-foreground: #3d475c;
+}
+
+/* Pita judul halaman: navy bergradasi di bawah header. Token ditimpa seperti .dark
+   sehingga komponen shadcn di dalamnya (tombol, input) otomatis menyesuaikan.
+   Tombol utama di atas navy memakai kuning, sama seperti header. */
+.page-head {
+  --background: #0c1a45;
+  --foreground: #ffffff;
+  --card: rgb(255 255 255 / 0.08);
+  --card-foreground: #ffffff;
+  --primary: var(--highlight);
+  --primary-foreground: var(--highlight-foreground);
+  --secondary: rgb(255 255 255 / 0.12);
+  --secondary-foreground: #ffffff;
+  --muted: rgb(255 255 255 / 0.1);
+  --muted-foreground: #c9d4ee;
+  --accent: rgb(255 255 255 / 0.12);
+  --accent-foreground: #ffffff;
+  --border: rgb(255 255 255 / 0.2);
+  --input: rgb(255 255 255 / 0.3);
+  --ring: #ffd36b;
+  /* merah muda agar tombol hapus berbingkai tetap terbaca di atas navy */
+  --destructive: #ffb4ab;
 }
 
 /* Tema gelap tetap untuk kiosk (layar bersama yang menyala sepanjang hari) */
 .dark {
-  --background: #0b1d33;
+  --background: #0a1640;
   --foreground: #ffffff;
-  --card: #12284a;
+  --card: #12245c;
   --card-foreground: #ffffff;
-  --popover: #12284a;
+  --popover: #12245c;
   --popover-foreground: #ffffff;
-  --primary: #dbe7f7;
-  --primary-foreground: #123b6d;
-  --secondary: #1b355d;
+  --primary: var(--highlight);
+  --primary-foreground: var(--highlight-foreground);
+  --secondary: #1a2f6e;
   --secondary-foreground: #ffffff;
-  --muted: #1b355d;
-  --muted-foreground: #b8c6dc;
-  --accent: #1b355d;
+  --muted: #1a2f6e;
+  --muted-foreground: #c0cbe6;
+  --accent: #1a2f6e;
   --accent-foreground: #ffffff;
-  --border: #284573;
-  --input: #3a5a8c;
-  --ring: #8ab4f0;
+  --border: #2a4186;
+  --input: #3a54a0;
+  --ring: #ffd36b;
 }
 
 @layer base {
@@ -117,6 +141,7 @@
   a:not([class]) { @apply text-primary underline underline-offset-2; }
   .tabular, td, .jam { font-variant-numeric: tabular-nums; }
   [hidden] { display: none !important; }
+  body { overflow-x: clip; }
 }
 
 @layer components {
@@ -125,13 +150,20 @@
   .ui-switch:checked::before { transform: translateX(calc(100% - 2px)); }
   @media (pointer: coarse) { .ui-switch { transform: scale(1.35); margin: 0 .4rem; } }
 
+  /* Pita judul: elemen pertama di <main>, dibentangkan selebar layar.
+     Gradasi navy ke biru tua (satu keluarga warna) hanya di pita ini untuk
+     memisahkan identitas halaman dari area kerja, bukan latar seluruh halaman. */
+  .page-head { position: relative; isolation: isolate; order: -1; margin-top: -1.5rem; padding-block: 1.5rem 2rem; color: var(--foreground); color-scheme: dark; }
+  .page-head::before { content: ''; position: absolute; z-index: -1; inset-block: 0; left: 50%; width: 100vw; translate: -50% 0; background: linear-gradient(165deg, #0c1a45 0%, #12276b 60%, #1a3590 100%); }
+  .page-head [role=menu] { color: var(--popover-foreground); color-scheme: light; }
+
   /* Dialog/Sheet memakai <dialog> asli; backdrop setara overlay shadcn (bg-black/50) */
   dialog.ui-dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 
   /* Garis hari kerja 05.00 sampai 22.00 (motif identitas) */
   .dayline { position: relative; height: 18px; min-width: 140px; }
   .dayline .track { position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: var(--border); }
-  .dayline .shift { position: absolute; top: 5px; height: 8px; border-radius: 4px; background: #c9daf0; }
+  .dayline .shift { position: absolute; top: 5px; height: 8px; border-radius: 4px; background: #c8d4f0; }
   .dayline .dot { position: absolute; top: 3px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; border: 2px solid var(--card); }
   .dayline .dot.in { background: var(--primary); }
   .dayline .dot.in.late { background: #c27803; }
@@ -152,17 +184,17 @@
   }
 
   /* Kamera */
-  .camera-wrap { position: relative; width: 100%; max-width: 640px; margin: 0 auto; background: #0b1d33; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; }
+  .camera-wrap { position: relative; width: 100%; max-width: 640px; margin: 0 auto; background: #0a1640; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; }
   .camera-wrap video, .camera-wrap canvas.overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .camera-wrap.mirror video, .camera-wrap.mirror canvas.overlay { transform: scaleX(-1); }
-  .camera-status { position: absolute; left: 0; right: 0; bottom: 0; padding: .6rem .85rem; background: rgb(11 29 51 / .85); color: #fff; font-size: .9rem; }
+  .camera-status { position: absolute; left: 0; right: 0; bottom: 0; padding: .6rem .85rem; background: rgb(10 22 64 / .85); color: #fff; font-size: .9rem; }
   .face-guide { position: absolute; left: 50%; top: 48%; width: 46%; aspect-ratio: 3 / 4; transform: translate(-50%, -50%); border: 3px dashed rgb(255 255 255 / .7); border-radius: 50%; pointer-events: none; }
 
   /* Grid jadwal */
   .schedule-table th, .schedule-table td { min-width: 40px; text-align: center; }
   .schedule-table .name { position: sticky; left: 0; z-index: 1; min-width: 170px; text-align: left; background: var(--card); }
   .schedule-table thead .name { background: var(--muted); z-index: 2; }
-  .schedule-table .weekend { background: #f8f1ea; }
+  .schedule-table .weekend { background: #f1f4fa; }
   .schedule-table .cell-btn { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: center; }
   .schedule-table .cell-btn:hover { background: var(--accent); }
   @media (pointer: coarse), (max-width: 1023.98px) {

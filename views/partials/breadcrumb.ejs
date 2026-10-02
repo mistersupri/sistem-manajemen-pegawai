@@ -1,0 +1,12 @@
+<%# Breadcrumb shadcn. items: [[href, label], ..., [null, halaman sekarang]] %>
+<nav aria-label="Breadcrumb" class="mb-3">
+  <ol class="flex flex-wrap items-center gap-1.5 text-sm break-words text-muted-foreground sm:gap-2">
+    <% items.forEach(([href, label], i) => { %>
+      <% if (i) { %><li role="presentation" aria-hidden="true" class="[&>svg]:size-3.5"><%- ui.icon('chevron-right') %></li><% } %>
+      <li class="inline-flex items-center gap-1.5">
+        <% if (href) { %><a class="inline-flex min-h-8 items-center transition-colors hover:text-foreground max-lg:min-h-11" href="<%= href %>"><%= label %></a>
+        <% } else { %><span aria-current="page" class="font-medium text-foreground"><%= label %></span><% } %>
+      </li>
+    <% }) %>
+  </ol>
+</nav>

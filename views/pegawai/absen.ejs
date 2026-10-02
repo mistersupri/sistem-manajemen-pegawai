@@ -1,5 +1,5 @@
 <%- include('../partials/header') %>
-<div class="mb-6">
+<div class="page-head mb-6">
   <h1 class="text-2xl font-bold tracking-tight">Absen wajah</h1>
   <p class="mt-1 text-sm text-muted-foreground"><%= rec && rec.jam_masuk ? `Sudah absen masuk pukul ${rec.jam_masuk.slice(11, 16)}${rec.jam_pulang ? `, pulang ${rec.jam_pulang.slice(11, 16)}` : ''}.` : 'Belum absen hari ini.' %></p>
 </div>

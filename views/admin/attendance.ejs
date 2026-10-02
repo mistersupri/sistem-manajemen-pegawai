@@ -1,6 +1,6 @@
 <%- include('../partials/header') %>
 <% const filtered = f.unit || f.status || f.q; %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
     <h1 class="text-2xl font-bold tracking-tight">Data absensi</h1>
     <p class="mt-1 text-sm text-muted-foreground"><%= records.length %> catatan · <%= T.fmtTglPendek(f.dari) %> sampai <%= T.fmtTglPendek(f.sampai) %></p>
@@ -21,7 +21,7 @@
       <% if (!records.length) { %>
         <tr><td colspan="7">
           <% if (filtered) { %>
-            <%- include('../partials/empty', { judul: 'Tidak ada absensi yang cocok dengan filter', alasan: 'Periode sudah benar? Coba hapus filter unit, status, atau nama pegawai.', aksi: [{ href: `/admin/absensi?dari=${f.dari}&sampai=${f.sampai}`, label: 'Hapus filter, tetap di periode ini' }] }) %>
+            <%- include('../partials/empty', { ikon: 'search-x', judul: 'Tidak ada absensi yang cocok dengan filter', alasan: 'Periode sudah benar? Coba hapus filter unit, status, atau nama pegawai.', aksi: [{ href: `/admin/absensi?dari=${f.dari}&sampai=${f.sampai}`, label: 'Hapus filter, tetap di periode ini' }] }) %>
           <% } else { %>
             <%- include('../partials/empty', { judul: 'Belum ada absensi pada periode ini', alasan: 'Absensi masuk dari kiosk wajah, HP pegawai, atau mesin fingerprint. Data mesin USB perlu diimpor dulu.', aksi: [{ href: '/admin/mesin', label: 'Impor data mesin', utama: true }, { href: '/admin/absensi/input', label: 'Input manual' }] }) %>
           <% } %>

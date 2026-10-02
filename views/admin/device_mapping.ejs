@@ -1,11 +1,11 @@
 <%- include('../partials/header') %>
 <% const chev = ui.icon('chevron-down', ui.selectIcon); %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
+    <%- include('../partials/breadcrumb', { items: [['/admin/mesin', 'Mesin fingerprint'], [null, 'Pemetaan ID mesin']] }) %>
     <h1 class="text-2xl font-bold tracking-tight">Pemetaan ID mesin ke pegawai</h1>
     <p class="mt-1 text-sm text-muted-foreground">ID pengguna di mesin fingerprint yang belum terhubung ke data pegawai. Scan mereka belum masuk ke absensi.</p>
   </div>
-  <a href="/admin/mesin" class="<%= ui.button({ variant: 'outline' }) %>"><%- ui.icon('arrow-left') %> Kembali ke mesin</a>
 </div>
 <% if (!unmatched.length) { %>
   <div class="<%= ui.card('py-0') %>"><%- include('../partials/empty', { judul: 'Semua ID mesin sudah terhubung', alasan: 'Setiap scan dari mesin sudah diproses menjadi absensi pegawai. ID baru akan muncul di sini setelah impor atau tarik data berikutnya.', aksi: [{ href: '/admin/mesin', label: 'Kembali ke mesin' }] }) %></div>

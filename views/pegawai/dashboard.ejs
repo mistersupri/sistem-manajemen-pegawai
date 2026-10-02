@@ -8,9 +8,13 @@
   else if (!rec.jam_pulang) next = { label: 'Absen pulang', href: '/pegawai/absen' };
   const row = 'flex items-center justify-between gap-3 px-6 py-2.5';
 %>
-<div class="mb-6">
-  <h1 class="text-2xl font-bold tracking-tight">Halo, <%= emp.nama %></h1>
-  <p class="mt-1 text-sm text-muted-foreground"><%= sub %></p>
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight">Halo, <%= emp.nama %></h1>
+    <p class="mt-1 text-sm text-muted-foreground"><%= sub %></p>
+    <% if (next && next.note) { %><p class="mt-2 text-sm"><%= next.note %></p><% } %>
+  </div>
+  <% if (next) { %><a href="<%= next.href %>" class="<%= ui.button({ size: 'lg' }, 'h-12 w-full text-base sm:w-auto') %>"><%- ui.icon('scan-face') %> <%= next.label %></a><% } %>
 </div>
 
 <% if (!emp.face_descriptors) { %>
@@ -45,10 +49,7 @@
       <% } %>
     </div>
     <div class="grid gap-2">
-      <% if (next) { %>
-        <% if (next.note) { %><p class="text-sm"><%= next.note %></p><% } %>
-        <a href="<%= next.href %>" class="<%= ui.button({ size: 'lg' }, 'h-12 text-base') %>"><%- ui.icon('scan-face') %> <%= next.label %></a>
-      <% } else if (rec && rec.jam_pulang) { %>
+      <% if (!next && rec && rec.jam_pulang) { %>
         <p class="flex items-center gap-2 font-medium text-status-hadir-foreground"><%- ui.icon('circle-check') %> Absen hari ini sudah lengkap.</p>
       <% } %>
       <a href="/pegawai/dinas-luar" class="<%= ui.button({ variant: 'outline' }, 'whitespace-normal') %>"><%- ui.icon('map-pin') %> Sedang di luar kantor? Absen dinas luar</a>

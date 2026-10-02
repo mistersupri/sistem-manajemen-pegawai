@@ -1,5 +1,6 @@
 <%- include('../partials/header') %>
-<div class="mb-6">
+<div class="page-head mb-6">
+  <%- include('../partials/breadcrumb', { items: [['/admin/absensi', 'Absensi'], [null, 'Input atau koreksi']] }) %>
   <h1 class="text-2xl font-bold tracking-tight">Input atau koreksi absensi</h1>
   <p class="mt-1 text-sm text-muted-foreground">Untuk pegawai yang tidak bisa absen lewat kiosk, HP, atau mesin. Setiap perubahan ditandai sebagai input manual.</p>
 </div>

@@ -70,10 +70,11 @@ const STATUS_BADGE = {
   menunggu: 'terlambat', disetujui: 'hadir', ditolak: 'alpa',
 };
 
-// app: tab tidak aktif memakai muted-foreground (foreground/60 di atas muted hanya 3,9:1)
+// app: Tabs berbentuk tombol pilihan (segmented) berbingkai, item aktif berwarna primary.
+// Teks tidak aktif memakai muted-foreground agar kontras minimal 4,5:1.
 const tabsTrigger = (active) => cn(
-  'relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring [&_svg]:pointer-events-none [&_svg]:shrink-0',
-  active && 'bg-background text-foreground shadow-sm',
+  'relative inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring [&_svg]:pointer-events-none [&_svg]:shrink-0',
+  active && 'bg-primary text-primary-foreground shadow-xs hover:text-primary-foreground',
   TOUCH,
 );
 
@@ -106,6 +107,9 @@ const ui = {
     TOUCH, extra,
   ),
   selectIcon: 'pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-muted-foreground opacity-50 select-none',
+  // app: kolom cari berbentuk pil dengan ikon, satu-satunya input pil (penanda fungsi cari)
+  searchInput: (extra) => cn(ui.input(), 'rounded-full pl-9', extra),
+  searchIcon: 'pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground',
   label: (extra) => cn('flex items-center gap-2 text-sm leading-none font-medium select-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50', extra),
   checkbox: (extra) => cn('peer size-4 shrink-0 rounded-[4px] border border-input shadow-xs transition-shadow outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 accent-primary pointer-coarse:size-5', extra),
   // Switch: checkbox asli bergaya switch shadcn (lihat .ui-switch di CSS)
@@ -137,7 +141,13 @@ const ui = {
   // app: sel boleh membungkus teks (data absensi berisi keterangan panjang)
   tableCell: (extra) => cn('p-2 align-middle [&:has([role=checkbox])]:pr-0', extra),
 
-  tabsList: (extra) => cn('inline-flex w-fit items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground h-9 pointer-coarse:h-12 max-lg:h-12', extra),
+  // Accordion di atas <details>; app: ikon plus yang berputar menjadi silang saat terbuka
+  accordionItem: 'group border-b last:border-b-0',
+  accordionTrigger: 'flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-md py-3 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden',
+  accordionIcon: 'size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45',
+  accordionContent: 'pb-4 text-sm',
+
+  tabsList: (extra) => cn('inline-flex w-fit items-center justify-center gap-0.5 rounded-full border bg-card p-1 text-muted-foreground h-10 shadow-xs pointer-coarse:h-13 max-lg:h-13', extra),
   tabsTrigger,
 
   dialog: (extra) => cn('ui-dialog fixed top-[50%] left-[50%] z-50 m-0 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 text-foreground shadow-lg outline-none sm:max-w-lg', extra),

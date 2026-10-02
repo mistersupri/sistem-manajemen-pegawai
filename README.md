@@ -56,7 +56,7 @@ Dibangun dengan Node.js + Express + SQLite bawaan Node (`node:sqlite`), jadi tid
 
 ### Tampilan
 - Antarmuka memakai komponen [shadcn/ui](https://ui.shadcn.com/) (Button, Card, Table, Badge, Alert, Dialog, Sheet, DropdownMenu, Tabs, Switch, dan lainnya) yang dipindahkan ke template EJS dengan Tailwind CSS v4. Penjelasannya ada di `DESIGN.md` bagian Komponen.
-- Arah desain tertulis di `DESIGN.md`: palet navy dan biru instansi di atas latar kertas hangat, huruf Plus Jakarta Sans (disajikan lokal), dan motif garis hari kerja yang menunjukkan jam masuk/pulang terhadap shift.
+- Arah desain tertulis di `DESIGN.md`: header dan pita judul navy dengan kuning sebagai warna aksi, area kerja terang, huruf Plus Jakarta Sans (disajikan lokal), dan motif garis hari kerja yang menunjukkan jam masuk/pulang terhadap shift.
 - Logo instansi diunggah di **Pengaturan** (PNG/JPG/WebP, maksimal 1 MB). Tanpa logo, yang tampil hanya nama instansi.
 - Di HP: tabel berubah menjadi kartu, pegawai memakai navigasi bawah, dan filter bisa dilipat. Semua halaman lolos pemeriksaan WCAG 2 AA (axe-core) dan bisa dipakai dengan keyboard.
 

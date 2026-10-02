@@ -1,9 +1,11 @@
 <%- include('../partials/header') %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
     <h1 class="text-2xl font-bold tracking-tight">Klarifikasi absen</h1>
     <p class="mt-1 text-sm text-muted-foreground">Pengajuan pegawai untuk lupa absen, terlambat, izin, sakit, cuti, atau dinas luar.</p>
   </div>
+</div>
+<div class="mb-4 flex">
   <nav class="<%= ui.tabsList('max-w-full overflow-x-auto') %>" aria-label="Filter status">
     <% [['menunggu', 'Menunggu'], ['disetujui', 'Disetujui'], ['ditolak', 'Ditolak'], ['semua', 'Semua']].forEach(([k, v]) => { const act = (status || 'semua') === k; %>
       <a class="<%= ui.tabsTrigger(act) %>" <%- act ? 'aria-current="page"' : '' %> href="?status=<%= k %>"><%= v %><% if (k === 'menunggu' && pendingKlarifikasi) { %><span class="<%= ui.badge({ variant: 'highlight' }) %>"><%= pendingKlarifikasi %></span><% } %></a>

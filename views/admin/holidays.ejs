@@ -1,6 +1,7 @@
 <%- include('../partials/header') %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
+    <%- include('../partials/breadcrumb', { items: [['/admin/jadwal', 'Jadwal'], [null, 'Hari libur nasional']] }) %>
     <h1 class="text-2xl font-bold tracking-tight">Hari libur nasional dan cuti bersama</h1>
     <p class="mt-1 text-sm text-muted-foreground">Pada tanggal ini shift default tidak berlaku, jadi pegawai tidak dihitung tanpa keterangan.</p>
   </div>

@@ -1,10 +1,10 @@
 <%- include('../partials/header') %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
+    <%- include('../partials/breadcrumb', { items: [['/admin/klarifikasi', 'Klarifikasi'], [null, 'Tinjau pengajuan']] }) %>
     <h1 class="text-2xl font-bold tracking-tight">Klarifikasi dari <%= c.nama %></h1>
     <p class="mt-1 text-sm text-muted-foreground"><%= JENIS[c.jenis] %> untuk <%= T.fmtTanggalIndo(c.tanggal) %></p>
   </div>
-  <a href="/admin/klarifikasi" class="<%= ui.button({ variant: 'outline' }) %>"><%- ui.icon('arrow-left') %> Kembali ke daftar</a>
 </div>
 <div class="grid items-start gap-6 lg:grid-cols-2">
   <div class="grid gap-6">

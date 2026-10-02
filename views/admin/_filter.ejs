@@ -14,7 +14,7 @@
       <div class="<%= ui.selectWrap() %>"><select id="fstatus" name="status" class="<%= ui.select() %>"><option value="">Semua status</option><% Object.entries(STATUS_LABEL).forEach(([k, v]) => { %><option value="<%= k %>" <%= f.status === k ? 'selected' : '' %>><%= v %></option><% }) %></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
     </div>
     <% } %>
-    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fq">Pegawai</label><input id="fq" name="q" class="<%= ui.input() %>" placeholder="Nama atau NIP" value="<%= f.q %>"></div>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fq">Pegawai</label><div class="relative"><%- ui.icon('search', ui.searchIcon) %><input type="search" id="fq" name="q" class="<%= ui.searchInput() %>" placeholder="Nama atau NIP" value="<%= f.q %>"></div></div>
     <button class="<%= ui.button() %>">Terapkan</button>
   </form>
 </details>

@@ -1,10 +1,10 @@
 <%- include('partials/header') %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
+    <%- include('partials/breadcrumb', { items: backUrl === '/pegawai' ? [['/pegawai', 'Beranda'], [null, 'Daftarkan wajah']] : [['/admin/pegawai', 'Pegawai'], [null, 'Daftarkan wajah']] }) %>
     <h1 class="text-2xl font-bold tracking-tight">Daftarkan wajah</h1>
     <p class="mt-1 text-sm text-muted-foreground"><%= emp.nama %> · NIP <span class="tabular"><%= emp.nip %></span></p>
   </div>
-  <a href="<%= backUrl %>" class="<%= ui.button({ variant: 'outline' }) %>"><%- ui.icon('arrow-left') %> Kembali</a>
 </div>
 
 <div class="grid items-start gap-6 lg:grid-cols-[7fr_5fr]">

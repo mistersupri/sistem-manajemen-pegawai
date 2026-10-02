@@ -1,6 +1,7 @@
 <%- include('../partials/header') %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
+    <%- include('../partials/breadcrumb', { items: [['/admin/jadwal', 'Jadwal'], [null, 'Master shift']] }) %>
     <h1 class="text-2xl font-bold tracking-tight">Master shift</h1>
     <p class="mt-1 text-sm text-muted-foreground">Jam kerja yang bisa dipakai sebagai shift default pegawai atau di jadwal harian.</p>
   </div>

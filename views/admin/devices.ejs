@@ -1,6 +1,6 @@
 <%- include('../partials/header') %>
 <% const chev = ui.icon('chevron-down', ui.selectIcon); %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
     <h1 class="text-2xl font-bold tracking-tight">Mesin fingerprint</h1>
     <p class="mt-1 text-sm text-muted-foreground"><%= stats.total %> scan tersimpan<% if (stats.akhir) { %>, scan terakhir <%= T.fmtTglPendek(stats.akhir.slice(0, 10)) %> pukul <span class="tabular"><%= stats.akhir.slice(11, 16) %></span><% } %></p>
@@ -147,22 +147,26 @@
       </div>
     </form>
 
-    <section class="<%= ui.card('text-sm') %>" aria-labelledby="panduan">
+    <section class="<%= ui.card('gap-2') %>" aria-labelledby="panduan">
       <div class="<%= ui.cardHeader() %>"><h2 class="<%= ui.cardTitle() %>" id="panduan">Panduan koneksi</h2></div>
-      <div class="<%= ui.cardContent('grid gap-2') %>">
-        <p class="font-medium">X302 lewat LAN</p>
-        <ol class="mb-2 grid list-decimal gap-1 pl-4 text-muted-foreground">
-          <li>Di mesin, buka menu Komunikasi, lalu Ethernet. Catat atau atur alamat IP (misalnya 192.168.1.201).</li>
-          <li>Pastikan Comm Key (kata sandi komunikasi) sama dengan isian di sini. Bawaan mesin biasanya 0.</li>
-          <li>Komputer yang menjalankan aplikasi ini harus satu jaringan dengan mesin.</li>
-          <li>Tekan <b class="text-foreground">Tes koneksi</b>, lalu <b class="text-foreground">Tarik data</b>.</li>
-        </ol>
-        <p class="font-medium">P280 lewat USB</p>
-        <ol class="grid list-decimal gap-1 pl-4 text-muted-foreground">
-          <li>Colokkan flashdisk ke mesin, lalu pilih menu USB untuk mengunduh laporan atau attlog.</li>
-          <li>Unggah filenya di bagian <b class="text-foreground">Impor data dari flashdisk</b>.</li>
-          <li>Hubungkan ID mesin dengan pegawai di <b class="text-foreground">Pemetaan ID mesin</b>. Cukup sekali.</li>
-        </ol>
+      <div class="<%= ui.cardContent() %>">
+        <details class="<%= ui.accordionItem %>">
+          <summary class="<%= ui.accordionTrigger %>">X302 lewat LAN <%- ui.icon('plus', ui.accordionIcon) %></summary>
+          <ol class="<%= ui.accordionContent %> grid list-decimal gap-1 pl-4 text-muted-foreground">
+            <li>Di mesin, buka menu Komunikasi, lalu Ethernet. Catat atau atur alamat IP (misalnya 192.168.1.201).</li>
+            <li>Pastikan Comm Key (kata sandi komunikasi) sama dengan isian di sini. Bawaan mesin biasanya 0.</li>
+            <li>Komputer yang menjalankan aplikasi ini harus satu jaringan dengan mesin.</li>
+            <li>Tekan <b class="text-foreground">Tes koneksi</b>, lalu <b class="text-foreground">Tarik data</b>.</li>
+          </ol>
+        </details>
+        <details class="<%= ui.accordionItem %>">
+          <summary class="<%= ui.accordionTrigger %>">P280 lewat USB <%- ui.icon('plus', ui.accordionIcon) %></summary>
+          <ol class="<%= ui.accordionContent %> grid list-decimal gap-1 pl-4 text-muted-foreground">
+            <li>Colokkan flashdisk ke mesin, lalu pilih menu USB untuk mengunduh laporan atau attlog.</li>
+            <li>Unggah filenya di bagian <b class="text-foreground">Impor data dari flashdisk</b>.</li>
+            <li>Hubungkan ID mesin dengan pegawai di <b class="text-foreground">Pemetaan ID mesin</b>. Cukup sekali.</li>
+          </ol>
+        </details>
       </div>
     </section>
   </div>

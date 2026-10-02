@@ -1,7 +1,9 @@
-<div class="max-w-xl px-6 py-8">
+<%# Empty state: judul, alasan, aksi opsional [{ href, label, utama }], ikon opsional (nama ikon Lucide) %>
+<div class="mx-auto flex max-w-md flex-col items-center px-6 py-10 text-center">
+  <span class="mb-3 flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground"><%- ui.icon(typeof ikon !== 'undefined' && ikon ? ikon : 'inbox', 'size-5') %></span>
   <h3 class="font-semibold"><%= judul %></h3>
   <p class="mt-1 text-sm text-muted-foreground"><%= alasan %></p>
   <% if (typeof aksi !== 'undefined' && aksi) { %>
-    <div class="mt-4 flex flex-wrap gap-2"><% aksi.forEach((a) => { %><a class="<%= ui.button({ variant: a.utama ? 'default' : 'outline', size: 'sm' }) %>" href="<%= a.href %>"><%= a.label %></a><% }) %></div>
+    <div class="mt-4 flex flex-wrap justify-center gap-2"><% aksi.forEach((a) => { %><a class="<%= ui.button({ variant: a.utama ? 'default' : 'outline', size: 'sm' }) %>" href="<%= a.href %>"><%= a.label %></a><% }) %></div>
   <% } %>
 </div>

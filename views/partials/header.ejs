@@ -10,8 +10,10 @@
   const isAdmin = user && user.role === 'admin';
   const isPegawai = user && user.role === 'pegawai';
   const on = (...prefixes) => prefixes.some((p) => path === p || path.startsWith(p + '/'));
-  const navLink = (active) => ui.cn('inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-highlight',
-    active && 'bg-white/10 text-white shadow-[inset_0_-3px_0_var(--highlight)]');
+  // Menu aktif: teks kuning dengan garis pendek di bawahnya
+  const navLink = (active) => ui.cn('relative inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-highlight',
+    active && 'text-highlight hover:text-highlight after:absolute after:bottom-0 after:left-1/2 after:h-0.5 after:w-5 after:-translate-x-1/2 after:rounded-full after:bg-highlight');
+  const darkBtn = 'inline-flex min-h-9 items-center gap-1.5 rounded-md border border-white/15 bg-white/5 px-3 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-highlight pointer-coarse:min-h-11 max-lg:min-h-11';
   const adminNav = [
     { href: '/admin', label: 'Dashboard', active: path === '/admin' },
     { label: 'Absensi', id: 'mAbsensi', active: on('/admin/absensi', '/admin/rekap'), items: [['/admin/absensi', 'Data absensi'], ['/admin/rekap', 'Rekap per pegawai'], ['/admin/absensi/input', 'Input atau koreksi manual']] },
@@ -31,11 +33,11 @@
 %>
 <body class="min-h-dvh <%= isPegawai ? 'has-bottom-nav' : '' %>">
 <a href="#konten" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] <%= ui.button({ variant: 'outline' }) %>">Lewati ke konten</a>
-<header class="bg-navy text-white">
-  <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2 lg:px-6">
+<header class="border-b border-white/10 bg-navy text-white">
+  <div class="mx-auto flex min-h-16 max-w-7xl items-center gap-3 px-4 py-2 lg:px-6">
     <a href="/" class="flex min-h-11 min-w-0 items-center gap-2.5 font-bold"><%- include('brand') %></a>
     <% if (user) { %>
-    <nav class="ml-4 hidden flex-1 items-center gap-1 lg:flex" aria-label="Navigasi utama">
+    <nav class="hidden flex-1 items-center justify-center gap-1 lg:flex" aria-label="Navigasi utama">
       <% if (isAdmin) { adminNav.forEach((n) => { if (n.items) { %>
         <div class="relative">
           <button type="button" class="<%= navLink(n.active) %>" data-dropdown aria-controls="<%= n.id %>" aria-expanded="false" aria-haspopup="menu"><%= n.label %> <%- ui.icon('chevron-down', 'size-4 opacity-70') %></button>
@@ -50,9 +52,9 @@
       <% }) } %>
     </nav>
     <div class="ml-auto flex items-center gap-2">
-      <% if (isAdmin) { %><a href="/kiosk" target="_blank" rel="noopener" class="<%= ui.button({ variant: 'secondary', size: 'sm' }, 'hidden lg:inline-flex') %>">Buka kiosk wajah</a><% } %>
+      <% if (isAdmin) { %><a href="/kiosk" target="_blank" rel="noopener" class="<%= ui.button({ variant: 'highlight' }, 'hidden lg:inline-flex') %>"><%- ui.icon('scan-face') %> Buka kiosk wajah</a><% } %>
       <div class="relative">
-        <button type="button" class="<%= navLink(false) %> min-h-11" data-dropdown aria-controls="mAkun" aria-expanded="false" aria-haspopup="menu">
+        <button type="button" class="<%= darkBtn %>" data-dropdown aria-controls="mAkun" aria-expanded="false" aria-haspopup="menu">
           <span class="max-w-40 truncate"><%= user.nama || user.username %></span> <%- ui.icon('chevron-down', 'size-4 opacity-70') %>
         </button>
         <div id="mAkun" role="menu" class="<%= ui.dropdownContent('absolute right-0 top-full mt-1 w-56') %>">
@@ -63,7 +65,7 @@
         </div>
       </div>
       <% if (isAdmin) { %>
-        <button type="button" class="<%= ui.button({ variant: 'ghost' }, 'text-white hover:bg-white/10 hover:text-white lg:hidden') %>" data-dialog-open="navSheet" aria-controls="navSheet" aria-expanded="false"><%- ui.icon('menu') %> Menu</button>
+        <button type="button" class="<%= darkBtn %> lg:hidden" data-dialog-open="navSheet" aria-controls="navSheet" aria-expanded="false"><%- ui.icon('menu') %> Menu</button>
       <% } %>
     </div>
     <% } %>
@@ -94,7 +96,7 @@
   <% }) %>
 </nav>
 <% } %>
-<main class="mx-auto max-w-7xl px-4 py-6 lg:px-6" id="konten" tabindex="-1">
+<main class="mx-auto flex max-w-7xl flex-col px-4 py-6 lg:px-6" id="konten" tabindex="-1">
   <% if (flash) { const v = { success: 'success', danger: 'destructive', warning: 'warning' }[flash.type] || 'default'; %>
     <div data-slot="alert" class="<%= ui.alert(v, 'mb-4 pr-12') %>" role="<%= flash.type === 'danger' ? 'alert' : 'status' %>">
       <%- ui.icon(flash.type === 'danger' ? 'circle-alert' : flash.type === 'warning' ? 'triangle-alert' : 'circle-check') %>

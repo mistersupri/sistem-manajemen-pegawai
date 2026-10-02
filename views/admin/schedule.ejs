@@ -5,7 +5,7 @@
   const prev = `${mm === 1 ? yy - 1 : yy}-${T.pad(mm === 1 ? 12 : mm - 1)}`;
   const next = `${mm === 12 ? yy + 1 : yy}-${T.pad(mm === 12 ? 1 : mm + 1)}`;
 %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
     <h1 class="text-2xl font-bold tracking-tight">Jadwal shift · <%= T.BULAN[mm - 1] %> <%= yy %></h1>
     <p class="mt-1 text-sm text-muted-foreground">Pilih sel untuk mengubah jadwal satu hari. Gunakan tombol panah untuk berpindah sel dan Enter untuk membuka pilihan.</p>

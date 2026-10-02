@@ -1,6 +1,6 @@
 <%- include('../partials/header') %>
 <% const filtered = query.q || query.unit || query.status || query.wajah; %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
     <h1 class="text-2xl font-bold tracking-tight">Pegawai</h1>
     <p class="mt-1 text-sm text-muted-foreground"><%= employees.length %> pegawai<%= filtered ? ' sesuai filter' : '' %></p>
@@ -33,7 +33,7 @@
     <span class="flex items-center gap-2 text-right text-sm font-normal text-muted-foreground"><%= [query.q && `"${query.q}"`, query.unit, query.status, query.wajah === 'belum' && 'wajah belum terdaftar'].filter(Boolean).join(' · ') || 'Semua pegawai' %> <%- ui.icon('chevron-down') %></span>
   </summary>
   <form method="get" class="grid gap-3 border-t px-6 py-4 md:grid-cols-[2fr_1.5fr_1fr_auto] md:items-end">
-    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fq">Nama, NIP, atau jabatan</label><input class="<%= ui.input() %>" id="fq" name="q" value="<%= query.q || '' %>"></div>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fq">Nama, NIP, atau jabatan</label><div class="relative"><%- ui.icon('search', ui.searchIcon) %><input type="search" class="<%= ui.searchInput() %>" id="fq" name="q" placeholder="Cari pegawai..." value="<%= query.q || '' %>"></div></div>
     <div class="grid gap-2"><label class="<%= ui.label() %>" for="fu">Unit kerja</label>
       <div class="<%= ui.selectWrap() %>"><select class="<%= ui.select() %>" id="fu" name="unit"><option value="">Semua unit</option><% units.forEach((u) => { %><option <%= query.unit === u ? 'selected' : '' %>><%= u %></option><% }) %></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
     </div>
@@ -54,7 +54,7 @@
       <% if (!employees.length) { %>
         <tr><td colspan="7">
           <% if (filtered) { %>
-            <%- include('../partials/empty', { judul: 'Tidak ada pegawai yang cocok', alasan: 'Coba kata kunci lain atau hapus filter unit dan status.', aksi: [{ href: '/admin/pegawai', label: 'Tampilkan semua pegawai' }] }) %>
+            <%- include('../partials/empty', { ikon: 'search-x', judul: 'Tidak ada pegawai yang cocok', alasan: 'Coba kata kunci lain atau hapus filter unit dan status.', aksi: [{ href: '/admin/pegawai', label: 'Tampilkan semua pegawai' }] }) %>
           <% } else { %>
             <%- include('../partials/empty', { judul: 'Belum ada data pegawai', alasan: 'Tambahkan satu per satu, impor dari Excel, atau buat dari daftar pengguna mesin fingerprint.', aksi: [{ href: '/admin/pegawai/baru', label: 'Tambah pegawai', utama: true }, { href: '/admin/mesin/pemetaan', label: 'Buat dari data mesin' }] }) %>
           <% } %>

@@ -4,12 +4,12 @@
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const wajib = '<span class="text-destructive">*</span>';
 %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
+    <%- include('../partials/breadcrumb', { items: [['/admin/pegawai', 'Pegawai'], [null, emp.id ? 'Ubah data' : 'Tambah pegawai']] }) %>
     <h1 class="text-2xl font-bold tracking-tight"><%= emp.id ? 'Ubah data pegawai' : 'Tambah pegawai' %></h1>
     <p class="mt-1 text-sm text-muted-foreground"><%= emp.id ? emp.nama : 'Akun login dibuat otomatis dengan username NIP.' %></p>
   </div>
-  <a href="/admin/pegawai" class="<%= ui.button({ variant: 'outline' }) %>"><%- ui.icon('arrow-left') %> Kembali ke daftar</a>
 </div>
 <% if (errors.length) { %>
   <div data-slot="alert" class="<%= ui.alert('destructive', 'mb-4') %>" role="alert">

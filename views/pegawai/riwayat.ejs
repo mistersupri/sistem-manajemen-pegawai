@@ -1,6 +1,6 @@
 <%- include('../partials/header') %>
 <% const [yy, mm] = bulan.split('-').map(Number); %>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="page-head mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
     <h1 class="text-2xl font-bold tracking-tight">Riwayat absensi</h1>
     <p class="mt-1 text-sm text-muted-foreground"><%= T.BULAN[mm - 1] %> <%= yy %></p>

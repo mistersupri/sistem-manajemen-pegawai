@@ -1,10 +1,8 @@
 <%- include('partials/header') %>
-<div class="<%= ui.card('max-w-xl') %>">
-  <div class="<%= ui.cardHeader() %>">
-    <h1 class="<%= ui.cardTitle('text-xl') %>"><%= title %></h1>
-    <p class="<%= ui.cardDescription() %>"><%= message %></p>
-  </div>
-  <div class="<%= ui.cardFooter('flex-wrap gap-2') %>">
+<div class="page-head mb-6">
+  <h1 class="text-2xl font-bold tracking-tight"><%= title %></h1>
+  <p class="mt-1 text-sm text-muted-foreground"><%= message %></p>
+  <div class="mt-5 flex flex-wrap gap-2">
     <a href="/" class="<%= ui.button() %>">Ke halaman utama</a>
     <a href="javascript:history.back()" class="<%= ui.button({ variant: 'outline' }) %>">Kembali ke halaman sebelumnya</a>
   </div>
