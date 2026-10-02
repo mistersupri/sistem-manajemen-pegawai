@@ -18,3 +18,5 @@ test-results
 playwright-report
 .test-storage
 .local-db
+laporan-x302-*.json
+attlog-x302-*.txt

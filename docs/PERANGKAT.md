@@ -6,13 +6,16 @@ Data mesin absensi masuk ke SIMPEG lewat **adapter**. Setiap merek atau protokol
 
 | Adapter | Koneksi | Status | Keterangan |
 |---|---|---|---|
-| `SOLUTION_SOAP` | LAN | **Belum diuji dengan perangkat fisik** | Solution X302 dan mesin lain yang punya Web Service `iWsService` (port 80, Comm Key). Menarik `GetAttLog` dan `GetUserInfo`. |
+| `SOLUTION_SOAP` | LAN | **Belum diuji dengan perangkat fisik** (sudah diuji dengan simulator respons mesin di `tests/unit/solution-soap.test.ts`) | Solution X302 dan mesin lain yang punya Web Service `iWsService` (port 80, Comm Key). Menarik `GetAttLog` dan `GetUserInfo`. |
 | `FILE_IMPORT` | USB | Siap | Berkas unduhan flashdisk: laporan standar Solution P280 (`.xls`, sheet "Lap. Log Absen"), `attlog` `.dat/.txt`, atau CSV/Excel berkolom ID dan waktu. Parser laporan P280 sudah dicoba dengan berkas ekspor asli instansi. |
 | `MOCK` | API | Simulasi | Untuk pengembangan, demo, dan pengujian. Data deterministik; host `mock://gagal` mensimulasikan perangkat offline. |
 
 Status "belum diuji" berarti konektornya ada tetapi belum dicoba dengan unit X302 di jaringan instansi. Jangan nyatakan siap sebelum langkah uji di bawah lulus.
 
 ### Uji X302 sebelum dipakai resmi
+
+Panduan lengkap langkah demi langkah, termasuk pengaturan mesin dan pemecahan masalah: [PANDUAN-X302.md](PANDUAN-X302.md). Alat diagnosa `npm run perangkat:cek -- --ip <IP> --key <Comm Key>` memeriksa jaringan, Web Service, dan log tanpa database.
+
 
 1. Di mesin: aktifkan Web Server/Web Service, catat alamat IP, port (biasanya 80), dan Comm Key.
 2. Tambahkan perangkat dengan adapter `SOLUTION_SOAP`, isi IP, port, dan Comm Key.

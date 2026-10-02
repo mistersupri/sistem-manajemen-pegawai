@@ -21,9 +21,10 @@
     "db:reset": "prisma migrate reset --force",
     "db:local": "tsx scripts/local-db.ts",
     "migrate:sqlite": "tsx scripts/migrate-sqlite.ts",
+    "perangkat:cek": "tsx scripts/cek-perangkat.ts",
     "test": "vitest run",
-    "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
     "test:e2e": "playwright test"
   },
   "dependencies": {

@@ -31,9 +31,12 @@ export function soapRequest(cfg: DeviceConfig, method: string): Promise<string> 
       socket.write(`POST /iWsService HTTP/1.0\r\nHost: ${host}\r\nContent-Type: text/xml\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}\r\n`);
     });
     socket.setTimeout(cfg.timeoutMs, () => finish(new DeviceError(`Mesin ${host} tidak merespons (timeout).`)));
+    let tail = '';
     socket.on('data', (d: Buffer) => {
       chunks.push(d);
-      if (Buffer.concat(chunks).toString('utf8').includes(endTag)) finish();
+      // Cukup periksa ujung data; log mesin bisa berukuran beberapa MB.
+      tail = (tail + d.toString('latin1')).slice(-(endTag.length + d.length));
+      if (tail.includes(endTag)) finish();
     });
     socket.on('end', () => finish());
     socket.on('close', () => finish());

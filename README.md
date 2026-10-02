@@ -76,12 +76,13 @@ Akun demo (password `Demo#2026`): `superadmin`, `kepegawaian`, `admin.it`, `pimp
 | `npm run db:migrate` | Buat migrasi baru dari perubahan skema (pengembangan) |
 | `npm run db:deploy` / `db:seed` | Terapkan migrasi / seed |
 | `npm run migrate:sqlite -- --sqlite data/absensi.db` | Pindahkan data aplikasi absensi lama, lihat [docs/MIGRASI.md](docs/MIGRASI.md) |
+| `npm run perangkat:cek -- --ip 192.168.1.201 --key 0` | Diagnosa koneksi mesin X302 (tanpa database), lihat [docs/PANDUAN-X302.md](docs/PANDUAN-X302.md) |
 | `npm test` | Unit + integration test (butuh database uji, lihat di bawah) |
 | `npm run test:e2e` | Playwright terhadap aplikasi yang berjalan dengan data demo |
 
 ## Pengujian
 
-- **Unit** (`tests/unit`): mesin perhitungan absensi (jadwal, shift malam, keterlambatan, tanggal kerja).
+- **Unit** (`tests/unit`, `npm run test:unit`, tanpa database): mesin perhitungan absensi (jadwal, shift malam, keterlambatan, tanggal kerja) dan adapter X302 terhadap simulator respons mesin.
 - **Integration** (`tests/integration`): RBAC dan kebocoran data antar unit, login dan penguncian akun, impor valid/duplikat/salah, sinkronisasi ulang tanpa duplikat, perangkat offline, secret perangkat tidak terkirim, koreksi dengan nilai awal dan audit, cuti berjenjang, idempotensi absensi wajah, imutabilitas audit log dan raw event. Memakai database terpisah `TEST_DATABASE_URL` (bawaan `postgresql://postgres@127.0.0.1:5433/simpeg_test`) yang dikosongkan setiap file tes.
 - **E2E** (`tests/e2e`): login, tambah/ubah/nonaktifkan pegawai, input manual, koreksi, persetujuan cuti, ekspor rekap. Jalankan terhadap aplikasi berdata demo: `BASE_URL=http://127.0.0.1:3000 npm run test:e2e`.
 
@@ -89,6 +90,7 @@ Akun demo (password `Demo#2026`): `superadmin`, `kepegawaian`, `admin.it`, `pimp
 
 - [docs/ARSITEKTUR.md](docs/ARSITEKTUR.md): struktur kode, alur data absensi, keputusan teknis
 - [docs/API.md](docs/API.md): REST API `/api/v1`
+- [docs/PANDUAN-X302.md](docs/PANDUAN-X302.md): langkah integrasi mesin Solution X302 lewat LAN
 - [docs/PERANGKAT.md](docs/PERANGKAT.md): adapter mesin absensi, jaringan, menambah merek baru
 - [docs/BIOMETRIK.md](docs/BIOMETRIK.md): pengenalan wajah, kalibrasi ambang, batasan
 - [docs/KEAMANAN.md](docs/KEAMANAN.md): keamanan, privasi, backup dan pemulihan
