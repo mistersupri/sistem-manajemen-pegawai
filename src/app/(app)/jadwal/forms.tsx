@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Plus } from 'lucide-react';
+import { CloudDownload, Pencil, Plus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -176,12 +176,19 @@ export function HolidayForm({ units, canAllUnits }: { units: Opt[]; canAllUnits:
         <form className="grid gap-4" onSubmit={async (e) => {
           e.preventDefault();
           const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
-          const r = await run(() => api('POST', '/api/v1/holidays', { date: d.date, name: d.name, unitId: d.unitId || null }), { success: 'Hari libur ditambahkan.' });
+          const r = await run(() => api('POST', '/api/v1/holidays', { date: d.date, name: d.name, unitId: d.unitId || null, kind: d.kind }), { success: 'Hari libur ditambahkan.' });
           if (r !== undefined) setOpen(false);
         }}>
           <DialogHeader><DialogTitle>Tambah hari libur</DialogTitle><DialogDescription>Pegawai dengan jadwal tetap tidak dijadwalkan bekerja pada tanggal ini.</DialogDescription></DialogHeader>
           <Field id="date" label="Tanggal" error={fields.date} required><Input {...fieldProps('date', fields.date)} type="date" required /></Field>
           <Field id="name" label="Keterangan" error={fields.name} required><Input {...fieldProps('name', fields.name)} required placeholder="Mis. Hari Kemerdekaan" /></Field>
+          <Field id="kind" label="Jenis" error={fields.kind}>
+            <NativeSelect {...fieldProps('kind', fields.kind)} defaultValue="INSTANSI">
+              <NativeSelectOption value="INSTANSI">Libur instansi</NativeSelectOption>
+              <NativeSelectOption value="NASIONAL">Libur nasional</NativeSelectOption>
+              <NativeSelectOption value="CUTI_BERSAMA">Cuti bersama</NativeSelectOption>
+            </NativeSelect>
+          </Field>
           <Field id="unitId" label="Berlaku untuk" error={fields.unitId}>
             <NativeSelect {...fieldProps('unitId', fields.unitId)} defaultValue={canAllUnits ? '' : units[0]?.id}>
               {canAllUnits && <NativeSelectOption value="">Semua unit</NativeSelectOption>}
@@ -192,6 +199,60 @@ export function HolidayForm({ units, canAllUnits }: { units: Opt[]; canAllUnits:
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+type SyncResult = { created: number; updated: number; removed: number; keptManual: number; skippedCuti: number };
+const syncSummary = (r: SyncResult) => {
+  const parts = [r.created && `${r.created} ditambahkan`, r.updated && `${r.updated} diperbarui`, r.removed && `${r.removed} dihapus`, r.keptManual && `${r.keptManual} isian petugas dipertahankan`].filter(Boolean);
+  return parts.length ? `Hari libur: ${parts.join(', ')}.` : 'Daftar hari libur sudah sesuai.';
+};
+
+/** Tarik libur nasional dan cuti bersama dari internet untuk satu tahun. */
+export function HolidaySync({ year }: { year: number }) {
+  const { pending, run } = useAction();
+  return (
+    <Button variant="outline" disabled={pending} onClick={() => run(() => api<SyncResult>('POST', '/api/v1/holidays/sync', { year }), { success: syncSummary })}>
+      <CloudDownload />{pending ? 'Menarik...' : `Perbarui libur nasional ${year}`}
+    </Button>
+  );
+}
+
+/** Impor berkas .ics (mis. ekspor kalender) atau .csv bila server tidak punya akses internet. */
+export function HolidayImport({ year }: { year: number }) {
+  const [open, setOpen] = useState(false);
+  const { pending, fields, run } = useAction();
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button variant="outline"><Upload />Impor berkas</Button></DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <form className="grid gap-4" onSubmit={async (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.currentTarget);
+          fd.set('year', String(year));
+          const r = await run(() => api<SyncResult>('POST', '/api/v1/holidays/import', fd), { success: syncSummary });
+          if (r !== undefined) setOpen(false);
+        }}>
+          <DialogHeader>
+            <DialogTitle>Impor hari libur {year}</DialogTitle>
+            <DialogDescription>Untuk server tanpa akses internet. Berkas .ics dari aplikasi kalender, atau .csv berkolom tanggal (YYYY-MM-DD), keterangan, dan jenis (isi &quot;cuti bersama&quot; bila cuti bersama). Hanya tanggal tahun {year} yang diambil; isian petugas tidak ditimpa.</DialogDescription>
+          </DialogHeader>
+          <Field id="file" label="Berkas" error={fields.file} required><Input {...fieldProps('file', fields.file)} type="file" accept=".ics,.csv,text/calendar,text/csv" required /></Field>
+          <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button><Button type="submit" disabled={pending}>{pending ? 'Mengimpor...' : 'Impor'}</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Nonaktifkan libur dari sumber otomatis tanpa menghapusnya, agar tidak muncul lagi saat tarik berikutnya. */
+export function HolidayToggle({ id, name, disabled }: { id: string; name: string; disabled: boolean }) {
+  const { pending, run } = useAction();
+  return (
+    <Button size="sm" variant="ghost" disabled={pending} aria-label={`${disabled ? 'Aktifkan' : 'Nonaktifkan'} ${name}`}
+      onClick={() => run(() => api('PATCH', `/api/v1/holidays/${id}`, { disabled: !disabled }), { success: disabled ? 'Hari libur diaktifkan. Rekap tanggal itu dihitung ulang.' : 'Hari libur dinonaktifkan. Tanggal itu kembali menjadi hari kerja biasa.' })}>
+      {disabled ? 'Aktifkan' : 'Nonaktifkan'}
+    </Button>
   );
 }
 

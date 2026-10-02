@@ -45,6 +45,11 @@ export const SETTING_DEFAULTS = {
   // Keamanan.
   'security.mfaRequiredForAdmins': false,
   'security.sessionHours': 12,
+  // Hari libur nasional dan cuti bersama: ditarik otomatis setiap hari dari sumber daring.
+  'holidays.autoSync': true,
+  'holidays.includeCutiBersama': true,
+  // Status tarik terakhir (diisi sistem, tidak diubah dari form).
+  'holidays.lastSync': null as null | { at: string; ok: boolean; source: string | null; message: string },
   // Modul.
   'modules.leave': true,
 };

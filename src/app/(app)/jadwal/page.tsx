@@ -17,7 +17,10 @@ import { listAssignments, listHolidays, listSchedules, scheduleGrid, scheduleRev
 import { unitOptions } from '@/lib/services/units';
 import { plansFor } from '@/lib/attendance/plan';
 import { BULAN, HARI, HARI_PENDEK, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, monthBounds, todayIn } from '@/lib/time';
-import { AssignmentForm, EndAssignment, HolidayForm, ScheduleForm, ScheduleGrid } from './forms';
+import { AssignmentForm, EndAssignment, HolidayForm, HolidayImport, HolidaySync, HolidayToggle, ScheduleForm, ScheduleGrid } from './forms';
+import { HOLIDAY_KIND_LABEL, HOLIDAY_SOURCE_LABEL } from '@/lib/services/holidays';
+import { Badge } from '@/components/ui/badge';
+import { getSettings } from '@/lib/settings';
 
 export const metadata = { title: 'Jadwal Kerja' };
 
@@ -198,7 +201,10 @@ async function AssignmentsTab({ actor, manage }: { actor: Actor; manage: boolean
 }
 
 async function HolidaysTab({ actor, manage, year }: { actor: Actor; manage: boolean; year: number }) {
-  const [rows, units] = await Promise.all([listHolidays(year), manage ? unitOptions(actor, 'schedule.manage') : []]);
+  const [rows, units, settings] = await Promise.all([listHolidays(year), manage ? unitOptions(actor, 'schedule.manage') : [], getSettings()]);
+  const allUnits = !!scopeOf(actor, 'schedule.manage')?.all;
+  const last = settings['holidays.lastSync'];
+  const tz = settings['org.timezone'];
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -207,19 +213,41 @@ async function HolidaysTab({ actor, manage, year }: { actor: Actor; manage: bool
           <h2 className="min-w-20 text-center text-lg font-semibold tabular">{year}</h2>
           <Button asChild variant="outline" size="icon" aria-label="Tahun berikutnya"><Link href={`?tab=libur&tahun=${year + 1}`}><ChevronRight /></Link></Button>
         </div>
-        {manage && <HolidayForm units={units} canAllUnits={!!scopeOf(actor, 'schedule.manage')?.all} />}
+        {manage && (
+          <div className="flex flex-wrap gap-2">
+            {allUnits && <HolidaySync year={year} />}
+            {allUnits && <HolidayImport year={year} />}
+            <HolidayForm units={units} canAllUnits={allUnits} />
+          </div>
+        )}
       </div>
+      <p className="text-sm text-muted-foreground">
+        {settings['holidays.autoSync']
+          ? <>Libur nasional{settings['holidays.includeCutiBersama'] ? ' dan cuti bersama' : ''} diperbarui otomatis setiap hari untuk tahun ini dan tahun depan. </>
+          : <>Pembaruan otomatis libur nasional dimatikan di Pengaturan. </>}
+        {last && <span className={last.ok ? '' : 'font-medium text-destructive'}>Terakhir {fmtWaktu(new Date(last.at), tz)}: {last.ok ? last.message : `gagal, ${last.message}`}.</span>}
+        {' '}Libur yang tidak berlaku di instansi bisa dinonaktifkan tanpa dihapus.
+      </p>
       <div className="rounded-xl border bg-card">
         <Table className="table-stack">
-          <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Tanggal</TableHead><TableHead>Keterangan</TableHead><TableHead>Berlaku untuk</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Tanggal</TableHead><TableHead>Keterangan</TableHead><TableHead>Jenis</TableHead><TableHead>Berlaku untuk</TableHead><TableHead>Sumber</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
           <TableBody>
-            {rows.length === 0 && <TableRow><TableCell colSpan={4}><EmptyState title={`Belum ada hari libur ${year}`} description="Daftar hari libur nasional dan cuti bersama diisi sesuai keputusan resmi yang berlaku di instansi." /></TableCell></TableRow>}
+            {rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title={`Belum ada hari libur ${year}`} description={manage && allUnits ? 'Tekan "Perbarui libur nasional" untuk menarik daftar resmi, atau impor berkas bila server tidak terhubung ke internet.' : 'Daftar libur nasional diperbarui otomatis oleh sistem.'} /></TableCell></TableRow>}
             {rows.map((h) => (
-              <TableRow key={h.id}>
-                <TableCell className="stack-head pl-4 lg:pl-6">{fmtTanggal(fromDbDate(h.date))}</TableCell>
-                <TableCell data-label="Keterangan">{h.name}</TableCell>
+              <TableRow key={h.id} className={h.disabled ? 'text-muted-foreground' : undefined}>
+                <TableCell className="stack-head pl-4 lg:pl-6"><span className={h.disabled ? 'line-through' : undefined}>{fmtTanggal(fromDbDate(h.date))}</span></TableCell>
+                <TableCell data-label="Keterangan" className="whitespace-normal">{h.name}{h.disabled && <span className="ml-2 text-xs font-medium">(nonaktif)</span>}</TableCell>
+                <TableCell data-label="Jenis"><Badge variant={h.kind === 'NASIONAL' ? 'default' : 'netral'}>{HOLIDAY_KIND_LABEL[h.kind] ?? h.kind}</Badge></TableCell>
                 <TableCell data-label="Berlaku">{h.unit?.name ?? 'Semua unit'}</TableCell>
-                <TableCell className="pr-4 text-right lg:pr-6">{manage && <ConfirmButton size="sm" label="Hapus" title={`Hapus ${h.name}?`} description="Rekap tanggal tersebut dihitung ulang sesuai jadwal kerja biasa." confirmLabel="Hapus" method="DELETE" url={`/api/v1/holidays/${h.id}`} success="Hari libur dihapus." />}</TableCell>
+                <TableCell data-label="Sumber" className="text-muted-foreground">{HOLIDAY_SOURCE_LABEL[h.source] ?? h.source}</TableCell>
+                <TableCell className="pr-4 text-right lg:pr-6">
+                  {manage && (h.unitId || allUnits) && (
+                    <div className="flex justify-end gap-1">
+                      {h.source !== 'MANUAL' && <HolidayToggle id={h.id} name={h.name} disabled={h.disabled} />}
+                      <ConfirmButton size="sm" label="Hapus" title={`Hapus ${h.name}?`} description={h.source === 'MANUAL' ? 'Rekap tanggal tersebut dihitung ulang sesuai jadwal kerja biasa.' : 'Libur dari sumber otomatis akan muncul lagi saat pembaruan berikutnya. Pakai "Nonaktifkan" bila tanggal ini memang tidak libur di instansi.'} confirmLabel="Hapus" method="DELETE" url={`/api/v1/holidays/${h.id}`} success="Hari libur dihapus." />
+                    </div>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

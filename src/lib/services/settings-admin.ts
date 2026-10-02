@@ -39,6 +39,8 @@ const SCHEMAS: Partial<Record<SettingKey, z.ZodType>> = {
   'security.mfaRequiredForAdmins': z.boolean(),
   'security.sessionHours': num(1, 72),
   'modules.leave': z.boolean(),
+  'holidays.autoSync': z.boolean(),
+  'holidays.includeCutiBersama': z.boolean(),
 };
 
 export async function updateSettings(actor: Actor, raw: unknown) {

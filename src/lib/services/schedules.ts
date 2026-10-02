@@ -245,7 +245,7 @@ export async function setDay(actor: Actor, employeeId: string, day: string, valu
 // Hari libur
 // ---------------------------------------------------------------------------
 
-export const holidayInput = z.object({ date, name: z.string().trim().min(2, 'Nama wajib diisi').max(120), unitId: z.string().uuid().nullable().optional() });
+export const holidayInput = z.object({ date, name: z.string().trim().min(2, 'Nama wajib diisi').max(120), unitId: z.string().uuid().nullable().optional().or(z.literal('')).transform((v) => v || null), kind: z.enum(['NASIONAL', 'CUTI_BERSAMA', 'INSTANSI']).default('INSTANSI') });
 
 export async function listHolidays(year: number) {
   return prisma.holiday.findMany({ where: { date: { gte: toDbDate(`${year}-01-01`), lte: toDbDate(`${year}-12-31`) } }, include: { unit: { select: { name: true } } }, orderBy: { date: 'asc' } });
@@ -259,7 +259,7 @@ export async function createHoliday(actor: Actor, raw: unknown, db: Db = prisma)
   if (v.unitId && !unitInScope(actor, 'schedule.manage', v.unitId)) throw forbidden('Unit di luar kewenangan Anda.');
   const dup = await db.holiday.findFirst({ where: { date: toDbDate(v.date), unitId: v.unitId ?? null } });
   if (dup) throw conflict('Tanggal tersebut sudah tercatat sebagai hari libur.', { date: 'Sudah ada' });
-  const h = await db.holiday.create({ data: { date: toDbDate(v.date), name: v.name, unitId: v.unitId ?? null } });
+  const h = await db.holiday.create({ data: { date: toDbDate(v.date), name: v.name, unitId: v.unitId ?? null, kind: v.kind, source: 'MANUAL' } });
   await audit(actor, { action: 'holiday.create', entityType: 'Holiday', entityId: h.id, after: v }, db);
   if (db === prisma) await rebuildActive(null, v.date, v.date);
   return h;

@@ -29,6 +29,8 @@ const RULES: SettingField[] = [
   { key: 'rules.clockSkewToleranceMinutes', label: 'Toleransi selisih jam perangkat', type: 'number', min: 1, max: 1440, suffix: 'menit', hint: 'Scan dengan selisih lebih besar dari waktu server ditandai untuk ditinjau.' },
   { key: 'rules.blockOutsideSchedule', label: 'Tolak absen di hari tanpa jadwal atau libur', type: 'bool', hint: 'Bila mati, absen tetap dicatat dengan keterangan dan tidak memengaruhi status hari kerja.' },
   { key: 'modules.leave', label: 'Modul cuti dan izin aktif', type: 'bool' },
+  { key: 'holidays.autoSync', label: 'Perbarui hari libur nasional otomatis', type: 'bool', hint: 'Ditarik setiap hari dari sumber daring gratis untuk tahun ini dan tahun depan. Server perlu akses internet.' },
+  { key: 'holidays.includeCutiBersama', label: 'Cuti bersama dihitung hari libur', type: 'bool', hint: 'Matikan bila instansi tetap masuk pada cuti bersama. Berlaku pada pembaruan libur berikutnya.' },
 ];
 
 export default async function RulesPage() {
