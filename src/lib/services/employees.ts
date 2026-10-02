@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clampPage } from '../list';
 import type { Prisma } from '@/generated/prisma/client';
 import { prisma, type Db } from '../db';
 import { audit, diff } from '../audit';
@@ -47,9 +48,11 @@ export const listQuery = z.object({
   status: z.enum(['aktif', 'nonaktif', 'semua']).optional().default('aktif'),
   employmentStatus: z.string().max(50).optional().or(z.literal('')).transform((v) => v || undefined),
   face: z.enum(['terdaftar', 'belum', 'menunggu']).optional().or(z.literal('')).transform((v) => v || undefined),
-  sort: z.enum(['nama', 'nip', 'unit', 'terbaru']).optional().default('nama'),
-  page: z.coerce.number().int().min(1).optional().default(1),
+  sort: z.enum(['nama', 'nip', 'jabatan', 'unit', 'status', 'terbaru']).catch('nama').default('nama'),
+  dir: z.enum(['asc', 'desc']).catch('asc').default('asc'),
+  page: z.coerce.number().int().min(1).catch(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).optional().default(25),
+  per: z.coerce.number().int().min(1).max(200).optional(),
 });
 export type ListQuery = z.infer<typeof listQuery>;
 
@@ -69,24 +72,28 @@ export function employeeWhere(actor: Actor, q: Partial<ListQuery>, perm: 'employ
   return { AND: and };
 }
 
-const ORDER: Record<string, Prisma.EmployeeOrderByWithRelationInput[]> = {
-  nama: [{ fullName: 'asc' }],
-  nip: [{ employeeNumber: 'asc' }],
-  unit: [{ unit: { name: 'asc' } }, { fullName: 'asc' }],
-  terbaru: [{ createdAt: 'desc' }],
+const ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.EmployeeOrderByWithRelationInput[]> = {
+  nama: (d) => [{ fullName: d }, { id: 'asc' }],
+  nip: (d) => [{ employeeNumber: { sort: d, nulls: 'last' } }, { fullName: 'asc' }],
+  jabatan: (d) => [{ position: { sort: d, nulls: 'last' } }, { fullName: 'asc' }],
+  unit: (d) => [{ unit: { name: d } }, { fullName: 'asc' }],
+  status: (d) => [{ employmentStatus: { sort: d, nulls: 'last' } }, { fullName: 'asc' }],
+  terbaru: (d) => [{ createdAt: d === 'asc' ? 'desc' : 'asc' }, { id: 'asc' }],
 };
 
 export async function listEmployees(actor: Actor, raw: unknown) {
   assertCan(actor, 'employee.read');
   const q = listQuery.parse(raw);
+  const size = q.per ?? q.pageSize;
   const where = employeeWhere(actor, q);
-  const [total, rows] = await Promise.all([
-    prisma.employee.count({ where }),
+  const total = await prisma.employee.count({ where });
+  const page = clampPage(q.page, size, total);
+  const [rows] = await Promise.all([
     prisma.employee.findMany({
       where,
-      orderBy: ORDER[q.sort],
-      skip: (q.page - 1) * q.pageSize,
-      take: q.pageSize,
+      orderBy: ORDER[q.sort](q.dir),
+      skip: (page - 1) * size,
+      take: size,
       include: {
         unit: { select: { id: true, name: true } },
         biometrics: { where: { status: { in: ['ACTIVE', 'PENDING_VERIFICATION'] } }, select: { status: true } },
@@ -94,7 +101,7 @@ export async function listEmployees(actor: Actor, raw: unknown) {
       },
     }),
   ]);
-  return { total, page: q.page, pageSize: q.pageSize, rows: rows.map(publicEmployee) };
+  return { total, page, pageSize: size, sort: q.sort, dir: q.dir, rows: rows.map(publicEmployee) };
 }
 
 /** Bentuk data pegawai yang aman dikirim ke klien (tanpa NIK dan template biometrik). */

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clampPage, listSchema } from '../list';
 import type { Prisma } from '@/generated/prisma/client';
 import { prisma } from '../db';
 import { audit } from '../audit';
@@ -82,8 +83,13 @@ export const auditQuery = z.object({
   result: z.enum(['SUCCESS', 'FAILURE', '']).optional(),
   from: z.string().optional(),
   to: z.string().optional(),
-  page: z.coerce.number().int().min(1).default(1),
-});
+}).and(listSchema(['waktu', 'pelaku', 'aksi'] as const, { sort: 'waktu', dir: 'desc', per: 50 }));
+
+const AUDIT_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.AuditLogOrderByWithRelationInput[]> = {
+  waktu: (d) => [{ createdAt: d }, { id: d }],
+  pelaku: (d) => [{ actorLabel: { sort: d, nulls: 'last' } }, { createdAt: 'desc' }],
+  aksi: (d) => [{ action: d }, { createdAt: 'desc' }],
+};
 
 export async function listAudit(actor: Actor, raw: unknown) {
   assertCan(actor, 'audit.read');
@@ -94,10 +100,9 @@ export async function listAudit(actor: Actor, raw: unknown) {
     ...(q.q ? { OR: [{ actorLabel: { contains: q.q, mode: 'insensitive' } }, { entityId: q.q }, { action: { contains: q.q } }] } : {}),
     ...(q.from || q.to ? { createdAt: { ...(q.from ? { gte: new Date(`${q.from}T00:00:00Z`) } : {}), ...(q.to ? { lte: new Date(`${q.to}T23:59:59Z`) } : {}) } } : {}),
   };
-  const size = 50;
-  const [total, rows] = await Promise.all([
-    prisma.auditLog.count({ where }),
-    prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * size, take: size }),
-  ]);
-  return { total, page: q.page, pageSize: size, rows };
+  const size = q.per;
+  const total = await prisma.auditLog.count({ where });
+  const page = clampPage(q.page, size, total);
+  const rows = await prisma.auditLog.findMany({ where, orderBy: AUDIT_ORDER[q.sort](q.dir), skip: (page - 1) * size, take: size });
+  return { total, page, pageSize: size, sort: q.sort, dir: q.dir, rows };
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clampPage, listSchema } from '../list';
 import type { Prisma } from '@/generated/prisma/client';
 import { prisma } from '../db';
 import { audit, diff } from '../audit';
@@ -423,13 +424,43 @@ export async function syncRuns(actor: Actor, deviceId?: string, take = 50) {
   });
 }
 
+const RUN_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.DeviceSyncRunOrderByWithRelationInput[]> = {
+  mulai: (d) => [{ startedAt: d }, { id: 'asc' }],
+  diterima: (d) => [{ received: d }, { startedAt: 'desc' }],
+  baru: (d) => [{ inserted: d }, { startedAt: 'desc' }],
+};
+export const runQuery = z.object({
+  deviceId: z.string().uuid().optional().or(z.literal('')).catch(undefined).transform((v) => v || undefined),
+  status: z.enum(['RUNNING', 'SUCCESS', 'PARTIAL', 'FAILED', '']).catch('').default('').transform((v) => v || undefined),
+}).and(listSchema(['mulai', 'diterima', 'baru'] as const, { sort: 'mulai', dir: 'desc' }));
+
+/** Riwayat sinkronisasi dengan filter, urutan, dan halaman. */
+export async function syncRunsPage(actor: Actor, raw: unknown) {
+  assertCan(actor, 'device.read');
+  const q = runQuery.parse(raw);
+  const where: Prisma.DeviceSyncRunWhereInput = {
+    AND: [{ OR: [{ device: deviceScopeWhere(actor) }, { deviceId: null }] }, q.deviceId ? { deviceId: q.deviceId } : {}, q.status ? { status: q.status } : {}],
+  };
+  const total = await prisma.deviceSyncRun.count({ where });
+  const page = clampPage(q.page, q.per, total);
+  const rows = await prisma.deviceSyncRun.findMany({ where, include: { device: { select: { name: true } } }, orderBy: RUN_ORDER[q.sort](q.dir), skip: (page - 1) * q.per, take: q.per });
+  return { total, page, pageSize: q.per, sort: q.sort, dir: q.dir, rows };
+}
+
+const RAW_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.DeviceRawEventOrderByWithRelationInput[]> = {
+  waktu: (d) => [{ deviceTime: d }, { id: 'asc' }],
+  diterima: (d) => [{ receivedAt: d }, { id: 'asc' }],
+  pin: (d) => [{ devicePin: d }, { deviceTime: 'desc' }],
+  nama: (d) => [{ employee: { fullName: d } }, { deviceTime: 'desc' }],
+};
 export const rawQuery = z.object({
   from: z.string().refine(isValidDate),
   to: z.string().refine(isValidDate),
   deviceId: z.string().uuid().optional().or(z.literal('')).transform((v) => v || undefined),
   q: z.string().max(60).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-});
+  // belum = ID mesin belum dipetakan, tertunda = belum diproses, menyimpang = jam perangkat menyimpang
+  state: z.enum(['belum', 'tertunda', 'menyimpang', '']).catch('').default(''),
+}).and(listSchema(['waktu', 'diterima', 'pin', 'nama'] as const, { sort: 'waktu', dir: 'desc', per: 100 }));
 
 export async function rawEvents(actor: Actor, raw: unknown) {
   assertCan(actor, 'device.read');
@@ -440,15 +471,15 @@ export async function rawEvents(actor: Actor, raw: unknown) {
       { deviceTime: { gte: zonedToUtc(q.from, '00:00', tz), lte: zonedToUtc(q.to, '23:59', tz) } },
       q.deviceId ? { deviceId: q.deviceId } : {},
       q.q ? { OR: [{ devicePin: q.q }, { employee: { fullName: { contains: q.q, mode: 'insensitive' } } }] } : {},
+      q.state === 'belum' ? { employeeId: null } : q.state === 'tertunda' ? { processedAt: null } : q.state === 'menyimpang' ? { clockSkewSuspect: true } : {},
       { OR: [{ device: deviceScopeWhere(actor) }, { deviceId: null }] },
     ],
   };
-  const size = 100;
-  const [total, rows] = await Promise.all([
-    prisma.deviceRawEvent.count({ where }),
-    prisma.deviceRawEvent.findMany({ where, include: { device: { select: { name: true } }, employee: { select: { id: true, fullName: true, employeeNumber: true } } }, orderBy: { deviceTime: 'desc' }, skip: (q.page - 1) * size, take: size }),
-  ]);
-  return { total, page: q.page, pageSize: size, rows };
+  const size = q.per;
+  const total = await prisma.deviceRawEvent.count({ where });
+  const page = clampPage(q.page, size, total);
+  const rows = await prisma.deviceRawEvent.findMany({ where, include: { device: { select: { name: true } }, employee: { select: { id: true, fullName: true, employeeNumber: true } } }, orderBy: RAW_ORDER[q.sort](q.dir), skip: (page - 1) * size, take: size });
+  return { total, page, pageSize: size, sort: q.sort, dir: q.dir, rows };
 }
 
 // ---------------------------------------------------------------------------

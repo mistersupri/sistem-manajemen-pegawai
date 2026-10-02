@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PageBody, PageHeader } from '@/components/app/page-header';
 import { EmptyState } from '@/components/app/empty-state';
-import { Pager, SortLink } from '@/components/app/pagination';
+import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
 import { StatusBadge } from '@/components/app/status-badge';
 import { requirePage } from '@/lib/guard';
 import { can } from '@/lib/auth/actor';
@@ -23,14 +23,16 @@ export const metadata = { title: 'Data Pegawai' };
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePage(['employee.read']);
   const sp = await searchParams;
-  const params = { q: sp.q, unitId: sp.unitId, status: sp.status, face: sp.face, sort: sp.sort, employmentStatus: sp.employmentStatus };
+  const filters = { q: sp.q, unitId: sp.unitId, status: sp.status, face: sp.face, employmentStatus: sp.employmentStatus };
   const [data, units] = await Promise.all([
-    listEmployees(actor, { ...Object.fromEntries(Object.entries(params).filter(([, v]) => v)), page: sp.page || 1 }),
+    listEmployees(actor, { ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)), sort: sp.sort, dir: sp.dir, page: sp.page, per: sp.per }),
     unitOptions(actor, 'employee.read'),
   ]);
+  const params = { ...filters, sort: sp.sort, dir: sp.dir, per: sp.per };
+  const sortProps = { sort: data.sort, dir: data.dir, params };
   const pending = sp.face === 'menunggu' ? await pendingVerifications(actor) : [];
   const filtered = !!(sp.q || sp.unitId || (sp.status && sp.status !== 'aktif') || sp.face || sp.employmentStatus);
-  const exportQs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)) as Record<string, string>).toString();
+  const exportQs = new URLSearchParams(Object.fromEntries(Object.entries({ ...filters, sort: sp.sort }).filter(([, v]) => v)) as Record<string, string>).toString();
   return (
     <>
       <PageHeader
@@ -69,6 +71,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
           <div className="grid gap-2"><Label htmlFor="face">Wajah</Label>
             <NativeSelect id="face" name="face" defaultValue={sp.face ?? ''}><NativeSelectOption value="">Semua</NativeSelectOption><NativeSelectOption value="terdaftar">Terdaftar</NativeSelectOption><NativeSelectOption value="belum">Belum terdaftar</NativeSelectOption><NativeSelectOption value="menunggu">Menunggu verifikasi</NativeSelectOption></NativeSelect>
           </div>
+          <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
           <div className="flex gap-2"><Button type="submit">Terapkan</Button>{filtered && <Button asChild variant="outline"><Link href="/pegawai">Reset</Link></Button>}</div>
         </form>
         </CollapsibleFilters>
@@ -88,14 +91,17 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         )}
 
         <div className="rounded-xl border bg-card">
+          <TableToolbar {...sortProps} sorts={[{ value: 'nama', label: 'Nama' }, { value: 'nip', label: 'NIP' }, { value: 'jabatan', label: 'Jabatan' }, { value: 'unit', label: 'Unit' }, { value: 'terbaru', label: 'Terbaru ditambahkan' }]}>
+            <span className="tabular-nums">{data.total.toLocaleString('id-ID')}</span> pegawai{filtered ? ' sesuai filter' : ''}
+          </TableToolbar>
           <Table className="table-stack">
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-4 lg:pl-6"><SortLink label="Nama" value="nama" current={sp.sort ?? 'nama'} params={params} /></TableHead>
-                <TableHead><SortLink label="NIP" value="nip" current={sp.sort ?? 'nama'} params={params} /></TableHead>
-                <TableHead>Jabatan</TableHead>
-                <TableHead><SortLink label="Unit" value="unit" current={sp.sort ?? 'nama'} params={params} /></TableHead>
-                <TableHead>Status kepegawaian</TableHead>
+                <SortableHead label="Nama" value="nama" {...sortProps} className="pl-4 lg:pl-6" />
+                <SortableHead label="NIP" value="nip" {...sortProps} />
+                <SortableHead label="Jabatan" value="jabatan" {...sortProps} />
+                <SortableHead label="Unit" value="unit" {...sortProps} />
+                <SortableHead label="Status kepegawaian" value="status" {...sortProps} />
                 <TableHead>Wajah</TableHead>
                 <TableHead className="pr-4 lg:pr-6">Status</TableHead>
               </TableRow>

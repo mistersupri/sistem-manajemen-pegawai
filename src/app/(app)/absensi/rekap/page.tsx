@@ -10,10 +10,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PageBody, PageHeader } from '@/components/app/page-header';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
-import { Pager } from '@/components/app/pagination';
+import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
+import { clampPage, listSchema, sortRows } from '@/lib/list';
 import { requirePage } from '@/lib/guard';
 import { can } from '@/lib/auth/actor';
-import { CALENDAR_LEGEND, calendarRecap, dailyRecords, recap } from '@/lib/services/reports';
+import { CALENDAR_LEGEND, calendarRecap, dailyRecords, recap, type RecapRow } from '@/lib/services/reports';
 import { CalendarRecap } from '@/components/app/calendar-recap';
 import { unitOptions } from '@/lib/services/units';
 import { getSettings } from '@/lib/settings';
@@ -38,8 +39,8 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
   const monthLabel = (ym: string) => `${BULAN[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
   const f = { from, to, unitId: sp.unit ?? '', status: sp.status ?? '', method: sp.metode ?? '', deviceId: sp.mesin ?? '', q: sp.q ?? '' };
   const params = view === 'kalender'
-    ? { bulan, unit: sp.unit, q: sp.q, tampilan: view }
-    : { dari: from, sampai: to, unit: sp.unit, status: sp.status, metode: sp.metode, mesin: sp.mesin, q: sp.q, tampilan: view };
+    ? { bulan, unit: sp.unit, q: sp.q, tampilan: view, per: sp.per }
+    : { dari: from, sampai: to, unit: sp.unit, status: sp.status, metode: sp.metode, mesin: sp.mesin, q: sp.q, tampilan: view, sort: sp.sort, dir: sp.dir, per: sp.per };
   const qs = (extra: Record<string, string | undefined>) => `?${new URLSearchParams(Object.fromEntries(Object.entries({ ...params, ...extra }).filter(([, v]) => v)) as Record<string, string>)}`;
   const [units, devices] = await Promise.all([unitOptions(actor, 'attendance.report'), prisma.attendanceDevice.findMany({ where: { deletedAt: null }, select: { id: true, name: true } })]);
   const calendarQs = new URLSearchParams(Object.fromEntries(Object.entries({ month: bulan, unitId: f.unitId, q: f.q }).filter(([, v]) => v)) as Record<string, string>).toString();
@@ -99,6 +100,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
           <div className="grid gap-2"><Label htmlFor="metode">Metode</Label><NativeSelect id="metode" name="metode" defaultValue={f.method}><NativeSelectOption value="">Semua</NativeSelectOption>{Object.entries(METHOD_LABEL).map(([k, v]) => <NativeSelectOption key={k} value={k}>{v}</NativeSelectOption>)}</NativeSelect></div>
           <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={f.q} placeholder="Nama atau NIP" className="rounded-full pl-9" /></div></div>
           <input type="hidden" name="tampilan" value={view} />
+          <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
           <div className="flex gap-2"><Button type="submit">Terapkan</Button></div>
           {devices.length > 0 && (
             <div className="grid gap-2 sm:col-span-2 lg:col-span-2"><Label htmlFor="mesin">Perangkat sumber</Label><NativeSelect id="mesin" name="mesin" defaultValue={f.deviceId}><NativeSelectOption value="">Semua</NativeSelectOption>{devices.map((d) => <NativeSelectOption key={d.id} value={d.id}>{d.name}</NativeSelectOption>)}</NativeSelect></div>
@@ -116,9 +118,12 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
           ))}
         </nav>
 
-        {view === 'rekap' && <RecapTable actorPromise={recap(actor, f)} />}
-        {view === 'harian' && <DailyTable data={await dailyRecords(actor, f, { page: Number(sp.page) || 1 })} tz={tz} params={params} />}
-        {view === 'kalender' && <CalendarView data={await calendarRecap(actor, { month: bulan, unitId: f.unitId, q: f.q, page: Number(sp.page) || 1 })} params={params} />}
+        {view === 'rekap' && <RecapTable data={await recap(actor, f)} sp={sp} params={params} />}
+        {view === 'harian' && (() => {
+          const l = dailySchema.parse(sp);
+          return dailyRecords(actor, f, { page: l.page, pageSize: l.per, sort: l.sort, dir: sp.dir ? l.dir : undefined }).then((data) => <DailyTable data={data} tz={tz} params={params} />);
+        })()}
+        {view === 'kalender' && <CalendarView data={await calendarRecap(actor, { month: bulan, unitId: f.unitId, q: f.q, page: Number(sp.page) || 1, pageSize: [25, 50, 100].includes(Number(sp.per)) ? Number(sp.per) : 50 })} params={params} />}
         <p className="text-sm text-muted-foreground">&quot;Tanpa transaksi&quot; = hari kerja terjadwal yang sudah lewat tanpa catatan apa pun. Bukan otomatis tidak hadir; status tidak hadir hanya ditetapkan petugas setelah pemeriksaan.</p>
       </PageBody>
     </>
@@ -153,17 +158,42 @@ function CalendarView({ data, params }: { data: Awaited<ReturnType<typeof calend
   );
 }
 
-async function RecapTable({ actorPromise }: { actorPromise: ReturnType<typeof recap> }) {
-  const { rows, filter } = await actorPromise;
+const RECAP_SORTS = ['nama', 'unit', 'hari', 'hadir', 'terlambat', 'pulangawal', 'dinas', 'izin', 'absen', 'tanpa', 'persen'] as const;
+const recapSchema = listSchema(RECAP_SORTS, { sort: 'nama', per: 50 });
+const dailySchema = listSchema(['tanggal', 'nama', 'masuk', 'pulang', 'status', 'terlambat'] as const, { sort: 'tanggal', dir: 'desc', per: 50 });
+
+function RecapTable({ data, sp, params }: { data: Awaited<ReturnType<typeof recap>>; sp: Record<string, string | undefined>; params: Record<string, string | undefined> }) {
+  const { rows: all, filter } = data;
+  const l = recapSchema.parse(sp);
+  const key: Record<(typeof RECAP_SORTS)[number], (r: RecapRow) => string | number | null> = {
+    nama: (r) => r.name, unit: (r) => r.unit, hari: (r) => r.scheduledDays, hadir: (r) => r.present, terlambat: (r) => r.lateMinutes,
+    pulangawal: (r) => r.earlyLeaveMinutes, dinas: (r) => r.fieldDuty, izin: (r) => r.permit + r.sick + r.leave, absen: (r) => r.absent, tanpa: (r) => r.noRecord, persen: (r) => r.attendancePct,
+  };
+  const sorted = sortRows(all, key[l.sort], l.dir);
+  const page = clampPage(l.page, l.per, sorted.length);
+  const rows = sorted.slice((page - 1) * l.per, page * l.per);
+  const sortProps = { sort: l.sort, dir: l.dir, params };
+  const num = { align: 'right' as const, firstDir: 'desc' as const };
   return (
     <div className="rounded-xl border bg-card">
+      <TableToolbar {...sortProps} sorts={[{ value: 'nama', label: 'Nama' }, { value: 'persen', label: 'Kehadiran' }, { value: 'terlambat', label: 'Menit terlambat' }, { value: 'tanpa', label: 'Tanpa transaksi' }, { value: 'unit', label: 'Unit' }]}>
+        <span className="tabular-nums">{all.length.toLocaleString('id-ID')}</span> pegawai
+      </TableToolbar>
       <Table className="table-stack stack-grid">
         <TableHeader><TableRow>
-          <TableHead className="pl-4 lg:pl-6">Pegawai</TableHead><TableHead className="text-right">Hari kerja</TableHead><TableHead className="text-right">Hadir</TableHead><TableHead className="text-right">Terlambat</TableHead>
-          <TableHead className="text-right">Pulang awal</TableHead><TableHead className="text-right">Dinas luar</TableHead><TableHead className="text-right">Izin/sakit/cuti</TableHead><TableHead className="text-right">Tidak hadir</TableHead><TableHead className="text-right">Tanpa transaksi</TableHead><TableHead className="pr-4 text-right lg:pr-6">Kehadiran</TableHead>
+          <SortableHead label="Pegawai" value="nama" {...sortProps} className="pl-4 lg:pl-6" />
+          <SortableHead label="Hari kerja" value="hari" {...sortProps} {...num} />
+          <SortableHead label="Hadir" value="hadir" {...sortProps} {...num} />
+          <SortableHead label="Terlambat" value="terlambat" {...sortProps} {...num} />
+          <SortableHead label="Pulang awal" value="pulangawal" {...sortProps} {...num} />
+          <SortableHead label="Dinas luar" value="dinas" {...sortProps} {...num} />
+          <SortableHead label="Izin/sakit/cuti" value="izin" {...sortProps} {...num} />
+          <SortableHead label="Tidak hadir" value="absen" {...sortProps} {...num} />
+          <SortableHead label="Tanpa transaksi" value="tanpa" {...sortProps} {...num} />
+          <SortableHead label="Kehadiran" value="persen" {...sortProps} {...num} className="pr-4 lg:pr-6" />
         </TableRow></TableHeader>
         <TableBody>
-          {rows.length === 0 && <TableRow><TableCell colSpan={10}><EmptyState filtered title="Tidak ada data untuk filter ini" /></TableCell></TableRow>}
+          {rows.length === 0 && <TableRow><TableCell colSpan={10}><EmptyState filtered title="Tidak ada data untuk filter ini" description="Ubah rentang tanggal atau hapus filter." actions={[{ href: '/absensi/rekap', label: 'Hapus filter' }]} /></TableCell></TableRow>}
           {rows.map((r) => (
             <TableRow key={r.employeeId}>
               <TableCell className="stack-head pl-4 lg:pl-6"><Link className="font-medium text-primary hover:underline" href={`/absensi/rekap?tampilan=harian&dari=${filter.from}&sampai=${filter.to}&q=${encodeURIComponent(r.employeeNumber ?? r.name)}`}>{r.name}</Link><span className="block text-xs text-muted-foreground">{r.unit ?? ''}</span></TableCell>
@@ -180,15 +210,28 @@ async function RecapTable({ actorPromise }: { actorPromise: ReturnType<typeof re
           ))}
         </TableBody>
       </Table>
+      <Pager total={all.length} page={page} pageSize={l.per} params={params} />
     </div>
   );
 }
 
 function DailyTable({ data, tz, params }: { data: Awaited<ReturnType<typeof dailyRecords>>; tz: string; params: Record<string, string | undefined> }) {
+  const sortProps = { sort: data.sort, dir: data.dir, params };
   return (
     <div className="rounded-xl border bg-card">
+      <TableToolbar {...sortProps} sorts={[{ value: 'tanggal', label: 'Tanggal' }, { value: 'nama', label: 'Nama' }, { value: 'masuk', label: 'Jam masuk' }, { value: 'terlambat', label: 'Menit terlambat' }, { value: 'status', label: 'Status' }]}>
+        <span className="tabular-nums">{data.total.toLocaleString('id-ID')}</span> catatan harian
+      </TableToolbar>
       <Table className="table-stack stack-grid">
-        <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Tanggal</TableHead><TableHead>Pegawai</TableHead><TableHead>Jadwal</TableHead><TableHead>Masuk</TableHead><TableHead>Pulang</TableHead><TableHead>Status</TableHead><TableHead className="pr-4 lg:pr-6">Catatan</TableHead></TableRow></TableHeader>
+        <TableHeader><TableRow>
+          <SortableHead label="Tanggal" value="tanggal" {...sortProps} className="pl-4 lg:pl-6" firstDir="desc" />
+          <SortableHead label="Pegawai" value="nama" {...sortProps} />
+          <TableHead>Jadwal</TableHead>
+          <SortableHead label="Masuk" value="masuk" {...sortProps} />
+          <SortableHead label="Pulang" value="pulang" {...sortProps} />
+          <SortableHead label="Status" value="status" {...sortProps} />
+          <TableHead className="pr-4 lg:pr-6">Catatan</TableHead>
+        </TableRow></TableHeader>
         <TableBody>
           {data.rows.length === 0 && <TableRow><TableCell colSpan={7}><EmptyState filtered title="Tidak ada catatan absensi untuk filter ini" /></TableCell></TableRow>}
           {data.rows.map((r) => (

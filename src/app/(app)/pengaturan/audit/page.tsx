@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PageBody, PageHeader } from '@/components/app/page-header';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
-import { Pager } from '@/components/app/pagination';
+import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
 import { requirePage } from '@/lib/guard';
 import { getSetting } from '@/lib/settings';
 import { listAudit } from '@/lib/services/settings-admin';
@@ -27,9 +27,11 @@ function Json({ label, value }: { label: string; value: unknown }) {
 export default async function AuditPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePage(['audit.read']);
   const sp = await searchParams;
-  const q = { q: sp.q?.trim() || undefined, action: sp.action || undefined, result: (sp.result === 'SUCCESS' || sp.result === 'FAILURE' ? sp.result : undefined) as 'SUCCESS' | 'FAILURE' | undefined, from: isValidDate(sp.from) ? sp.from : undefined, to: isValidDate(sp.to) ? sp.to : undefined, page: sp.page ?? '1' };
+  const q = { q: sp.q?.trim() || undefined, action: sp.action || undefined, result: (sp.result === 'SUCCESS' || sp.result === 'FAILURE' ? sp.result : undefined) as 'SUCCESS' | 'FAILURE' | undefined, from: isValidDate(sp.from) ? sp.from : undefined, to: isValidDate(sp.to) ? sp.to : undefined, page: sp.page, per: sp.per, sort: sp.sort, dir: sp.dir };
   const [data, tz] = await Promise.all([listAudit(actor, q), getSetting('org.timezone')]);
   const filtered = !!(q.q || q.action || q.result || q.from || q.to);
+  const params = { q: q.q, action: q.action, result: q.result, from: q.from, to: q.to, sort: sp.sort, dir: sp.dir, per: sp.per };
+  const sortProps = { sort: data.sort, dir: data.dir, params };
   return (
     <>
       <PageHeader title="Audit Log" description="Catatan siapa melakukan apa dan kapan. Hanya bisa ditambah; tidak bisa diubah atau dihapus dari aplikasi maupun database." crumbs={[{ label: 'Pengaturan' }, { label: 'Audit Log' }]} />
@@ -41,14 +43,19 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <label className="grid gap-1 text-sm font-medium" htmlFor="result">Hasil<NativeSelect id="result" name="result" defaultValue={q.result ?? ''} className="min-w-32"><NativeSelectOption value="">Semua</NativeSelectOption><NativeSelectOption value="SUCCESS">Berhasil</NativeSelectOption><NativeSelectOption value="FAILURE">Gagal</NativeSelectOption></NativeSelect></label>
           <label className="grid gap-1 text-sm font-medium" htmlFor="from">Dari<Input id="from" name="from" type="date" defaultValue={q.from ?? ''} /></label>
           <label className="grid gap-1 text-sm font-medium" htmlFor="to">Sampai<Input id="to" name="to" type="date" defaultValue={q.to ?? ''} /></label>
-          <Button type="submit" variant="outline">Terapkan</Button>
+          <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
+          <Button type="submit">Terapkan</Button>
+          {filtered && <Button asChild variant="outline"><a href="/pengaturan/audit">Reset</a></Button>}
         </form>
         </CollapsibleFilters>
         <div className="rounded-xl border bg-card">
+          <TableToolbar {...sortProps} sorts={[{ value: 'waktu', label: 'Waktu' }, { value: 'pelaku', label: 'Pelaku' }, { value: 'aksi', label: 'Aksi' }]}>
+            <span className="tabular-nums">{data.total.toLocaleString('id-ID')}</span> catatan{filtered ? ' sesuai filter' : ''}
+          </TableToolbar>
           <Table className="table-stack">
-            <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Waktu</TableHead><TableHead>Pelaku</TableHead><TableHead>Aksi</TableHead><TableHead>Data</TableHead><TableHead>Hasil</TableHead><TableHead className="pr-4 lg:pr-6">Rincian</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><SortableHead label="Waktu" value="waktu" {...sortProps} firstDir="desc" className="pl-4 lg:pl-6" /><SortableHead label="Pelaku" value="pelaku" {...sortProps} /><SortableHead label="Aksi" value="aksi" {...sortProps} /><TableHead>Data</TableHead><TableHead>Hasil</TableHead><TableHead className="pr-4 lg:pr-6">Rincian</TableHead></TableRow></TableHeader>
             <TableBody>
-              {data.rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada catatan" filtered={filtered} /></TableCell></TableRow>}
+              {data.rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada catatan" filtered={filtered} description={filtered ? 'Ubah kata kunci, area, atau rentang tanggal.' : undefined} actions={filtered ? [{ href: '/pengaturan/audit', label: 'Hapus filter' }] : undefined} /></TableCell></TableRow>}
               {data.rows.map((a) => (
                 <TableRow key={a.id} className="align-top">
                   <TableCell className="stack-head pl-4 tabular lg:pl-6">{fmtWaktu(a.createdAt, tz)}</TableCell>
@@ -68,7 +75,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
               ))}
             </TableBody>
           </Table>
-          <Pager total={data.total} page={data.page} pageSize={50} params={{ q: q.q, action: q.action, result: q.result, from: q.from, to: q.to }} />
+          <Pager total={data.total} page={data.page} pageSize={data.pageSize} params={params} />
         </div>
       </PageBody>
     </>

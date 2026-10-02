@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { Prisma } from '@/generated/prisma/client';
+import { clampPage, listSchema } from '../list';
 import { prisma } from '../db';
 import { audit } from '../audit';
 import { assertCan, getEmployeeInScope, scopeOf, unitInScope, type Actor } from '../auth/actor';
@@ -27,6 +29,45 @@ export async function listUsers(actor: Actor, q?: string) {
     orderBy: { username: 'asc' },
     take: 500,
   });
+}
+
+const USER_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.UserOrderByWithRelationInput[]> = {
+  username: (d) => [{ username: d }],
+  nama: (d) => [{ employee: { fullName: d } }, { username: 'asc' }],
+  login: (d) => [{ lastLoginAt: { sort: d, nulls: 'last' } }, { username: 'asc' }],
+};
+export const userListQuery = z.object({
+  q: z.string().trim().max(100).optional().or(z.literal('')).transform((v) => v || undefined),
+  status: z.enum(['aktif', 'nonaktif', 'terkunci', '']).catch('').default(''),
+  role: z.string().max(40).optional().or(z.literal('')).transform((v) => v || undefined),
+  mfa: z.enum(['ya', 'tidak', '']).catch('').default(''),
+}).and(listSchema(['username', 'nama', 'login'] as const, { sort: 'username' }));
+
+/** Daftar pengguna dengan filter, urutan, dan halaman untuk halaman Pengguna & Peran. */
+export async function listUsersPage(actor: Actor, raw: unknown) {
+  const q = userListQuery.parse(raw);
+  const and: Prisma.UserWhereInput[] = [userWhere(actor)];
+  if (q.q) and.push({ OR: [{ username: { contains: q.q, mode: 'insensitive' } }, { email: { contains: q.q, mode: 'insensitive' } }, { employee: { fullName: { contains: q.q, mode: 'insensitive' } } }] });
+  if (q.status === 'aktif') and.push({ isActive: true });
+  if (q.status === 'nonaktif') and.push({ isActive: false });
+  if (q.status === 'terkunci') and.push({ lockedUntil: { gt: new Date() } });
+  if (q.role) and.push({ roles: { some: { role: { code: q.role } } } });
+  if (q.mfa) and.push({ mfaEnabled: q.mfa === 'ya' });
+  const where = { AND: and };
+  const total = await prisma.user.count({ where });
+  const page = clampPage(q.page, q.per, total);
+  const rows = await prisma.user.findMany({
+    where,
+    select: {
+      id: true, username: true, email: true, isActive: true, mfaEnabled: true, lastLoginAt: true, lockedUntil: true,
+      employee: { select: { id: true, fullName: true, unit: { select: { name: true } } } },
+      roles: { select: { id: true, unitId: true, includeSubunits: true, role: { select: { code: true, name: true } }, unit: { select: { name: true } } } },
+    },
+    orderBy: USER_ORDER[q.sort](q.dir),
+    skip: (page - 1) * q.per,
+    take: q.per,
+  });
+  return { total, page, pageSize: q.per, sort: q.sort, dir: q.dir, rows };
 }
 
 export const userInput = z.object({

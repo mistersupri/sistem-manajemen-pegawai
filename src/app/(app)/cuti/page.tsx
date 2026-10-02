@@ -1,5 +1,9 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { CollapsibleFilters } from '@/components/app/collapsible-filters';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,11 +12,12 @@ import { PageBody, PageHeader } from '@/components/app/page-header';
 import { Segmented } from '@/components/app/segmented';
 import { StatusBadge, REQUEST_LABEL } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
-import { Pager } from '@/components/app/pagination';
+import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
+import { qs } from '@/lib/list';
 import { requirePage } from '@/lib/guard';
 import { can, type Actor } from '@/lib/auth/actor';
 import { getSettings } from '@/lib/settings';
-import { balancesFor, leaveCalendar, listLeave } from '@/lib/services/leave';
+import { balancesFor, leaveCalendar, listLeave, listLeaveTypes } from '@/lib/services/leave';
 import { BULAN, HARI_PENDEK, dateRange, fmtTglPendek, fmtWaktu, fromDbDate, monthBounds, todayIn } from '@/lib/time';
 
 export const metadata = { title: 'Cuti & Izin' };
@@ -62,11 +67,16 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
 async function ListView({ actor, view, sp, tz, year }: { actor: Actor; view: 'saya' | 'persetujuan' | 'semua'; sp: SP; tz: string; year: number }) {
   const status = view === 'persetujuan' ? 'ALL' : (['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL'].includes(sp.status ?? '') ? sp.status! : 'ALL');
-  const [data, balances] = await Promise.all([
-    listLeave(actor, { view, status, page: sp.page ?? '1' }),
-    view === 'saya' && actor.employeeId ? balancesFor(actor.employeeId, year) : Promise.resolve([]),
-  ]);
   const showEmployee = view !== 'saya';
+  const filters = { jenis: sp.jenis, q: showEmployee ? sp.q : undefined, dari: sp.dari, sampai: sp.sampai };
+  const [data, balances, types] = await Promise.all([
+    listLeave(actor, { view, status, typeId: sp.jenis, q: filters.q, from: sp.dari, to: sp.sampai, page: sp.page, per: sp.per, sort: sp.sort, dir: sp.dir }),
+    view === 'saya' && actor.employeeId ? balancesFor(actor.employeeId, year) : Promise.resolve([]),
+    listLeaveTypes(true),
+  ]);
+  const params = { lihat: view, status: view === 'persetujuan' ? undefined : status, ...filters, sort: sp.sort, dir: sp.dir, per: sp.per };
+  const sortProps = { sort: data.sort, dir: data.dir, params };
+  const filtered = Object.values(filters).some(Boolean);
   return (
     <>
       {balances.length > 0 && (
@@ -87,15 +97,42 @@ async function ListView({ actor, view, sp, tz, year }: { actor: Actor; view: 'sa
         </div>
       )}
       {view !== 'persetujuan' && (
-        <Segmented label="Filter status" current={status} className="w-fit" items={['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map((k) => ({ key: k, label: k === 'ALL' ? 'Semua' : REQUEST_LABEL[k], href: `?lihat=${view}&status=${k}` }))} />
+        <Segmented label="Filter status" current={status} className="w-fit" items={['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map((k) => ({ key: k, label: k === 'ALL' ? 'Semua' : REQUEST_LABEL[k], href: qs({ ...params, status: k, page: undefined }) }))} />
       )}
+      <CollapsibleFilters active={Object.values(filters).filter(Boolean).length}>
+        <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1.4fr_1fr_1fr_auto] lg:items-end" aria-label="Filter pengajuan">
+          <input type="hidden" name="lihat" value={view} />
+          {view !== 'persetujuan' && <input type="hidden" name="status" value={status} />}
+          <KeepParams values={{ sort: sp.sort, dir: sp.dir, per: sp.per }} />
+          {showEmployee ? (
+            <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={sp.q} placeholder="Nama atau NIP" className="rounded-full pl-9" /></div></div>
+          ) : <div className="max-lg:hidden" />}
+          <div className="grid gap-2"><Label htmlFor="jenis">Jenis</Label><NativeSelect id="jenis" name="jenis" defaultValue={sp.jenis ?? ''}><NativeSelectOption value="">Semua jenis</NativeSelectOption>{types.map((t) => <NativeSelectOption key={t.id} value={t.id}>{t.name}</NativeSelectOption>)}</NativeSelect></div>
+          <div className="grid gap-2"><Label htmlFor="dari">Tanggal dari</Label><Input id="dari" name="dari" type="date" defaultValue={sp.dari} /></div>
+          <div className="grid gap-2"><Label htmlFor="sampai">Sampai</Label><Input id="sampai" name="sampai" type="date" defaultValue={sp.sampai} /></div>
+          <div className="flex gap-2"><Button type="submit">Terapkan</Button>{filtered && <Button asChild variant="outline"><Link href={qs({ lihat: view, status: params.status })}>Reset</Link></Button>}</div>
+        </form>
+      </CollapsibleFilters>
       <div className="rounded-xl border bg-card">
+        <TableToolbar {...sortProps} sorts={[{ value: 'diajukan', label: 'Waktu diajukan' }, { value: 'mulai', label: 'Tanggal mulai' }, ...(showEmployee ? [{ value: 'nama', label: 'Nama pegawai' }] : []), { value: 'lama', label: 'Lama' }, { value: 'status', label: 'Status' }]}>
+          <span className="tabular-nums">{data.total.toLocaleString('id-ID')}</span> pengajuan{filtered ? ' sesuai filter' : ''}
+        </TableToolbar>
         <Table className="table-stack">
-          <TableHeader><TableRow>{showEmployee && <TableHead className="pl-4 lg:pl-6">Pegawai</TableHead>}<TableHead className={showEmployee ? '' : 'pl-4 lg:pl-6'}>Jenis</TableHead><TableHead>Tanggal</TableHead><TableHead>Lama</TableHead><TableHead>Tahap</TableHead><TableHead>Diajukan</TableHead><TableHead className="pr-4 lg:pr-6">Status</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow>
+            {showEmployee && <SortableHead label="Pegawai" value="nama" {...sortProps} className="pl-4 lg:pl-6" />}
+            <TableHead className={showEmployee ? '' : 'pl-4 lg:pl-6'}>Jenis</TableHead>
+            <SortableHead label="Tanggal" value="mulai" {...sortProps} firstDir="desc" />
+            <SortableHead label="Lama" value="lama" {...sortProps} firstDir="desc" />
+            <TableHead>Tahap</TableHead>
+            <SortableHead label="Diajukan" value="diajukan" {...sortProps} firstDir="desc" />
+            <SortableHead label="Status" value="status" {...sortProps} className="pr-4 lg:pr-6" />
+          </TableRow></TableHeader>
           <TableBody>
             {data.rows.length === 0 && (
               <TableRow><TableCell colSpan={7}>
-                <EmptyState title={view === 'persetujuan' ? 'Tidak ada pengajuan yang menunggu Anda' : 'Belum ada pengajuan'} description={view === 'saya' ? 'Pengajuan cuti, izin, atau sakit akan tampil di sini beserta status persetujuannya.' : undefined} />
+                {filtered
+                  ? <EmptyState filtered title="Tidak ada pengajuan yang cocok" description="Ubah filter atau rentang tanggal." actions={[{ href: qs({ lihat: view, status: params.status }), label: 'Hapus filter' }]} />
+                  : <EmptyState title={view === 'persetujuan' ? 'Tidak ada pengajuan yang menunggu Anda' : 'Belum ada pengajuan'} description={view === 'saya' ? 'Pengajuan cuti, izin, atau sakit akan tampil di sini beserta status persetujuannya.' : 'Pengajuan pegawai di unit Anda akan muncul di sini.'} actions={view === 'saya' && can(actor, 'leave.request') ? [{ href: '/cuti/baru', label: 'Ajukan cuti/izin', primary: true }] : undefined} />}
               </TableCell></TableRow>
             )}
             {data.rows.map((r) => (
@@ -111,7 +148,7 @@ async function ListView({ actor, view, sp, tz, year }: { actor: Actor; view: 'sa
             ))}
           </TableBody>
         </Table>
-        <Pager total={data.total} page={data.page} pageSize={data.pageSize} params={{ lihat: view, status }} />
+        <Pager total={data.total} page={data.page} pageSize={data.pageSize} params={params} />
       </div>
     </>
   );

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clampPage, listSchema } from '../list';
 import type { Prisma } from '@/generated/prisma/client';
 import { prisma } from '../db';
 import { audit } from '../audit';
@@ -165,9 +166,19 @@ export async function cancelCorrection(actor: Actor, id: string) {
 
 export const correctionQuery = z.object({
   scope: z.enum(['saya', 'tinjau']).default('saya'),
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL']).default('PENDING'),
-  page: z.coerce.number().int().min(1).default(1),
-});
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL']).catch('PENDING').default('PENDING'),
+  kind: z.string().max(30).optional().or(z.literal('')).transform((v) => v || undefined),
+  q: z.string().trim().max(100).optional().or(z.literal('')).transform((v) => v || undefined),
+  from: z.string().refine(isValidDate).optional().catch(undefined),
+  to: z.string().refine(isValidDate).optional().catch(undefined),
+}).and(listSchema(['diajukan', 'tanggal', 'nama', 'status'] as const, { sort: 'diajukan', dir: 'desc' }));
+
+const CORRECTION_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.AttendanceCorrectionOrderByWithRelationInput[]> = {
+  diajukan: (d) => [{ createdAt: d }, { id: 'asc' }],
+  tanggal: (d) => [{ workDate: d }, { createdAt: 'desc' }, { id: 'asc' }],
+  nama: (d) => [{ employee: { fullName: d } }, { workDate: 'desc' }, { id: 'asc' }],
+  status: (d) => [{ status: d }, { createdAt: 'desc' }, { id: 'asc' }],
+};
 
 export async function listCorrections(actor: Actor, raw: unknown) {
   const q = correctionQuery.parse(raw);
@@ -176,16 +187,21 @@ export async function listCorrections(actor: Actor, raw: unknown) {
     if (!can(actor, 'correction.review')) throw forbidden();
     where = { employee: employeeScopeWhere(actor, 'correction.review'), ...(actor.employeeId ? { NOT: { employeeId: actor.employeeId } } : {}) };
   } else {
-    if (!actor.employeeId) return { total: 0, page: 1, pageSize: 25, rows: [] };
+    if (!actor.employeeId) return { total: 0, page: 1, pageSize: q.per, sort: q.sort, dir: q.dir, rows: [] };
     where = { employeeId: actor.employeeId };
   }
-  if (q.status !== 'ALL') where = { ...where, status: q.status };
-  const size = 25;
-  const [total, rows] = await Promise.all([
-    prisma.attendanceCorrection.count({ where }),
-    prisma.attendanceCorrection.findMany({ where, include: { employee: { select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } } } }, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * size, take: size }),
-  ]);
-  return { total, page: q.page, pageSize: size, rows };
+  const and: Prisma.AttendanceCorrectionWhereInput[] = [where];
+  if (q.status !== 'ALL') and.push({ status: q.status });
+  if (q.kind) and.push({ kind: q.kind });
+  if (q.from) and.push({ workDate: { gte: toDbDate(q.from) } });
+  if (q.to) and.push({ workDate: { lte: toDbDate(q.to) } });
+  if (q.q) and.push({ employee: { OR: [{ fullName: { contains: q.q, mode: 'insensitive' } }, { employeeNumber: { contains: q.q } }] } });
+  where = { AND: and };
+  const size = q.per;
+  const total = await prisma.attendanceCorrection.count({ where });
+  const page = clampPage(q.page, size, total);
+  const rows = await prisma.attendanceCorrection.findMany({ where, include: { employee: { select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } } } }, orderBy: CORRECTION_ORDER[q.sort](q.dir), skip: (page - 1) * size, take: size });
+  return { total, page, pageSize: size, sort: q.sort, dir: q.dir, rows };
 }
 
 export async function getCorrection(actor: Actor, id: string) {

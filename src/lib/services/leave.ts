@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clampPage, listSchema } from '../list';
 import type { Prisma } from '@/generated/prisma/client';
 import { prisma } from '../db';
 import { audit, diff } from '../audit';
@@ -251,9 +252,20 @@ export async function cancelLeave(actor: Actor, requestId: string, reason: strin
 
 export const leaveQuery = z.object({
   view: z.enum(['saya', 'persetujuan', 'semua']).default('saya'),
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL']).default('ALL'),
-  page: z.coerce.number().int().min(1).default(1),
-});
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL']).catch('ALL').default('ALL'),
+  typeId: z.string().uuid().optional().or(z.literal('')).catch(undefined).transform((v) => v || undefined),
+  q: z.string().trim().max(100).optional().or(z.literal('')).transform((v) => v || undefined),
+  from: z.string().refine(isValidDate).optional().catch(undefined),
+  to: z.string().refine(isValidDate).optional().catch(undefined),
+}).and(listSchema(['diajukan', 'mulai', 'nama', 'lama', 'status'] as const, { sort: 'diajukan', dir: 'desc' }));
+
+const LEAVE_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.LeaveRequestOrderByWithRelationInput[]> = {
+  diajukan: (d) => [{ createdAt: d }, { id: 'asc' }],
+  mulai: (d) => [{ startDate: d }, { id: 'asc' }],
+  nama: (d) => [{ employee: { fullName: d } }, { startDate: 'desc' }, { id: 'asc' }],
+  lama: (d) => [{ days: d }, { startDate: 'desc' }, { id: 'asc' }],
+  status: (d) => [{ status: d }, { createdAt: 'desc' }, { id: 'asc' }],
+};
 
 export async function listLeave(actor: Actor, raw: unknown) {
   const q = leaveQuery.parse(raw);
@@ -267,16 +279,22 @@ export async function listLeave(actor: Actor, raw: unknown) {
     where = { employee: employeeScopeWhere(actor, can(actor, 'leave.manage') ? 'leave.manage' : 'leave.approve') };
     if (q.status !== 'ALL') where = { ...where, status: q.status };
   } else {
-    if (!actor.employeeId) return { total: 0, page: 1, pageSize: 25, rows: [] };
+    if (!actor.employeeId) return { total: 0, page: 1, pageSize: q.per, sort: q.sort, dir: q.dir, rows: [] };
     where = { employeeId: actor.employeeId };
     if (q.status !== 'ALL') where = { ...where, status: q.status };
   }
-  const size = 25;
-  const [total, rows] = await Promise.all([
-    prisma.leaveRequest.count({ where }),
-    prisma.leaveRequest.findMany({ where, include: { leaveType: true, employee: { select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } } }, approvals: { orderBy: { level: 'asc' } } }, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * size, take: size }),
-  ]);
-  return { total, page: q.page, pageSize: size, rows };
+  const and: Prisma.LeaveRequestWhereInput[] = [where];
+  if (q.typeId) and.push({ leaveTypeId: q.typeId });
+  // Rentang tanggal: pengajuan yang beririsan dengan rentang.
+  if (q.from) and.push({ endDate: { gte: toDbDate(q.from) } });
+  if (q.to) and.push({ startDate: { lte: toDbDate(q.to) } });
+  if (q.q) and.push({ employee: { OR: [{ fullName: { contains: q.q, mode: 'insensitive' } }, { employeeNumber: { contains: q.q } }] } });
+  where = { AND: and };
+  const size = q.per;
+  const total = await prisma.leaveRequest.count({ where });
+  const page = clampPage(q.page, size, total);
+  const rows = await prisma.leaveRequest.findMany({ where, include: { leaveType: true, employee: { select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } } }, approvals: { orderBy: { level: 'asc' } } }, orderBy: LEAVE_ORDER[q.sort](q.dir), skip: (page - 1) * size, take: size });
+  return { total, page, pageSize: size, sort: q.sort, dir: q.dir, rows };
 }
 
 export async function getLeave(actor: Actor, id: string) {

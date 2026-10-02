@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clampPage } from '../list';
 import type { Prisma } from '@/generated/prisma/client';
 import { prisma } from '../db';
 import { assertCan, can, employeeScopeWhere, getEmployeeInScope, type Actor } from '../auth/actor';
@@ -83,7 +84,11 @@ export async function recap(actor: Actor, raw: unknown, perm: 'attendance.report
     loadPlanContext(ids, f.from, f.to),
   ]);
   const byEmp = new Map<string, typeof records>();
-  for (const r of records) byEmp.set(r.employeeId, [...(byEmp.get(r.employeeId) || []), r]);
+  for (const r of records) {
+    const list = byEmp.get(r.employeeId);
+    if (list) list.push(r);
+    else byEmp.set(r.employeeId, [r]);
+  }
   const days = dateRange(f.from, f.to);
   const rows: RecapRow[] = employees.map((e) => {
     const recs = byEmp.get(e.id) || [];
@@ -106,7 +111,17 @@ export async function recap(actor: Actor, raw: unknown, perm: 'attendance.report
 }
 
 /** Detail harian (satu baris per pegawai per tanggal yang punya catatan). */
-export async function dailyRecords(actor: Actor, raw: unknown, opts: { page?: number; pageSize?: number; perm?: 'attendance.report' | 'attendance.monitor' | 'attendance.export' } = {}) {
+const DAILY_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.AttendanceRecordOrderByWithRelationInput[]> = {
+  tanggal: (d) => [{ workDate: d }, { employee: { fullName: 'asc' } }, { id: 'asc' }],
+  nama: (d) => [{ employee: { fullName: d } }, { workDate: 'desc' }, { id: 'asc' }],
+  masuk: (d) => [{ checkInAt: { sort: d, nulls: 'last' } }, { id: 'asc' }],
+  pulang: (d) => [{ checkOutAt: { sort: d, nulls: 'last' } }, { id: 'asc' }],
+  status: (d) => [{ status: d }, { workDate: 'desc' }, { id: 'asc' }],
+  terlambat: (d) => [{ lateMinutes: d }, { workDate: 'desc' }, { id: 'asc' }],
+};
+export const DAILY_SORTS = Object.keys(DAILY_ORDER);
+
+export async function dailyRecords(actor: Actor, raw: unknown, opts: { page?: number; pageSize?: number; sort?: string; dir?: 'asc' | 'desc'; perm?: 'attendance.report' | 'attendance.monitor' | 'attendance.export' } = {}) {
   const perm = opts.perm ?? 'attendance.report';
   assertCan(actor, perm);
   const f = reportFilter.parse(raw);
@@ -117,18 +132,18 @@ export async function dailyRecords(actor: Actor, raw: unknown, opts: { page?: nu
     ...(f.status === 'TANPA_TRANSAKSI' ? { id: '00000000-0000-0000-0000-000000000000' } : {}),
   };
   const size = opts.pageSize ?? 50;
-  const page = opts.page ?? 1;
-  const [total, rows] = await Promise.all([
-    prisma.attendanceRecord.count({ where }),
-    prisma.attendanceRecord.findMany({
-      where,
-      include: { employee: { select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } } }, schedule: { select: { code: true, name: true, checkIn: true, checkOut: true } } },
-      orderBy: [{ workDate: 'desc' }, { employee: { fullName: 'asc' } }],
-      skip: (page - 1) * size,
-      take: size,
-    }),
-  ]);
-  return { total, page, pageSize: size, rows };
+  const sort = opts.sort && DAILY_ORDER[opts.sort] ? opts.sort : 'tanggal';
+  const dir = opts.dir ?? (sort === 'tanggal' ? 'desc' : 'asc');
+  const total = await prisma.attendanceRecord.count({ where });
+  const page = clampPage(opts.page ?? 1, size, total);
+  const rows = await prisma.attendanceRecord.findMany({
+    where,
+    include: { employee: { select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } } }, schedule: { select: { code: true, name: true, checkIn: true, checkOut: true } } },
+    orderBy: DAILY_ORDER[sort](dir),
+    skip: (page - 1) * size,
+    take: size,
+  });
+  return { total, page, pageSize: size, sort, dir, rows };
 }
 
 /** Penelusuran satu rekap harian ke jadwal, aturan, transaksi sumber, koreksi, dan cuti. */
