@@ -58,3 +58,14 @@ describe('absensi wajah', () => {
     expect(rec?.status ?? 'TANPA_TRANSAKSI').not.toBe('TIDAK_HADIR');
   });
 });
+
+describe('retensi template wajah', () => {
+  it('template dihapus saat pegawai dinonaktifkan', async () => {
+    const { setEmployeeActive } = await import('@/lib/services/employees');
+    const admin = await actorOf(f.users.admin.id);
+    await setEmployeeActive(admin, f.stafA.id, false, { reason: 'Pindah instansi' });
+    const b = await prisma.employeeBiometric.findFirstOrThrow({ where: { employeeId: f.stafA.id }, orderBy: { createdAt: 'desc' } });
+    expect(b.status).toBe('REVOKED');
+    expect(b.templateEnc).toBe('DIHAPUS');
+  });
+});

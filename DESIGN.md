@@ -1,10 +1,10 @@
-# Arah Desain: Sistem Absensi Pegawai
+# Arah Desain: SIMPEG
 
 Dial: ENERGY 2 / RHYTHM 2 / MOTION 1
 
 ## Identitas
 
-Aplikasi kerja harian untuk admin tata usaha dan pegawai Suku Dinas Pendidikan. Karakternya **instansi modern**: navy yang tegas di bagian atas setiap halaman, area kerja yang terang dan bersih di bawahnya, dan kuning sebagai warna aksi. Arah ini mengikuti inspirasi visual yang diberikan pemilik (Oktober 2026). Admin memakainya untuk mengambil keputusan cepat setiap pagi (siapa belum hadir, klarifikasi mana yang menunggu). Pegawai memakainya dari HP untuk satu tugas: absen.
+Aplikasi kerja harian untuk admin kepegawaian, pimpinan, operator unit, dan pegawai. Karakternya **instansi modern**: navy yang tegas di bagian atas setiap halaman, area kerja yang terang dan bersih di bawahnya, dan kuning sebagai warna aksi. Arah ini mengikuti inspirasi visual yang diberikan pemilik (Oktober 2026). Admin memakainya untuk mengambil keputusan cepat setiap pagi (siapa belum ada transaksi, pengajuan mana yang menunggu, perangkat mana yang offline). Pegawai memakainya dari HP untuk satu tugas: absen.
 
 ## Palet
 
@@ -12,7 +12,7 @@ Aplikasi kerja harian untuk admin tata usaha dan pegawai Suku Dinas Pendidikan. 
 |---|---|---|---|
 | Inti 1: Navy | `#0C1A45` | Header, pita judul, teks di atas kuning | Navy gelap instansi; teks putih di atasnya 16:1 |
 | Inti 2: Biru tua | `#1A3A8F` | Tombol utama di area terang, tautan, tab aktif, fokus | Biru kerja; teks putih 10:1 |
-| Aksen: Kuning | `#F4B92B` (teks `#0C1A45`) | Tombol aksi di atas navy (Buka kiosk wajah, aksi utama di pita judul, absen di beranda pegawai), menu aktif, jumlah klarifikasi menunggu | Satu aksen hangat; di atas navy kontrasnya 9:1 |
+| Aksen: Kuning | `#F4B92B` (teks `#0C1A45`) | Tombol aksi di atas navy (Buka kiosk wajah, aksi utama di pita judul, absen di beranda pegawai), menu aktif, jumlah pengajuan menunggu | Satu aksen hangat; di atas navy kontrasnya 9:1 |
 | Netral: Latar | `#F7F8FB` | Latar area kerja | Abu kebiruan yang sangat terang, senada dengan navy |
 | Netral: Permukaan | `#FFFFFF` | Card dan tabel | Data dibaca di atas putih bersih |
 | Netral: Garis | `#E2E7F0` | Batas card, pemisah baris | Senada dengan latar |
@@ -28,7 +28,7 @@ Warna status adalah skala semantik, bukan dekorasi. Semuanya berupa latar muda d
 - Dinas luar: biru muda `#E3EDF9` / `#1E4A80`
 - Izin, sakit, cuti: abu `#ECEFF4` / `#3D475C` (sah, tidak perlu tindakan)
 
-Warna shift dipilih admin. Teks chip shift otomatis hitam atau putih sesuai kecerahan warnanya agar kontras selalu terjaga.
+Warna jadwal dipilih admin dan hanya dipakai sebagai latar tipis (15%) dan garis bawah sel; teks kode jadwal tetap memakai warna teks utama sehingga kontras tidak bergantung pada pilihan warna.
 
 ## Tipografi
 
@@ -45,15 +45,14 @@ Setiap baris absensi hari ini menampilkan **garis hari kerja**: jalur tipis dari
 
 ## Tata letak
 
-- **Header** navy: logo dan nama instansi di kiri, menu di tengah, tombol kuning "Buka kiosk wajah" dan menu akun berbingkai di kanan. Menu aktif ditandai teks kuning dengan garis pendek di bawahnya.
-- **Pita judul** (`.page-head`): elemen pertama tiap halaman, dibentangkan selebar layar tepat di bawah header. Isinya breadcrumb (halaman turunan), judul, keterangan, dan aksi halaman. Token tema ditimpa di dalam pita sehingga tombol utama otomatis menjadi kuning dan tombol berbingkai menjadi navy, sama seperti tombol Login/Register pada inspirasi.
-- **Area kerja** di bawah pita: card putih di atas latar terang.
-- Dashboard admin dibangun di sekitar keputusan pagi hari: "Perlu perhatian" (belum absen, terlambat, klarifikasi menunggu) adalah fokus utama. Ringkasan angka hanya satu baris.
-- Beranda pegawai menaruh tombol absen berikutnya di pita judul, selebar layar di HP, agar langsung terlihat.
-- Di HP, tabel berubah menjadi daftar kartu yang memuat kolom penentu (status, jam) di baris pertama.
-- Pegawai di HP memakai navigasi bawah (Beranda, Absen, Dinas Luar, Riwayat, Klarifikasi), karena aksi absen harus selalu satu ketukan jauhnya.
-- Admin di HP memakai tombol "Menu" berlabel yang membuka Sheet.
-- Filter di HP dilipat, dengan ringkasan filter aktif.
+- **Sidebar** navy (`--sidebar #0C1A45`) dengan struktur menu sesuai PRD: Dashboard, Data Pegawai, Absensi (Absensi Saya, Monitoring, Rekapitulasi, Koreksi), Perangkat Absensi (Daftar, Status Sinkronisasi, Log), Jadwal Kerja, Cuti & Izin, Notifikasi, Pengaturan (Unit Kerja, Pengguna & Peran, Aturan, Metode, Retensi & Privasi, Audit Log). Menu hanya tampil bila pengguna punya izinnya. Menu aktif berteks kuning. Jumlah yang menunggu tindakan tampil sebagai badge di menu.
+- **Header** tipis di atas area kerja: tombol buka/tutup sidebar, nama instansi, dan lonceng notifikasi dengan jumlah belum dibaca.
+- **Pita judul** (`.page-head`): elemen pertama tiap halaman. Isinya breadcrumb (halaman turunan), judul, keterangan, dan aksi halaman. Token tema ditimpa di dalam pita sehingga tombol utama otomatis kuning.
+- **Area kerja** di bawah pita: card putih di atas latar terang. Lebar form dibatasi (`max-w-2xl` sampai `max-w-5xl`); tabel memakai lebar penuh.
+- Tampilan dalam satu halaman dipilih lewat navigasi pil berbasis URL (`Segmented`), sehingga bisa dibagikan dan tetap berfungsi tanpa JavaScript.
+- Dashboard admin dibangun di sekitar keputusan pagi hari; ringkasan angka hanya satu baris, grafik tren memakai palet referensi dataviz dengan tabel data sebagai alternatif.
+- Di HP sidebar menjadi Sheet, tabel berubah menjadi daftar kartu (`.table-stack`) dengan kolom penentu di baris pertama, dan kontrol bertinggi minimal 44px.
+- Kalender jadwal bulanan: tabel bergulir horizontal dengan kolom nama tetap (sticky). Warna jadwal hanya penanda (latar tipis dan garis bawah); kodenya tetap tertulis sehingga tidak bergantung warna.
 
 ## Gerak
 
@@ -65,18 +64,16 @@ Tema terang tetap untuk aplikasi admin dan pegawai. Alasannya: dipakai di kantor
 
 ## Komponen: shadcn/ui
 
-Semua komponen antarmuka mengikuti [shadcn/ui](https://ui.shadcn.com/) gaya new-york-v4. Karena aplikasi ini dirender server (EJS, bukan React), komponennya dipindahkan sebagai berikut:
+Semua komponen mengikuti [shadcn/ui](https://ui.shadcn.com/) gaya new-york-v4, disalin ke `src/components/ui` (React, Radix, Tailwind CSS v4). Komponen aplikasi ada di `src/components/app`.
 
-- Class dan varian disalin dari sumber shadcn ke `src/ui.js`, dirangkai dengan `class-variance-authority` dan `tailwind-merge` seperti fungsi `cn()` shadcn. Template memanggilnya lewat `ui.button({ variant: 'outline' })`, `ui.card()`, `ui.badge()`, dan seterusnya. Perubahan dari sumber asli ditandai komentar `app:`.
-- Token warna shadcn (`--background`, `--primary`, `--muted`, dan lainnya) diisi dari palet di atas, di `src/styles/app.css`. Tailwind CSS v4 membangunnya menjadi `public/css/app.css` (`npm run build:css`).
-- Komponen yang di React memakai Radix diganti elemen bawaan browser plus skrip kecil di `public/js/app.js`: Dialog, Sheet, dan AlertDialog memakai `<dialog>`; DropdownMenu memakai tombol `data-dropdown` dengan navigasi panah dan Escape; Select memakai NativeSelect; Switch memakai checkbox; Collapsible memakai `<details>`.
-- Bentuk pil dipakai di tiga tempat saja, masing-masing dengan alasan: kolom cari (`ui.searchInput`, penanda fungsi cari), Tabs sebagai tombol pilihan dengan item aktif biru tua (filter status klarifikasi), dan badge. Tombol, input lain, dan card tetap bersudut membulat biasa (R-11).
-- Breadcrumb di pita judul untuk halaman turunan menggantikan tombol "Kembali".
-- Empty state: ikon dalam lingkaran abu, judul tebal, alasan, lalu aksi.
-- Accordion di atas `<details>` dengan ikon plus yang berputar, dipakai untuk panduan koneksi mesin.
-- Varian tambahan: tombol `highlight` (aksen kuning) dan `outline-destructive` (hapus yang bukan aksi utama), badge status (`hadir`, `terlambat`, `alpa`, `dinas`, `netral`), dan Alert `warning`/`success`.
-- Ikon dari Lucide (ikon resmi shadcn), disisipkan sebagai SVG oleh `ui.icon()`.
-- Kontrol diberi tinggi minimal 44px di layar sentuh dan layar di bawah 1024px.
+- Token warna shadcn (`--background`, `--primary`, `--sidebar`, dan lainnya) diisi dari palet di atas di `src/app/globals.css`.
+- Varian tambahan: tombol `highlight` (aksen kuning) dan `outline-destructive`, badge status (`hadir`, `terlambat`, `alpa`, `dinas`, `netral`, `highlight`), Alert `warning`/`success`.
+- `Field` + `fieldProps`: label, petunjuk, dan pesan galat per isian yang terhubung lewat `aria-describedby`. Galat dari API (`error.fields`) tampil di isian yang bersangkutan.
+- `ConfirmButton`: aksi yang mengubah data penting selalu lewat dialog konfirmasi, dengan alasan wajib bila aksinya perlu jejak (pembatalan, penonaktifan).
+- `StatusBadge`: satu peta status untuk absensi, pengajuan, sinkronisasi, perangkat, dan wajah.
+- `EmptyState`: ikon dalam lingkaran abu, judul, alasan, lalu aksi. Pesan kosong membedakan "belum ada data" dan "tidak ada hasil filter".
+- Status "Belum ada transaksi" selalu netral (abu), tidak pernah merah. Hanya status yang ditetapkan aturan atau petugas yang memakai warna peringatan.
+- Ikon dari Lucide.
 
 ## Logo
 

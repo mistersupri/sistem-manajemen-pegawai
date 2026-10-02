@@ -37,7 +37,7 @@ export function EmployeeActions({ id, name, isActive, hasAccount, hasNip, hasFac
           <form className="grid gap-4" onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); const r = await run(() => api('POST', `/api/v1/employees/${id}/status`, { active: !isActive, reason: fd.get('reason'), effectiveDate: fd.get('effectiveDate') || null }), { success: isActive ? 'Pegawai dinonaktifkan.' : 'Pegawai diaktifkan.' }); if (r !== undefined) setMode(null); }}>
             <DialogHeader>
               <DialogTitle>{isActive ? `Nonaktifkan ${name}?` : `Aktifkan kembali ${name}?`}</DialogTitle>
-              <DialogDescription>{isActive ? 'Akun login ikut dinonaktifkan. Data dan riwayat absensi tidak dihapus.' : 'Akun login diaktifkan kembali.'}</DialogDescription>
+              <DialogDescription>{isActive ? 'Akun login ikut dinonaktifkan dan template wajah dihapus. Data dan riwayat absensi tetap tersimpan.' : 'Akun login diaktifkan kembali.'}</DialogDescription>
             </DialogHeader>
             <Field id="effectiveDate" label="Tanggal efektif" error={fields.effectiveDate} hint="Kosong = hari ini."><Input {...fieldProps('effectiveDate', fields.effectiveDate, true)} type="date" /></Field>
             <Field id="reason" label="Alasan" error={fields.reason} required><Textarea {...fieldProps('reason', fields.reason)} rows={2} required /></Field>

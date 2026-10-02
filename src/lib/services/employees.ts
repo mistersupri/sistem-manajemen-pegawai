@@ -9,6 +9,7 @@ import { hashPassword } from '../auth/password';
 import { addDays, fromDbDate, isValidDate, toDbDate, todayIn } from '../time';
 import { getSetting } from '../settings';
 import { realUserId } from '../auth/system';
+import { forgetTemplate } from '../biometric/templates';
 
 const optText = (max = 150) => z.string().trim().max(max).optional().nullable().transform((v) => (v ? v : null));
 const optDate = z.string().optional().nullable().transform((v) => (v ? v : null)).refine((v) => v === null || isValidDate(v), 'Tanggal tidak valid');
@@ -244,7 +245,13 @@ export async function setEmployeeActive(actor: Actor, id: string, active: boolea
   await prisma.$transaction(async (tx) => {
     await tx.employee.update({ where: { id }, data: { isActive: active, activeEffectiveDate: toDbDate(effective) } });
     await tx.user.updateMany({ where: { employeeId: id }, data: { isActive: active } });
-    if (!active) await tx.session.deleteMany({ where: { user: { employeeId: id } } });
+    if (!active) {
+      await tx.session.deleteMany({ where: { user: { employeeId: id } } });
+      // Template wajah hanya disimpan selama pegawai aktif (sesuai teks persetujuan); daftar ulang bila diaktifkan kembali.
+      const templates = await tx.employeeBiometric.findMany({ where: { employeeId: id, status: { in: ['ACTIVE', 'PENDING_VERIFICATION'] } }, select: { id: true } });
+      await tx.employeeBiometric.updateMany({ where: { id: { in: templates.map((t) => t.id) } }, data: { status: 'REVOKED', templateEnc: 'DIHAPUS', revokedAt: new Date(), revokedById: realUserId(actor), revokedReason: 'Pegawai dinonaktifkan' } });
+      templates.forEach((t) => forgetTemplate(t.id));
+    }
     await audit(actor, { action: active ? 'employee.activate' : 'employee.deactivate', entityType: 'Employee', entityId: id, before: { isActive: emp.isActive }, after: { isActive: active, effectiveDate: effective }, meta: { reason: meta.reason } }, tx);
   });
 }

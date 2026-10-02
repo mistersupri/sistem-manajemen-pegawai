@@ -14,8 +14,11 @@ const GENERIC = 'Username atau password salah.';
 
 export async function login(username: string, password: string) {
   const meta = await requestMeta();
-  rateLimit(`login-ip:${meta.ip ?? 'unknown'}`, 20, 5 * 60_000);
   const uname = username.trim().toLowerCase();
+  // Kantor biasanya keluar lewat satu IP (NAT), jadi batas per IP longgar; percobaan menebak
+  // password satu akun dibatasi per username dan oleh penguncian akun di bawah.
+  rateLimit(`login-ip:${meta.ip ?? 'unknown'}`, 300, 5 * 60_000);
+  rateLimit(`login-user:${uname}`, 10, 5 * 60_000);
   const user = await prisma.user.findFirst({
     where: { username: uname, deletedAt: null },
     include: { roles: { include: { role: true } } },
