@@ -194,6 +194,7 @@
   }
 
   .schedule-grid th, .schedule-grid td { min-width: 44px; text-align: center; }
-  .schedule-grid .name { position: sticky; left: 0; z-index: 1; min-width: 170px; text-align: left; background: var(--card); }
+  .schedule-grid .name { position: sticky; left: 0; z-index: 1; min-width: 128px; max-width: 128px; text-align: left; background: var(--card); }
+  @media (min-width: 768px) { .schedule-grid .name { min-width: 180px; max-width: 220px; } }
   .schedule-grid .off { background: #f1f4fa; }
 }

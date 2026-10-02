@@ -49,7 +49,7 @@ export function CreateUser({ employees, canNoEmployee }: { employees: Opt[]; can
 export function RoleChip({ userId, urId, label }: { userId: string; urId: string; label: string }) {
   const { pending, run } = useAction();
   return (
-    <Badge variant="netral" className="gap-1 pr-0.5">
+    <Badge variant="netral" className="h-auto max-w-full gap-1 py-0.5 pr-0.5 text-left whitespace-normal">
       {label}
       <button type="button" disabled={pending} className="inline-flex size-6 items-center justify-center rounded-full hover:bg-black/10" aria-label={`Cabut peran ${label}`}
         onClick={() => { if (confirm(`Cabut peran ${label}?`)) run(() => api('DELETE', `/api/v1/users/${userId}/roles/${urId}`), { success: 'Peran dicabut.' }); }}>
