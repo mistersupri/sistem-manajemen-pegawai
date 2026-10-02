@@ -1,25 +1,31 @@
+import { readdir, rm, stat } from 'node:fs/promises';
+import path from 'node:path';
 import { prisma } from '../db';
+import { env } from '../env';
 import { log } from '../logger';
 import { getSettings } from '../settings';
-import { removeStored } from '../storage';
 
 /**
- * Hapus berkas foto absensi yang melewati masa retensi. Baris transaksi tetap ada (immutable);
- * berkasnya dihapus dan dicatat di audit. Path foto lama tetap tercatat sebagai jejak, tetapi
- * berkasnya tidak lagi tersedia.
+ * Hapus berkas foto absensi (storage/foto) yang melewati masa retensi. Baris transaksi tetap ada
+ * (immutable) dan path-nya tetap tercatat sebagai jejak; hanya berkasnya yang dihapus.
+ * Penghapusan dicatat di audit log hanya bila ada berkas yang benar-benar terhapus.
  */
 export async function purgeExpiredPhotos() {
   const days = (await getSettings())['privacy.photoRetentionDays'];
   if (!days) return { removed: 0 };
-  const cutoff = new Date(Date.now() - Number(days) * 86400_000);
-  const rows = await prisma.attendanceEvent.findMany({ where: { photoPath: { not: null }, occurredAt: { lt: cutoff } }, select: { id: true, photoPath: true }, take: 2000 });
+  const cutoff = Date.now() - Number(days) * 86400_000;
+  const base = path.resolve(env().STORAGE_DIR, 'foto');
   let removed = 0;
-  for (const r of rows) {
-    try {
-      await removeStored(r.photoPath);
+  const months = await readdir(base).catch(() => [] as string[]);
+  for (const m of months) {
+    const dir = path.join(base, m);
+    const files = await readdir(dir).catch(() => [] as string[]);
+    for (const f of files) {
+      const full = path.join(dir, f);
+      const st = await stat(full).catch(() => null);
+      if (!st?.isFile() || st.mtimeMs >= cutoff) continue;
+      await rm(full, { force: true });
       removed++;
-    } catch {
-      // berkas sudah tidak ada
     }
   }
   if (removed) {

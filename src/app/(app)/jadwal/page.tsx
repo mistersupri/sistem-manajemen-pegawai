@@ -1,0 +1,266 @@
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PageBody, PageHeader } from '@/components/app/page-header';
+import { Segmented } from '@/components/app/segmented';
+import { StatusBadge } from '@/components/app/status-badge';
+import { EmptyState } from '@/components/app/empty-state';
+import { ConfirmButton } from '@/components/app/confirm-button';
+import { requirePage } from '@/lib/guard';
+import { can, employeeScopeWhere, scopeOf, type Actor } from '@/lib/auth/actor';
+import { prisma } from '@/lib/db';
+import { getSetting } from '@/lib/settings';
+import { listAssignments, listHolidays, listSchedules, scheduleGrid, scheduleRevisions } from '@/lib/services/schedules';
+import { unitOptions } from '@/lib/services/units';
+import { plansFor } from '@/lib/attendance/plan';
+import { BULAN, HARI, HARI_PENDEK, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, monthBounds, todayIn } from '@/lib/time';
+import { AssignmentForm, EndAssignment, HolidayForm, ScheduleForm, ScheduleGrid } from './forms';
+
+export const metadata = { title: 'Jadwal Kerja' };
+
+type SP = Record<string, string | undefined>;
+
+const monthLabel = (m: string) => `${BULAN[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
+const shiftMonth = (m: string, n: number) => {
+  const d = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5)) - 1 + n, 1));
+  return d.toISOString().slice(0, 7);
+};
+const workdayText = (w: number[]) => [1, 2, 3, 4, 5, 6, 0].filter((d) => w.includes(d)).map((d) => HARI_PENDEK[d]).join(', ');
+
+export default async function SchedulePage({ searchParams }: { searchParams: Promise<SP> }) {
+  const actor = await requirePage(['schedule.read', 'attendance.self']);
+  const sp = await searchParams;
+  const tz = await getSetting('org.timezone');
+  const today = todayIn(tz);
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.bulan ?? '') ? sp.bulan! : today.slice(0, 7);
+  if (!can(actor, 'schedule.read')) return <MySchedule actor={actor} month={month} today={today} />;
+
+  const tab = ['kalender', 'jadwal', 'penugasan', 'libur'].includes(sp.tab ?? '') ? sp.tab! : 'kalender';
+  const manage = can(actor, 'schedule.manage');
+  const tabs = [
+    { key: 'kalender', label: 'Kalender bulanan', href: `?tab=kalender&bulan=${month}` },
+    { key: 'jadwal', label: 'Jenis jadwal', href: '?tab=jadwal' },
+    { key: 'penugasan', label: 'Penugasan', href: '?tab=penugasan' },
+    { key: 'libur', label: 'Hari libur', href: '?tab=libur' },
+  ];
+  return (
+    <>
+      <PageHeader title="Jadwal Kerja" description="Jenis jadwal, penugasan ke pegawai atau unit, perubahan harian, dan hari libur. Setiap perubahan aturan tersimpan sebagai versi baru." />
+      <PageBody className="grid gap-4">
+        <Segmented items={tabs} current={tab} label="Bagian jadwal" className="w-fit" />
+        {tab === 'kalender' && <GridTab actor={actor} month={month} unitId={sp.unit} today={today} manage={manage} />}
+        {tab === 'jadwal' && <SchedulesTab manage={manage} revFor={sp.rev} tz={tz} />}
+        {tab === 'penugasan' && <AssignmentsTab actor={actor} manage={manage} />}
+        {tab === 'libur' && <HolidaysTab actor={actor} manage={manage} year={Number(sp.tahun) || Number(today.slice(0, 4))} />}
+      </PageBody>
+    </>
+  );
+}
+
+async function GridTab({ actor, month, unitId, today, manage }: { actor: Actor; month: string; unitId?: string; today: string; manage: boolean }) {
+  const units = await unitOptions(actor, 'schedule.read');
+  const unit = unitId && units.some((u) => u.id === unitId) ? unitId : undefined;
+  const [grid, schedules] = await Promise.all([scheduleGrid(actor, month, unit), listSchedules()]);
+  const q = (m: string) => `?tab=kalender&bulan=${m}${unit ? `&unit=${unit}` : ''}`;
+  return (
+    <>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex items-center gap-1">
+          <Button asChild variant="outline" size="icon" aria-label="Bulan sebelumnya"><Link href={q(shiftMonth(month, -1))}><ChevronLeft /></Link></Button>
+          <h2 className="min-w-40 text-center text-lg font-semibold">{monthLabel(month)}</h2>
+          <Button asChild variant="outline" size="icon" aria-label="Bulan berikutnya"><Link href={q(shiftMonth(month, 1))}><ChevronRight /></Link></Button>
+        </div>
+        <form className="flex flex-wrap items-end gap-2">
+          <input type="hidden" name="tab" value="kalender" />
+          <input type="hidden" name="bulan" value={month} />
+          <label className="grid gap-1 text-sm font-medium" htmlFor="unit">Unit kerja
+            <NativeSelect id="unit" name="unit" defaultValue={unit ?? ''} className="min-w-56"><NativeSelectOption value="">Semua unit dalam kewenangan</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect>
+          </label>
+          <Button type="submit" variant="outline">Tampilkan</Button>
+        </form>
+      </div>
+      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm" aria-label="Keterangan">
+        {schedules.map((s) => (
+          <li key={s.id} className="inline-flex items-center gap-2"><span className="size-3 rounded-sm" style={{ background: s.color }} aria-hidden /><b>{s.code}</b><span className="text-muted-foreground">{s.checkIn} sampai {s.checkOut}</span></li>
+        ))}
+        <li className="inline-flex items-center gap-2"><b>L</b><span className="text-muted-foreground">libur / bukan hari kerja</span></li>
+        <li className="inline-flex items-center gap-2"><b>LN</b><span className="text-muted-foreground">hari libur</span></li>
+        {manage && <li className="inline-flex items-center gap-2"><span className="size-3 rounded-sm ring-1 ring-primary" aria-hidden /><span className="text-muted-foreground">diubah harian</span></li>}
+      </ul>
+      {grid.rows.length ? (
+        <ScheduleGrid dates={grid.dates} rows={grid.rows} schedules={schedules} editable={manage} today={today} />
+      ) : <Card><EmptyState title="Belum ada pegawai aktif" description="Pegawai aktif dalam unit yang dipilih akan tampil di sini." /></Card>}
+      {manage && <p className="text-sm text-muted-foreground">Klik sel untuk mengganti jadwal satu hari. Rekap hari yang sudah lewat dihitung ulang otomatis.</p>}
+    </>
+  );
+}
+
+async function SchedulesTab({ manage, revFor, tz }: { manage: boolean; revFor?: string; tz: string }) {
+  const rows = await listSchedules(true);
+  const revSchedule = revFor ? rows.find((r) => r.id === revFor) : null;
+  const revisions = revSchedule ? await scheduleRevisions(revSchedule.id) : [];
+  const users = revisions.length ? await prisma.user.findMany({ where: { id: { in: revisions.map((r) => r.changedById).filter(Boolean) as string[] } }, select: { id: true, username: true } }) : [];
+  return (
+    <>
+      {manage && <div><ScheduleForm /></div>}
+      <div className="rounded-xl border bg-card">
+        <Table className="table-stack">
+          <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Jadwal</TableHead><TableHead>Jam kerja</TableHead><TableHead>Hari kerja</TableHead><TableHead>Toleransi</TableHead><TableHead>Versi</TableHead><TableHead>Penugasan</TableHead><TableHead>Status</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
+          <TableBody>
+            {rows.length === 0 && <TableRow><TableCell colSpan={8}><EmptyState title="Belum ada jadwal kerja" description="Tambahkan jadwal sesuai aturan jam kerja instansi Anda." /></TableCell></TableRow>}
+            {rows.map((s) => (
+              <TableRow key={s.id}>
+                <TableCell className="stack-head pl-4 lg:pl-6"><span className="inline-flex items-center gap-2"><span className="size-3 shrink-0 rounded-sm" style={{ background: s.color }} aria-hidden /><b>{s.code}</b>{s.name}</span><span className="block text-xs text-muted-foreground">{s.kind === 'SHIFT' ? 'Shift' : 'Reguler'}{s.checkOut <= s.checkIn ? ', melewati tengah malam' : ''}</span></TableCell>
+                <TableCell data-label="Jam kerja" className="tabular">{s.checkIn} sampai {s.checkOut}{s.breakStart && <span className="block text-xs text-muted-foreground">istirahat {s.breakStart} sampai {s.breakEnd}</span>}</TableCell>
+                <TableCell data-label="Hari kerja" className="whitespace-normal">{workdayText(s.workdays)}</TableCell>
+                <TableCell data-label="Toleransi" className="tabular">{s.lateToleranceMin} / {s.earlyLeaveToleranceMin} mnt</TableCell>
+                <TableCell data-label="Versi"><Link className="text-primary hover:underline" href={`?tab=jadwal&rev=${s.id}#riwayat`}>v{s.version}</Link></TableCell>
+                <TableCell data-label="Penugasan" className="tabular">{s._count.assignments}</TableCell>
+                <TableCell data-label="Status"><StatusBadge status={s.isActive ? 'ACTIVE' : 'CANCELLED'} label={s.isActive ? 'Aktif' : 'Nonaktif'} /></TableCell>
+                <TableCell className="pr-4 lg:pr-6">
+                  {manage && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <ScheduleForm initial={s} />
+                      <ConfirmButton size="sm" variant={s.isActive ? 'outline-destructive' : 'outline'} destructive={s.isActive} label={s.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                        title={s.isActive ? `Nonaktifkan ${s.code}?` : `Aktifkan ${s.code}?`}
+                        description={s.isActive ? 'Jadwal nonaktif tidak bisa dipilih untuk penugasan baru. Penugasan yang sudah ada tidak ikut dihitung sampai jadwal diaktifkan lagi.' : 'Jadwal bisa dipilih lagi untuk penugasan.'}
+                        confirmLabel={s.isActive ? 'Nonaktifkan' : 'Aktifkan'} url={`/api/v1/schedules/${s.id}/status`} body={{ active: !s.isActive }} success="Status jadwal diperbarui." />
+                    </div>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      {revSchedule && (
+        <Card id="riwayat">
+          <CardHeader><CardTitle>Riwayat versi {revSchedule.code}</CardTitle><CardDescription>Aturan lama tetap tersimpan agar rekap periode lalu bisa ditelusuri.</CardDescription></CardHeader>
+          <CardContent>
+            <ol className="grid gap-3">
+              {revisions.map((r) => {
+                const x = r.rules as Record<string, unknown>;
+                return (
+                  <li key={r.id} className="rounded-lg border p-3 text-sm">
+                    <div className="flex flex-wrap justify-between gap-2"><b>Versi {r.version}</b><span className="text-muted-foreground">{fmtWaktu(r.createdAt, tz)}{users.find((u) => u.id === r.changedById) ? ` oleh ${users.find((u) => u.id === r.changedById)!.username}` : ''}</span></div>
+                    <p className="mt-1 tabular">{String(x.checkIn)} sampai {String(x.checkOut)} · toleransi {String(x.lateToleranceMin)}/{String(x.earlyLeaveToleranceMin)} mnt · {workdayText((x.workdays as number[]) ?? [])}</p>
+                    {r.changeNote && <p className="mt-1 text-muted-foreground">{r.changeNote}</p>}
+                  </li>
+                );
+              })}
+            </ol>
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
+}
+
+async function AssignmentsTab({ actor, manage }: { actor: Actor; manage: boolean }) {
+  const [rows, schedules, units, employees] = await Promise.all([
+    listAssignments(actor, {}),
+    listSchedules(),
+    unitOptions(actor, manage ? 'schedule.manage' : 'schedule.read'),
+    manage ? prisma.employee.findMany({ where: { AND: [{ deletedAt: null, isActive: true }, employeeScopeWhere(actor, 'schedule.manage')] }, select: { id: true, fullName: true, unit: { select: { name: true } } }, orderBy: { fullName: 'asc' } }) : [],
+  ]);
+  const visible = rows.filter((a) => !(a.kind === 'SEMENTARA' && a.endDate && a.startDate.getTime() === a.endDate.getTime() && a.note === 'Perubahan harian'));
+  return (
+    <>
+      {manage && (
+        <div className="flex flex-wrap items-center gap-3">
+          <AssignmentForm schedules={schedules} units={units} canAllUnits={!!scopeOf(actor, 'schedule.manage')?.all} employees={employees.map((e) => ({ id: e.id, name: e.fullName, unit: e.unit?.name ?? null }))} />
+          <p className="text-sm text-muted-foreground">Perubahan satu hari dilakukan langsung di kalender bulanan.</p>
+        </div>
+      )}
+      <div className="rounded-xl border bg-card">
+        <Table className="table-stack">
+          <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Untuk</TableHead><TableHead>Jadwal</TableHead><TableHead>Jenis</TableHead><TableHead>Berlaku</TableHead><TableHead>Catatan</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
+          <TableBody>
+            {visible.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Belum ada penugasan" description="Tanpa penugasan, pegawai tercatat tanpa jadwal dan status kehadirannya tidak dinilai terlambat atau tidak hadir." /></TableCell></TableRow>}
+            {visible.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell className="stack-head pl-4 lg:pl-6">{a.employee ? <Link className="font-medium text-primary hover:underline" href={`/pegawai/${a.employee.id}`}>{a.employee.fullName}</Link> : <span className="font-medium">Unit: {a.unit?.name}</span>}</TableCell>
+                <TableCell data-label="Jadwal">{a.schedule ? <span className="inline-flex items-center gap-2"><span className="size-3 rounded-sm" style={{ background: a.schedule.color }} aria-hidden />{a.schedule.code} · {a.schedule.name}</span> : 'Libur'}</TableCell>
+                <TableCell data-label="Jenis">{a.kind === 'TETAP' ? 'Tetap' : 'Sementara'}</TableCell>
+                <TableCell data-label="Berlaku" className="tabular">{fmtTglPendek(fromDbDate(a.startDate))} sampai {a.endDate ? fmtTglPendek(fromDbDate(a.endDate)) : 'seterusnya'}</TableCell>
+                <TableCell data-label="Catatan" className="whitespace-normal text-muted-foreground">{a.note || '-'}</TableCell>
+                <TableCell className="pr-4 text-right lg:pr-6">{manage && <EndAssignment id={a.id} startDate={fromDbDate(a.startDate)} />}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </>
+  );
+}
+
+async function HolidaysTab({ actor, manage, year }: { actor: Actor; manage: boolean; year: number }) {
+  const [rows, units] = await Promise.all([listHolidays(year), manage ? unitOptions(actor, 'schedule.manage') : []]);
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1">
+          <Button asChild variant="outline" size="icon" aria-label="Tahun sebelumnya"><Link href={`?tab=libur&tahun=${year - 1}`}><ChevronLeft /></Link></Button>
+          <h2 className="min-w-20 text-center text-lg font-semibold tabular">{year}</h2>
+          <Button asChild variant="outline" size="icon" aria-label="Tahun berikutnya"><Link href={`?tab=libur&tahun=${year + 1}`}><ChevronRight /></Link></Button>
+        </div>
+        {manage && <HolidayForm units={units} canAllUnits={!!scopeOf(actor, 'schedule.manage')?.all} />}
+      </div>
+      <div className="rounded-xl border bg-card">
+        <Table className="table-stack">
+          <TableHeader><TableRow><TableHead className="pl-4 lg:pl-6">Tanggal</TableHead><TableHead>Keterangan</TableHead><TableHead>Berlaku untuk</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead></TableRow></TableHeader>
+          <TableBody>
+            {rows.length === 0 && <TableRow><TableCell colSpan={4}><EmptyState title={`Belum ada hari libur ${year}`} description="Daftar hari libur nasional dan cuti bersama diisi sesuai keputusan resmi yang berlaku di instansi." /></TableCell></TableRow>}
+            {rows.map((h) => (
+              <TableRow key={h.id}>
+                <TableCell className="stack-head pl-4 lg:pl-6">{fmtTanggal(fromDbDate(h.date))}</TableCell>
+                <TableCell data-label="Keterangan">{h.name}</TableCell>
+                <TableCell data-label="Berlaku">{h.unit?.name ?? 'Semua unit'}</TableCell>
+                <TableCell className="pr-4 text-right lg:pr-6">{manage && <ConfirmButton size="sm" label="Hapus" title={`Hapus ${h.name}?`} description="Rekap tanggal tersebut dihitung ulang sesuai jadwal kerja biasa." confirmLabel="Hapus" method="DELETE" url={`/api/v1/holidays/${h.id}`} success="Hari libur dihapus." />}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </>
+  );
+}
+
+/** Tampilan pegawai: jadwalnya sendiri untuk satu bulan. */
+async function MySchedule({ actor, month, today }: { actor: Actor; month: string; today: string }) {
+  const { from, to } = monthBounds(month);
+  const plans = actor.employeeId ? await plansFor(actor.employeeId, from, to) : [];
+  const OFF: Record<string, string> = { HARI_LIBUR: 'Hari libur', BUKAN_HARI_KERJA: 'Bukan hari kerja', LIBUR_TERJADWAL: 'Libur terjadwal' };
+  return (
+    <>
+      <PageHeader title="Jadwal Saya" description="Jadwal kerja Anda per hari. Hubungi admin unit bila ada yang tidak sesuai." />
+      <PageBody className="grid gap-4">
+        <div className="flex items-center gap-1">
+          <Button asChild variant="outline" size="icon" aria-label="Bulan sebelumnya"><Link href={`?bulan=${shiftMonth(month, -1)}`}><ChevronLeft /></Link></Button>
+          <h2 className="min-w-40 text-center text-lg font-semibold">{monthLabel(month)}</h2>
+          <Button asChild variant="outline" size="icon" aria-label="Bulan berikutnya"><Link href={`?bulan=${shiftMonth(month, 1)}`}><ChevronRight /></Link></Button>
+        </div>
+        {!actor.employeeId ? <Card><EmptyState title="Akun ini tidak terhubung ke data pegawai" /></Card> : (
+          <div className="rounded-xl border bg-card">
+            <ul className="divide-y">
+              {plans.map((p) => {
+                const wd = new Date(`${p.date}T00:00:00Z`).getUTCDay();
+                return (
+                  <li key={p.date} className={`flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 lg:px-6 ${p.date === today ? 'bg-accent/50' : ''}`} aria-current={p.date === today ? 'date' : undefined}>
+                    <span className="min-w-44"><span className="font-medium">{HARI[wd]}, {fmtTglPendek(p.date, false)}</span>{p.date === today && <span className="ml-2 text-xs font-semibold text-primary">Hari ini</span>}</span>
+                    <span className={p.isOffDay || !p.schedule ? 'text-muted-foreground' : 'tabular'}>
+                      {p.isOffDay ? (p.holidayName ?? OFF[p.offReason ?? ''] ?? 'Libur') : p.schedule ? `${p.schedule.code} · ${p.schedule.checkIn} sampai ${p.schedule.checkOut}` : 'Tanpa jadwal'}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </PageBody>
+    </>
+  );
+}

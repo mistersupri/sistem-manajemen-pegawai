@@ -306,3 +306,46 @@ export async function leaveCalendar(actor: Actor, month: string, unitId?: string
   };
   return prisma.leaveRequest.findMany({ where, include: { leaveType: true, employee: { select: { id: true, fullName: true } } }, orderBy: { startDate: 'asc' } });
 }
+
+/** Tabel saldo seluruh pegawai dalam cakupan untuk satu tahun (satu kali query per tabel). */
+export async function balanceTable(actor: Actor, year: number, opts: { unitId?: string; q?: string; page?: number } = {}) {
+  assertCan(actor, 'leave.manage');
+  const where: Prisma.EmployeeWhereInput = {
+    AND: [
+      { deletedAt: null, isActive: true },
+      employeeScopeWhere(actor, 'leave.manage'),
+      opts.unitId ? { unitId: opts.unitId } : {},
+      opts.q ? { OR: [{ fullName: { contains: opts.q, mode: 'insensitive' } }, { employeeNumber: { contains: opts.q } }] } : {},
+    ],
+  };
+  const size = 50;
+  const page = Math.max(1, opts.page ?? 1);
+  const [total, employees, types] = await Promise.all([
+    prisma.employee.count({ where }),
+    prisma.employee.findMany({ where, select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } }, orderBy: { fullName: 'asc' }, skip: (page - 1) * size, take: size }),
+    prisma.leaveType.findMany({ where: { usesBalance: true, isActive: true }, orderBy: { name: 'asc' } }),
+  ]);
+  const ids = employees.map((e) => e.id);
+  const [balances, used] = await Promise.all([
+    prisma.leaveBalance.findMany({ where: { employeeId: { in: ids }, year } }),
+    prisma.leaveRequest.groupBy({
+      by: ['employeeId', 'leaveTypeId', 'status'],
+      where: { employeeId: { in: ids }, status: { in: ['APPROVED', 'PENDING'] }, leaveType: { usesBalance: true }, startDate: { gte: toDbDate(`${year}-01-01`), lte: toDbDate(`${year}-12-31`) } },
+      _sum: { days: true },
+    }),
+  ]);
+  const sum = (e: string, t: string, s: string) => used.find((u) => u.employeeId === e && u.leaveTypeId === t && u.status === s)?._sum.days ?? 0;
+  return {
+    total, page, pageSize: size, types,
+    rows: employees.map((e) => ({
+      employee: e,
+      cells: types.map((t) => {
+        const b = balances.find((x) => x.employeeId === e.id && x.leaveTypeId === t.id);
+        const entitled = b ? b.entitled + b.carriedOver + b.adjustment : 0;
+        const u = sum(e.id, t.id, 'APPROVED');
+        const r = sum(e.id, t.id, 'PENDING');
+        return { leaveTypeId: t.id, configured: !!b, base: b?.entitled ?? 0, carriedOver: b?.carriedOver ?? 0, adjustment: b?.adjustment ?? 0, note: b?.note ?? null, entitled, used: u, reserved: r, remaining: entitled - u - r };
+      }),
+    })),
+  };
+}

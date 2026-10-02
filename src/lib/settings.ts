@@ -40,10 +40,8 @@ export const SETTING_DEFAULTS = {
   'rules.duplicateWindowMinutes': 2,
   'rules.clockSkewToleranceMinutes': 10,
   // Privasi dan retensi.
-  'privacy.storeSelfPhotos': false,
   'privacy.storeFieldDutyPhotos': true,
   'privacy.photoRetentionDays': null as number | null,
-  'privacy.auditRetentionDays': null as number | null,
   // Keamanan.
   'security.mfaRequiredForAdmins': false,
   'security.sessionHours': 12,
