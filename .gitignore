@@ -17,3 +17,4 @@ backups
 test-results
 playwright-report
 .test-storage
+.local-db

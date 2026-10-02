@@ -41,15 +41,28 @@ Pasang aplikasi di belakang reverse proxy HTTPS (kamera dan GPS di browser hanya
 
 ## Pengembangan lokal
 
-Butuh Node.js 22.13+ dan PostgreSQL 16.
+Butuh Node.js 22.13+. PostgreSQL tidak perlu diinstal.
 
 ```bash
 npm install
-cp .env.example .env          # isi DATABASE_URL dan rahasia
-npm run db:deploy             # migrasi skema
-SEED_DEMO=1 npm run db:seed   # peran + data demo bertanda "(demo)"
-npm run dev
+npm run dev:local
 ```
+
+`dev:local` menjalankan PostgreSQL 16 lokal dari paket npm `embedded-postgres` (Windows, macOS, Linux) di port 54329, data di folder `.local-db/`. Saat pertama kali, perintah ini:
+
+1. membuat `.env` bila belum ada (atau melengkapi isian yang kosong) dengan `DATABASE_URL` lokal dan rahasia acak;
+2. menyiapkan database dan menerapkan migrasi;
+3. mengisi data demo bertanda "(demo)".
+
+Setelah itu buka http://localhost:3000. Ctrl+C menghentikan aplikasi dan database sekaligus; data tetap tersimpan untuk dijalankan lagi.
+
+| Perintah | Fungsi |
+|---|---|
+| `npm run dev:local -- --tanpa-demo` | Tanpa data demo; password sementara Super Admin ditampilkan sekali |
+| `npm run db:local` | Database lokal saja, mis. untuk `npm run dev` di terminal lain atau Prisma Studio |
+| `npm run db:local -- --reset` | Hapus database lokal lalu buat ulang |
+
+Database lokal hanya untuk pengembangan dan uji coba. Untuk produksi pakai Docker Compose atau PostgreSQL sendiri: isi `DATABASE_URL` di `.env`, lalu `npm run db:deploy` dan `npm run db:seed`.
 
 Akun demo (password `Demo#2026`): `superadmin`, `kepegawaian`, `admin.it`, `pimpinan`, `kabid.a`, `operator.b`, `pegawai`, `auditor`. Data demo fiktif dan tidak boleh dipakai di produksi; tanpa `SEED_DEMO=1` seed hanya membuat peran dan akun Super Admin dari `ADMIN_USERNAME`/`ADMIN_PASSWORD`.
 
