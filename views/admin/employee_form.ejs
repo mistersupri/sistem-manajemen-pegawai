@@ -1,83 +1,60 @@
 <%- include('../partials/header') %>
-<div class="page-head">
+<%
+  const field = (id, label, inner, help, span) => `<div class="grid content-start gap-2 ${span || ''}"><label class="${ui.label()}" for="${id}">${label}</label>${inner}${help ? `<p id="${id}Help" class="text-sm text-muted-foreground">${help}</p>` : ''}</div>`;
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const wajib = '<span class="text-destructive">*</span>';
+%>
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1><%= emp.id ? 'Ubah data pegawai' : 'Tambah pegawai' %></h1>
-    <div class="sub"><%= emp.id ? emp.nama : 'Akun login dibuat otomatis dengan username NIP.' %></div>
+    <h1 class="text-2xl font-bold tracking-tight"><%= emp.id ? 'Ubah data pegawai' : 'Tambah pegawai' %></h1>
+    <p class="mt-1 text-sm text-muted-foreground"><%= emp.id ? emp.nama : 'Akun login dibuat otomatis dengan username NIP.' %></p>
   </div>
-  <div class="actions"><a href="/admin/pegawai" class="btn btn-outline-secondary">Kembali ke daftar</a></div>
+  <a href="/admin/pegawai" class="<%= ui.button({ variant: 'outline' }) %>"><%- ui.icon('arrow-left') %> Kembali ke daftar</a>
 </div>
-<% if (errors.length) { %><div class="alert alert-danger" role="alert"><b>Data belum bisa disimpan:</b><ul class="mb-0"><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div><% } %>
-<form method="post" action="<%= emp.id ? `/admin/pegawai/${emp.id}` : '/admin/pegawai' %>" class="card" data-loading="Menyimpan...">
-  <div class="card-body">
-    <h2 class="h6 mb-3">Identitas</h2>
-    <div class="row g-3 mb-4">
-      <div class="col-md-4"><label class="form-label" for="nip">NIP <span class="text-danger">*</span></label><input id="nip" name="nip" class="form-control num" value="<%= emp.nip || '' %>" required maxlength="30"></div>
-      <div class="col-md-8"><label class="form-label" for="nama">Nama lengkap <span class="text-danger">*</span></label><input id="nama" name="nama" class="form-control" value="<%= emp.nama || '' %>" required></div>
-      <div class="col-md-4">
-        <label class="form-label" for="jk">Jenis kelamin</label>
-        <select id="jk" name="jenis_kelamin" class="form-select">
-          <option value="">Belum diisi</option>
-          <option value="L" <%= emp.jenis_kelamin === 'L' ? 'selected' : '' %>>Laki-laki</option>
-          <option value="P" <%= emp.jenis_kelamin === 'P' ? 'selected' : '' %>>Perempuan</option>
-        </select>
-      </div>
-      <div class="col-md-4"><label class="form-label" for="jabatan">Jabatan</label><input id="jabatan" name="jabatan" class="form-control" value="<%= emp.jabatan || '' %>"></div>
-      <div class="col-md-4">
-        <label class="form-label" for="unit">Unit kerja</label>
-        <input id="unit" name="unit_kerja" class="form-control" value="<%= emp.unit_kerja || '' %>" list="unitList">
-        <datalist id="unitList"><% units.forEach((u) => { %><option value="<%= u %>"><% }) %></datalist>
-      </div>
-      <div class="col-md-4"><label class="form-label" for="email">Email</label><input type="email" id="email" name="email" class="form-control" value="<%= emp.email || '' %>"></div>
-      <div class="col-md-4"><label class="form-label" for="telp">Telepon</label><input id="telp" name="telepon" class="form-control" value="<%= emp.telepon || '' %>" inputmode="tel"></div>
-      <div class="col-md-4"><label class="form-label" for="tm">Tanggal masuk</label><input type="date" id="tm" name="tanggal_masuk" class="form-control" value="<%= emp.tanggal_masuk || '' %>"></div>
-      <div class="col-12"><label class="form-label" for="alamat">Alamat</label><textarea id="alamat" name="alamat" class="form-control" rows="2"><%= emp.alamat || '' %></textarea></div>
-    </div>
-    <h2 class="h6 mb-3">Absensi</h2>
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label" for="shift">Shift default</label>
-        <select id="shift" name="default_shift_id" class="form-select" aria-describedby="shiftHelp">
-          <option value="">Tanpa shift</option>
-          <% shifts.forEach((s) => { %>
-            <option value="<%= s.id %>" <%= Number(emp.default_shift_id) === s.id ? 'selected' : '' %>><%= s.kode %> · <%= s.nama %> (<%= s.jam_masuk %> sampai <%= s.jam_pulang %>)</option>
-          <% }) %>
-        </select>
-        <div class="form-text" id="shiftHelp">Berlaku di hari kerja bila tidak ada jadwal khusus di menu Jadwal.</div>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label" for="idm">ID mesin fingerprint</label>
-        <input id="idm" name="id_mesin" class="form-control num" value="<%= emp.id_mesin || '' %>" maxlength="30" aria-describedby="idmHelp">
-        <div class="form-text" id="idmHelp">Nomor ID pegawai di mesin X302 atau P280.</div>
-      </div>
-      <div class="col-md-3">
-        <label class="form-label" for="status">Status</label>
-        <select id="status" name="status" class="form-select">
-          <option value="aktif" <%= emp.status === 'aktif' ? 'selected' : '' %>>Aktif</option>
-          <option value="nonaktif" <%= emp.status === 'nonaktif' ? 'selected' : '' %>>Nonaktif (tidak bisa login dan absen)</option>
-        </select>
-      </div>
-      <% if (!emp.id) { %>
-      <div class="col-md-4">
-        <label class="form-label" for="pw">Password awal</label>
-        <input type="password" id="pw" name="password" class="form-control" minlength="6" autocomplete="new-password" aria-describedby="pwHelp">
-        <div class="form-text" id="pwHelp">Kosongkan agar password sama dengan NIP.</div>
-      </div>
-      <% } else { %>
-      <div class="col-md-4">
-        <div class="form-label">Akun login</div>
-        <div class="form-control-plaintext num"><%= emp.username || 'Tidak ada akun' %></div>
-      </div>
-      <% } %>
-    </div>
+<% if (errors.length) { %>
+  <div data-slot="alert" class="<%= ui.alert('destructive', 'mb-4') %>" role="alert">
+    <%- ui.icon('circle-alert') %>
+    <div class="<%= ui.alertTitle() %>">Data belum bisa disimpan</div>
+    <div data-slot="alert-description" class="<%= ui.alertDescription() %>"><ul class="list-disc pl-4"><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div>
   </div>
-  <div class="card-footer d-flex flex-wrap justify-content-between gap-2">
-    <button class="btn btn-primary">Simpan</button>
-    <% if (emp.id) { %>
-      <button class="btn btn-outline-secondary" form="resetForm">Reset password ke NIP</button>
-    <% } %>
+<% } %>
+<form method="post" action="<%= emp.id ? `/admin/pegawai/${emp.id}` : '/admin/pegawai' %>" class="<%= ui.card() %>" data-loading="Menyimpan...">
+  <div class="<%= ui.cardContent('grid gap-8') %>">
+    <section class="grid gap-4">
+      <h2 class="font-semibold">Identitas</h2>
+      <div class="grid gap-4 md:grid-cols-3">
+        <%- field('nip', `NIP ${wajib}`, `<input id="nip" name="nip" class="${ui.input()}" value="${esc(emp.nip)}" required maxlength="30">`) %>
+        <%- field('nama', `Nama lengkap ${wajib}`, `<input id="nama" name="nama" class="${ui.input()}" value="${esc(emp.nama)}" required>`, '', 'md:col-span-2') %>
+        <%- field('jk', 'Jenis kelamin', `<div class="${ui.selectWrap()}"><select id="jk" name="jenis_kelamin" class="${ui.select()}"><option value="">Belum diisi</option><option value="L" ${emp.jenis_kelamin === 'L' ? 'selected' : ''}>Laki-laki</option><option value="P" ${emp.jenis_kelamin === 'P' ? 'selected' : ''}>Perempuan</option></select>${ui.icon('chevron-down', ui.selectIcon)}</div>`) %>
+        <%- field('jabatan', 'Jabatan', `<input id="jabatan" name="jabatan" class="${ui.input()}" value="${esc(emp.jabatan)}">`) %>
+        <%- field('unit', 'Unit kerja', `<input id="unit" name="unit_kerja" class="${ui.input()}" value="${esc(emp.unit_kerja)}" list="unitList"><datalist id="unitList">${units.map((u) => `<option value="${esc(u)}">`).join('')}</datalist>`) %>
+        <%- field('email', 'Email', `<input type="email" id="email" name="email" class="${ui.input()}" value="${esc(emp.email)}">`) %>
+        <%- field('telp', 'Telepon', `<input id="telp" name="telepon" class="${ui.input()}" value="${esc(emp.telepon)}" inputmode="tel">`) %>
+        <%- field('tm', 'Tanggal masuk', `<input type="date" id="tm" name="tanggal_masuk" class="${ui.input()}" value="${esc(emp.tanggal_masuk)}">`) %>
+        <%- field('alamat', 'Alamat', `<textarea id="alamat" name="alamat" class="${ui.textarea()}" rows="2">${esc(emp.alamat)}</textarea>`, '', 'md:col-span-3') %>
+      </div>
+    </section>
+    <div class="<%= ui.separator() %>"></div>
+    <section class="grid gap-4">
+      <h2 class="font-semibold">Absensi</h2>
+      <div class="grid gap-4 md:grid-cols-3">
+        <%- field('shift', 'Shift default', `<div class="${ui.selectWrap()}"><select id="shift" name="default_shift_id" class="${ui.select()}" aria-describedby="shiftHelp"><option value="">Tanpa shift</option>${shifts.map((s) => `<option value="${s.id}" ${Number(emp.default_shift_id) === s.id ? 'selected' : ''}>${esc(s.kode)} · ${esc(s.nama)} (${s.jam_masuk} sampai ${s.jam_pulang})</option>`).join('')}</select>${ui.icon('chevron-down', ui.selectIcon)}</div>`, 'Berlaku di hari kerja bila tidak ada jadwal khusus di menu Jadwal.') %>
+        <%- field('idm', 'ID mesin fingerprint', `<input id="idm" name="id_mesin" class="${ui.input()}" value="${esc(emp.id_mesin)}" maxlength="30" aria-describedby="idmHelp">`, 'Nomor ID pegawai di mesin X302 atau P280.') %>
+        <%- field('status', 'Status', `<div class="${ui.selectWrap()}"><select id="status" name="status" class="${ui.select()}"><option value="aktif" ${emp.status === 'aktif' ? 'selected' : ''}>Aktif</option><option value="nonaktif" ${emp.status === 'nonaktif' ? 'selected' : ''}>Nonaktif (tidak bisa login dan absen)</option></select>${ui.icon('chevron-down', ui.selectIcon)}</div>`) %>
+        <% if (!emp.id) { %>
+          <%- field('pw', 'Password awal', `<input type="password" id="pw" name="password" class="${ui.input()}" minlength="6" autocomplete="new-password" aria-describedby="pwHelp">`, 'Kosongkan agar password sama dengan NIP.') %>
+        <% } else { %>
+          <div class="grid content-start gap-2"><span class="<%= ui.label() %>">Akun login</span><span class="flex h-9 items-center text-sm"><%= emp.username || 'Tidak ada akun' %></span></div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+  <div class="<%= ui.cardFooter('flex-wrap justify-between gap-2 border-t') %>">
+    <button class="<%= ui.button() %>">Simpan</button>
+    <% if (emp.id) { %><button class="<%= ui.button({ variant: 'outline' }) %>" form="resetForm">Reset password ke NIP</button><% } %>
   </div>
 </form>
 <% if (emp.id) { %>
-<form id="resetForm" method="post" action="/admin/pegawai/<%= emp.id %>/reset-password" data-confirm="Reset password pegawai ini menjadi NIP?" data-loading="Mereset..."></form>
+<form id="resetForm" method="post" action="/admin/pegawai/<%= emp.id %>/reset-password" data-confirm="Reset password <%= emp.nama %> menjadi NIP? Pegawai harus masuk ulang." data-confirm-label="Reset password" data-loading="Mereset..."></form>
 <% } %>
 <%- include('../partials/footer') %>

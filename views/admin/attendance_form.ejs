@@ -1,46 +1,37 @@
 <%- include('../partials/header') %>
-<div class="page-head">
-  <div>
-    <h1>Input atau koreksi absensi</h1>
-    <div class="sub">Untuk pegawai yang tidak bisa absen lewat kiosk, HP, atau mesin. Setiap perubahan ditandai sebagai input manual.</div>
-  </div>
+<div class="mb-6">
+  <h1 class="text-2xl font-bold tracking-tight">Input atau koreksi absensi</h1>
+  <p class="mt-1 text-sm text-muted-foreground">Untuk pegawai yang tidak bisa absen lewat kiosk, HP, atau mesin. Setiap perubahan ditandai sebagai input manual.</p>
 </div>
-<div class="row">
-  <div class="col-lg-8">
-    <% if (error) { %><div class="alert alert-danger" role="alert"><%= error %></div><% } %>
-    <form method="get" class="card card-body mb-3" aria-label="Pilih pegawai dan tanggal">
-      <div class="row g-2 align-items-end">
-        <div class="col-md-6"><label class="form-label" for="emp">Pegawai</label>
-          <select id="emp" name="employee_id" class="form-select" required>
-            <option value="">Pilih pegawai</option>
-            <% employees.forEach((e) => { %><option value="<%= e.id %>" <%= empId === e.id ? 'selected' : '' %>><%= e.nama %> (<%= e.nip %>)</option><% }) %>
-          </select>
-        </div>
-        <div class="col-md-4"><label class="form-label" for="tgl">Tanggal</label><input type="date" id="tgl" name="tanggal" class="form-control" value="<%= tanggal %>" required></div>
-        <div class="col-md-2"><button class="btn btn-outline-secondary w-100">Tampilkan</button></div>
+<div class="grid max-w-3xl gap-4">
+  <% if (error) { %><div data-slot="alert" class="<%= ui.alert('destructive') %>" role="alert"><%- ui.icon('circle-alert') %><div class="<%= ui.alertTitle('line-clamp-none') %>"><%= error %></div></div><% } %>
+  <form method="get" class="<%= ui.card('py-4') %>" aria-label="Pilih pegawai dan tanggal">
+    <div class="<%= ui.cardContent('grid gap-3 px-4 sm:grid-cols-[2fr_1fr_auto] sm:items-end') %>">
+      <div class="grid gap-2"><label class="<%= ui.label() %>" for="emp">Pegawai</label>
+        <div class="<%= ui.selectWrap() %>"><select id="emp" name="employee_id" class="<%= ui.select() %>" required><option value="">Pilih pegawai</option><% employees.forEach((e) => { %><option value="<%= e.id %>" <%= empId === e.id ? 'selected' : '' %>><%= e.nama %> (<%= e.nip %>)</option><% }) %></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
       </div>
-    </form>
-    <% if (empId) { %>
-    <form method="post" class="card" data-loading="Menyimpan...">
-      <div class="card-header"><%= rec ? 'Ubah absensi yang sudah tercatat' : 'Belum ada absensi pada tanggal ini. Data baru akan dibuat.' %></div>
-      <div class="card-body">
-        <input type="hidden" name="employee_id" value="<%= empId %>">
-        <input type="hidden" name="tanggal" value="<%= tanggal %>">
-        <div class="row g-3">
-          <div class="col-md-4"><label class="form-label" for="jm">Jam masuk</label><input type="time" id="jm" name="jam_masuk" class="form-control" value="<%= rec && rec.jam_masuk ? rec.jam_masuk.slice(11, 16) : '' %>"></div>
-          <div class="col-md-4"><label class="form-label" for="jp">Jam pulang</label><input type="time" id="jp" name="jam_pulang" class="form-control" value="<%= rec && rec.jam_pulang ? rec.jam_pulang.slice(11, 16) : '' %>"></div>
-          <div class="col-md-4"><label class="form-label" for="st">Status</label>
-            <select id="st" name="status" class="form-select" aria-describedby="stHelp">
-              <% Object.entries(STATUS_LABEL).forEach(([k, v]) => { %><option value="<%= k %>" <%= (rec ? rec.status : 'hadir') === k ? 'selected' : '' %>><%= v %></option><% }) %>
-            </select>
-          </div>
-          <div class="col-12 form-text mt-1" id="stHelp">Hadir dan Terlambat dihitung otomatis dari jam dan shift. Pilih Izin, Sakit, Cuti, Dinas luar, atau Alpa untuk menetapkan status secara manual.</div>
-          <div class="col-12"><label class="form-label" for="ket">Keterangan</label><textarea id="ket" name="keterangan" class="form-control" rows="2"><%= rec ? rec.keterangan || '' : '' %></textarea></div>
+      <div class="grid gap-2"><label class="<%= ui.label() %>" for="tgl">Tanggal</label><input type="date" id="tgl" name="tanggal" class="<%= ui.input() %>" value="<%= tanggal %>" required></div>
+      <button class="<%= ui.button({ variant: 'outline' }) %>">Tampilkan</button>
+    </div>
+  </form>
+  <% if (empId) { %>
+  <form method="post" class="<%= ui.card() %>" data-loading="Menyimpan...">
+    <div class="<%= ui.cardHeader() %>"><h2 class="<%= ui.cardTitle() %>"><%= rec ? 'Ubah absensi yang sudah tercatat' : 'Belum ada absensi pada tanggal ini' %></h2><p class="<%= ui.cardDescription() %>"><%= rec ? 'Nilai di bawah adalah data yang tersimpan saat ini.' : 'Data baru akan dibuat saat disimpan.' %></p></div>
+    <div class="<%= ui.cardContent('grid gap-4') %>">
+      <input type="hidden" name="employee_id" value="<%= empId %>">
+      <input type="hidden" name="tanggal" value="<%= tanggal %>">
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div class="grid gap-2"><label class="<%= ui.label() %>" for="jm">Jam masuk</label><input type="time" id="jm" name="jam_masuk" class="<%= ui.input() %>" value="<%= rec && rec.jam_masuk ? rec.jam_masuk.slice(11, 16) : '' %>"></div>
+        <div class="grid gap-2"><label class="<%= ui.label() %>" for="jp">Jam pulang</label><input type="time" id="jp" name="jam_pulang" class="<%= ui.input() %>" value="<%= rec && rec.jam_pulang ? rec.jam_pulang.slice(11, 16) : '' %>"></div>
+        <div class="grid gap-2"><label class="<%= ui.label() %>" for="st">Status</label>
+          <div class="<%= ui.selectWrap() %>"><select id="st" name="status" class="<%= ui.select() %>" aria-describedby="stHelp"><% Object.entries(STATUS_LABEL).forEach(([k, v]) => { %><option value="<%= k %>" <%= (rec ? rec.status : 'hadir') === k ? 'selected' : '' %>><%= v %></option><% }) %></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
         </div>
       </div>
-      <div class="card-footer"><button class="btn btn-primary">Simpan absensi</button></div>
-    </form>
-    <% } %>
-  </div>
+      <p class="text-sm text-muted-foreground" id="stHelp">Hadir dan Terlambat dihitung otomatis dari jam dan shift. Pilih Izin, Sakit, Cuti, Dinas luar, atau Alpa untuk menetapkan status secara manual.</p>
+      <div class="grid gap-2"><label class="<%= ui.label() %>" for="ket">Keterangan</label><textarea id="ket" name="keterangan" class="<%= ui.textarea() %>" rows="2"><%= rec ? rec.keterangan || '' : '' %></textarea></div>
+    </div>
+    <div class="<%= ui.cardFooter() %>"><button class="<%= ui.button() %>">Simpan absensi</button></div>
+  </form>
+  <% } %>
 </div>
 <%- include('../partials/footer') %>

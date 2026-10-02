@@ -1,49 +1,47 @@
 <%- include('../partials/header') %>
-<div class="page-head">
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1>Hari libur nasional dan cuti bersama</h1>
-    <div class="sub">Pada tanggal ini shift default tidak berlaku, jadi pegawai tidak dihitung tanpa keterangan.</div>
+    <h1 class="text-2xl font-bold tracking-tight">Hari libur nasional dan cuti bersama</h1>
+    <p class="mt-1 text-sm text-muted-foreground">Pada tanggal ini shift default tidak berlaku, jadi pegawai tidak dihitung tanpa keterangan.</p>
   </div>
-  <form method="get" class="actions" aria-label="Pilih tahun">
-    <a class="btn btn-outline-secondary" href="?tahun=<%= +tahun - 1 %>" aria-label="Tahun <%= +tahun - 1 %>"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
-    <label class="visually-hidden" for="tahun">Tahun</label>
-    <input type="number" id="tahun" name="tahun" class="form-control num" style="width: 110px" value="<%= tahun %>" onchange="this.form.submit()">
-    <a class="btn btn-outline-secondary" href="?tahun=<%= +tahun + 1 %>" aria-label="Tahun <%= +tahun + 1 %>"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+  <form method="get" class="flex items-center gap-2" aria-label="Pilih tahun">
+    <a class="<%= ui.button({ variant: 'outline', size: 'icon' }) %>" href="?tahun=<%= +tahun - 1 %>" aria-label="Tahun <%= +tahun - 1 %>"><%- ui.icon('chevron-left') %></a>
+    <label class="sr-only" for="tahun">Tahun</label>
+    <input type="number" id="tahun" name="tahun" class="<%= ui.input('w-24 text-center') %>" value="<%= tahun %>" onchange="this.form.submit()">
+    <a class="<%= ui.button({ variant: 'outline', size: 'icon' }) %>" href="?tahun=<%= +tahun + 1 %>" aria-label="Tahun <%= +tahun + 1 %>"><%- ui.icon('chevron-right') %></a>
   </form>
 </div>
-<div class="row g-4">
-  <div class="col-lg-7">
-    <div class="card">
-      <div class="table-responsive">
-        <table class="table table-hover table-stack">
-          <thead><tr><th>Tanggal</th><th>Keterangan</th><th class="text-end">Aksi</th></tr></thead>
-          <tbody>
-          <% if (!list.length) { %><tr class="empty-row"><td colspan="3"><%- include('../partials/empty', { judul: `Belum ada hari libur untuk ${tahun}`, alasan: 'Tambahkan tanggal merah dan cuti bersama sesuai SKB pemerintah lewat formulir di samping.' }) %></td></tr><% } %>
-          <% list.forEach((h) => { %>
-            <tr>
-              <td class="stack-head text-nowrap fw-semibold"><%= T.fmtTglPendek(h.tanggal) %></td>
-              <td data-label="Keterangan"><%= h.keterangan %></td>
-              <td class="text-end"><form method="post" action="/admin/hari-libur/hapus" data-confirm="Hapus hari libur <%= h.keterangan %>?"><input type="hidden" name="tanggal" value="<%= h.tanggal %>"><button class="btn btn-sm btn-outline-danger">Hapus</button></form></td>
-            </tr>
-          <% }) %>
-          </tbody>
-        </table>
-      </div>
+<div class="grid gap-6 lg:grid-cols-[7fr_5fr]">
+  <div class="<%= ui.card('gap-0 py-0') %>">
+    <div class="<%= ui.tableContainer %>">
+      <table class="<%= ui.table('table-stack') %>">
+        <thead class="<%= ui.tableHeader %>"><tr class="<%= ui.tableRow() %>"><th class="<%= ui.tableHead('pl-6') %>">Tanggal</th><th class="<%= ui.tableHead() %>">Keterangan</th><th class="<%= ui.tableHead('pr-6 text-right') %>">Aksi</th></tr></thead>
+        <tbody class="<%= ui.tableBody %>">
+        <% if (!list.length) { %><tr><td colspan="3"><%- include('../partials/empty', { judul: `Belum ada hari libur untuk ${tahun}`, alasan: 'Tambahkan tanggal merah dan cuti bersama sesuai SKB pemerintah lewat formulir di samping.' }) %></td></tr><% } %>
+        <% list.forEach((h) => { %>
+          <tr class="<%= ui.tableRow() %>">
+            <td class="<%= ui.tableCell('stack-head pl-6 font-medium whitespace-nowrap') %>"><%= T.fmtTglPendek(h.tanggal) %></td>
+            <td data-label="Keterangan" class="<%= ui.tableCell() %>"><%= h.keterangan %></td>
+            <td class="<%= ui.tableCell('pr-6 text-right') %>"><form method="post" action="/admin/hari-libur/hapus" data-confirm="Hapus hari libur <%= h.keterangan %>?" data-confirm-label="Hapus"><input type="hidden" name="tanggal" value="<%= h.tanggal %>"><button class="<%= ui.button({ variant: 'outline-destructive', size: 'sm' }) %>">Hapus</button></form></td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
     </div>
   </div>
-  <div class="col-lg-5">
-    <form method="post" class="card" data-loading="Menyimpan...">
-      <div class="card-header"><h2 class="h6 mb-0">Tambah hari libur</h2></div>
-      <div class="card-body">
-        <div class="row g-2">
-          <div class="col-6"><label class="form-label" for="hd">Tanggal</label><input type="date" id="hd" name="dari" class="form-control" required></div>
-          <div class="col-6"><label class="form-label" for="hs">Sampai (opsional)</label><input type="date" id="hs" name="sampai" class="form-control"></div>
-          <div class="col-12"><label class="form-label" for="hk">Keterangan</label><input id="hk" name="keterangan" class="form-control" placeholder="Contoh: Cuti bersama Idul Fitri" required maxlength="200"></div>
+  <div>
+    <form method="post" class="<%= ui.card() %>" data-loading="Menyimpan...">
+      <div class="<%= ui.cardHeader() %>"><h2 class="<%= ui.cardTitle() %>">Tambah hari libur</h2></div>
+      <div class="<%= ui.cardContent('grid gap-4') %>">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="grid gap-2"><label class="<%= ui.label() %>" for="hd">Tanggal</label><input type="date" id="hd" name="dari" class="<%= ui.input() %>" required></div>
+          <div class="grid gap-2"><label class="<%= ui.label() %>" for="hs">Sampai (opsional)</label><input type="date" id="hs" name="sampai" class="<%= ui.input() %>"></div>
         </div>
+        <div class="grid gap-2"><label class="<%= ui.label() %>" for="hk">Keterangan</label><input id="hk" name="keterangan" class="<%= ui.input() %>" placeholder="Contoh: Cuti bersama Idul Fitri" required maxlength="200"></div>
       </div>
-      <div class="card-footer"><button class="btn btn-primary">Simpan hari libur</button></div>
+      <div class="<%= ui.cardFooter() %>"><button class="<%= ui.button() %>">Simpan hari libur</button></div>
     </form>
-    <p class="small text-muted mt-2">Pada hari libur, shift default tidak berlaku sehingga pegawai tidak dihitung "tanpa keterangan". Pegawai yang tetap bertugas (mis. piket) dapat diberi shift lewat <a href="/admin/jadwal">Jadwal Shift</a>.</p>
+    <p class="mt-3 text-sm text-muted-foreground">Pegawai yang tetap bertugas, misalnya piket, dapat diberi shift lewat <a href="/admin/jadwal">Jadwal shift</a>.</p>
   </div>
 </div>
 <%- include('../partials/footer') %>

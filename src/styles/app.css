@@ -1,0 +1,182 @@
+/* Sumber Tailwind. Hasil build: public/css/app.css (npm run build:css). Lihat DESIGN.md. */
+@import "tailwindcss";
+@source "../../views";
+@source "../../public/js";
+@source "../ui.js";
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant pointer-coarse (@media (pointer: coarse));
+
+@font-face { font-family: 'Plus Jakarta Sans'; font-weight: 400; font-display: swap; src: url('/vendor/font/plus-jakarta-sans-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Plus Jakarta Sans'; font-weight: 500; font-display: swap; src: url('/vendor/font/plus-jakarta-sans-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Plus Jakarta Sans'; font-weight: 600; font-display: swap; src: url('/vendor/font/plus-jakarta-sans-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Plus Jakarta Sans'; font-weight: 700; font-display: swap; src: url('/vendor/font/plus-jakarta-sans-latin-700-normal.woff2') format('woff2'); }
+
+@theme inline {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  /* app: warna identitas dan skala status (lihat DESIGN.md) */
+  --color-navy: var(--navy);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-status-hadir: var(--status-hadir);
+  --color-status-hadir-foreground: var(--status-hadir-foreground);
+  --color-status-telat: var(--status-telat);
+  --color-status-telat-foreground: var(--status-telat-foreground);
+  --color-status-alpa: var(--status-alpa);
+  --color-status-alpa-foreground: var(--status-alpa-foreground);
+  --color-status-dinas: var(--status-dinas);
+  --color-status-dinas-foreground: var(--status-dinas-foreground);
+  --color-status-izin: var(--status-izin);
+  --color-status-izin-foreground: var(--status-izin-foreground);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: #f6f4ef;
+  --foreground: #1f2733;
+  --card: #ffffff;
+  --card-foreground: #1f2733;
+  --popover: #ffffff;
+  --popover-foreground: #1f2733;
+  --primary: #1d5fa8;
+  --primary-foreground: #ffffff;
+  --secondary: #efece5;
+  --secondary-foreground: #1f2733;
+  --muted: #efece5;
+  --muted-foreground: #565e6b;
+  --accent: #e8f0fa;
+  --accent-foreground: #123b6d;
+  --destructive: #b42318;
+  --border: #e4e0d6;
+  --input: #cfc9bb;
+  --ring: #1d5fa8;
+  --navy: #123b6d;
+  --highlight: #f2b33d;
+  --highlight-foreground: #4a2f00;
+  --status-hadir: #dcfce7;
+  --status-hadir-foreground: #14532d;
+  --status-telat: #fdf1d8;
+  --status-telat-foreground: #6e4400;
+  --status-alpa: #fde2e2;
+  --status-alpa-foreground: #991b1b;
+  --status-dinas: #e3edf9;
+  --status-dinas-foreground: #1e4a80;
+  --status-izin: #eceae4;
+  --status-izin-foreground: #3f4654;
+}
+
+/* Tema gelap tetap untuk kiosk (layar bersama yang menyala sepanjang hari) */
+.dark {
+  --background: #0b1d33;
+  --foreground: #ffffff;
+  --card: #12284a;
+  --card-foreground: #ffffff;
+  --popover: #12284a;
+  --popover-foreground: #ffffff;
+  --primary: #dbe7f7;
+  --primary-foreground: #123b6d;
+  --secondary: #1b355d;
+  --secondary-foreground: #ffffff;
+  --muted: #1b355d;
+  --muted-foreground: #b8c6dc;
+  --accent: #1b355d;
+  --accent-foreground: #ffffff;
+  --border: #284573;
+  --input: #3a5a8c;
+  --ring: #8ab4f0;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+  h1, h2, h3 { letter-spacing: -0.01em; }
+  :focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+  [data-slot] :focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline-offset: 0; }
+  a:not([class]) { @apply text-primary underline underline-offset-2; }
+  .tabular, td, .jam { font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
+}
+
+@layer components {
+  /* Switch shadcn di atas checkbox asli */
+  .ui-switch::before { content: ''; display: block; width: 1rem; height: 1rem; border-radius: 9999px; background: var(--background); transition: transform .15s; }
+  .ui-switch:checked::before { transform: translateX(calc(100% - 2px)); }
+  @media (pointer: coarse) { .ui-switch { transform: scale(1.35); margin: 0 .4rem; } }
+
+  /* Dialog/Sheet memakai <dialog> asli; backdrop setara overlay shadcn (bg-black/50) */
+  dialog.ui-dialog::backdrop { background: rgb(0 0 0 / 0.5); }
+
+  /* Garis hari kerja 05.00 sampai 22.00 (motif identitas) */
+  .dayline { position: relative; height: 18px; min-width: 140px; }
+  .dayline .track { position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: var(--border); }
+  .dayline .shift { position: absolute; top: 5px; height: 8px; border-radius: 4px; background: #c9daf0; }
+  .dayline .dot { position: absolute; top: 3px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; border: 2px solid var(--card); }
+  .dayline .dot.in { background: var(--primary); }
+  .dayline .dot.in.late { background: #c27803; }
+  .dayline .dot.out { background: var(--navy); }
+
+  /* Tabel menjadi daftar kartu berlabel di HP */
+  @media (max-width: 767.98px) {
+    .table-stack thead { display: none; }
+    .table-stack, .table-stack tbody, .table-stack tr, .table-stack td { display: block; width: 100%; }
+    .table-stack tr { padding: .8rem 1rem; }
+    .table-stack td { padding: .2rem 0 !important; }
+    .table-stack td[data-label] { position: relative; padding-left: 42% !important; overflow-wrap: anywhere; min-height: 1.6em; }
+    .table-stack td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: .2rem; width: 40%; color: var(--muted-foreground); font-size: .8rem; }
+    .table-stack td[data-label]:empty { display: none; }
+    .table-stack td.stack-head { font-size: 1rem; padding-bottom: .35rem !important; }
+    .table-stack td.stack-hide { display: none; }
+    .table-stack .row-actions { justify-content: flex-start; padding-top: .5rem; }
+  }
+
+  /* Kamera */
+  .camera-wrap { position: relative; width: 100%; max-width: 640px; margin: 0 auto; background: #0b1d33; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; }
+  .camera-wrap video, .camera-wrap canvas.overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .camera-wrap.mirror video, .camera-wrap.mirror canvas.overlay { transform: scaleX(-1); }
+  .camera-status { position: absolute; left: 0; right: 0; bottom: 0; padding: .6rem .85rem; background: rgb(11 29 51 / .85); color: #fff; font-size: .9rem; }
+  .face-guide { position: absolute; left: 50%; top: 48%; width: 46%; aspect-ratio: 3 / 4; transform: translate(-50%, -50%); border: 3px dashed rgb(255 255 255 / .7); border-radius: 50%; pointer-events: none; }
+
+  /* Grid jadwal */
+  .schedule-table th, .schedule-table td { min-width: 40px; text-align: center; }
+  .schedule-table .name { position: sticky; left: 0; z-index: 1; min-width: 170px; text-align: left; background: var(--card); }
+  .schedule-table thead .name { background: var(--muted); z-index: 2; }
+  .schedule-table .weekend { background: #f8f1ea; }
+  .schedule-table .cell-btn { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: center; }
+  .schedule-table .cell-btn:hover { background: var(--accent); }
+  @media (pointer: coarse), (max-width: 1023.98px) {
+    .schedule-table .cell-btn { min-height: 44px; }
+    .schedule-table th, .schedule-table td { min-width: 44px; }
+  }
+  .shift-chip { display: inline-block; padding: .1rem .4rem; border-radius: 6px; font-size: .72rem; font-weight: 700; line-height: 1.4; border: 2px solid transparent; }
+  .shift-chip.default { background: var(--card) !important; color: var(--foreground) !important; }
+
+  /* Navigasi bawah pegawai di HP */
+  @media (max-width: 767.98px) {
+    body.has-bottom-nav { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  }
+}
+
+/* Di luar layer agar menang atas utilitas display (grid/flex) pada komponen */
+dialog.ui-dialog:not([open]) { display: none; }

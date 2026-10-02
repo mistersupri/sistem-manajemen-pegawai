@@ -1,22 +1,22 @@
 <%- include('../partials/header') %>
-<div class="page-head">
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1>Klarifikasi absen</h1>
-    <div class="sub">Pengajuan pegawai untuk lupa absen, terlambat, izin, sakit, cuti, atau dinas luar.</div>
+    <h1 class="text-2xl font-bold tracking-tight">Klarifikasi absen</h1>
+    <p class="mt-1 text-sm text-muted-foreground">Pengajuan pegawai untuk lupa absen, terlambat, izin, sakit, cuti, atau dinas luar.</p>
   </div>
-  <ul class="nav nav-pills" aria-label="Filter status">
+  <nav class="<%= ui.tabsList('max-w-full overflow-x-auto') %>" aria-label="Filter status">
     <% [['menunggu', 'Menunggu'], ['disetujui', 'Disetujui'], ['ditolak', 'Ditolak'], ['semua', 'Semua']].forEach(([k, v]) => { const act = (status || 'semua') === k; %>
-      <li class="nav-item"><a class="nav-link <%= act ? 'active' : '' %>" <%- act ? 'aria-current="page"' : '' %> href="?status=<%= k %>"><%= v %><% if (k === 'menunggu' && pendingKlarifikasi) { %><span class="nav-count"><%= pendingKlarifikasi %></span><% } %></a></li>
+      <a class="<%= ui.tabsTrigger(act) %>" <%- act ? 'aria-current="page"' : '' %> href="?status=<%= k %>"><%= v %><% if (k === 'menunggu' && pendingKlarifikasi) { %><span class="<%= ui.badge({ variant: 'highlight' }) %>"><%= pendingKlarifikasi %></span><% } %></a>
     <% }) %>
-  </ul>
+  </nav>
 </div>
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover table-stack">
-      <thead><tr><th>Pegawai</th><th>Untuk tanggal</th><th>Jenis</th><th>Alasan</th><th>Status</th><th class="text-end"><span class="visually-hidden">Aksi</span></th></tr></thead>
-      <tbody>
+<div class="<%= ui.card('gap-0 py-0') %>">
+  <div class="<%= ui.tableContainer %>">
+    <table class="<%= ui.table('table-stack') %>">
+      <thead class="<%= ui.tableHeader %>"><tr class="<%= ui.tableRow() %>"><th class="<%= ui.tableHead('pl-6') %>">Pegawai</th><th class="<%= ui.tableHead() %>">Untuk tanggal</th><th class="<%= ui.tableHead() %>">Jenis</th><th class="<%= ui.tableHead() %>">Alasan</th><th class="<%= ui.tableHead() %>">Status</th><th class="<%= ui.tableHead('pr-6 text-right') %>"><span class="sr-only">Aksi</span></th></tr></thead>
+      <tbody class="<%= ui.tableBody %>">
       <% if (!list.length) { %>
-        <tr class="empty-row"><td colspan="6">
+        <tr><td colspan="6">
           <% if (status === 'menunggu') { %>
             <%- include('../partials/empty', { judul: 'Tidak ada klarifikasi yang menunggu', alasan: 'Semua pengajuan sudah diproses. Pengajuan baru dari pegawai akan muncul di sini dan di dashboard.', aksi: [{ href: '?status=semua', label: 'Lihat riwayat semua klarifikasi' }] }) %>
           <% } else { %>
@@ -25,13 +25,13 @@
         </td></tr>
       <% } %>
       <% list.forEach((c) => { %>
-        <tr>
-          <td class="stack-head"><div class="fw-semibold"><%= c.nama %></div><span class="cell-sub">diajukan <%= T.fmtTglPendek(c.created_at.slice(0, 10), false) %>, <%= c.created_at.slice(11, 16) %></span></td>
-          <td data-label="Untuk tanggal" class="text-nowrap"><%= T.fmtTglPendek(c.tanggal) %></td>
-          <td data-label="Jenis"><%= JENIS[c.jenis] %><% if (c.lampiran) { %><span class="cell-sub">ada lampiran</span><% } %></td>
-          <td data-label="Alasan" class="small" style="max-width: 320px"><%= c.alasan.length > 120 ? c.alasan.slice(0, 120) + '...' : c.alasan %></td>
-          <td data-label="Status"><span class="badge klar-<%= c.status %>"><%= STATUS_KLARIFIKASI[c.status] %></span></td>
-          <td class="text-end"><a href="/admin/klarifikasi/<%= c.id %>" class="btn btn-sm <%= c.status === 'menunggu' ? 'btn-primary' : 'btn-outline-secondary' %>"><%= c.status === 'menunggu' ? 'Tinjau' : 'Lihat' %></a></td>
+        <tr class="<%= ui.tableRow() %>">
+          <td class="<%= ui.tableCell('stack-head pl-6') %>"><div class="font-medium"><%= c.nama %></div><span class="block text-xs text-muted-foreground">diajukan <%= T.fmtTglPendek(c.created_at.slice(0, 10), false) %>, <%= c.created_at.slice(11, 16) %></span></td>
+          <td data-label="Untuk tanggal" class="<%= ui.tableCell('whitespace-nowrap') %>"><%= T.fmtTglPendek(c.tanggal) %></td>
+          <td data-label="Jenis" class="<%= ui.tableCell() %>"><%= JENIS[c.jenis] %><% if (c.lampiran) { %><span class="block text-xs text-muted-foreground">ada lampiran</span><% } %></td>
+          <td data-label="Alasan" class="<%= ui.tableCell('max-w-80 text-muted-foreground') %>"><%= c.alasan.length > 120 ? c.alasan.slice(0, 120) + '...' : c.alasan %></td>
+          <td data-label="Status" class="<%= ui.tableCell() %>"><span class="<%= ui.statusBadge(c.status) %>"><%= STATUS_KLARIFIKASI[c.status] %></span></td>
+          <td class="<%= ui.tableCell('pr-6 text-right') %>"><div class="row-actions flex justify-end"><a href="/admin/klarifikasi/<%= c.id %>" class="<%= ui.button({ variant: c.status === 'menunggu' ? 'default' : 'outline', size: 'sm' }) %>"><%= c.status === 'menunggu' ? 'Tinjau' : 'Lihat' %></a></div></td>
         </tr>
       <% }) %>
       </tbody>

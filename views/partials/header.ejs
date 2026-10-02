@@ -4,99 +4,101 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title><%= title %> · <%= settings.nama_instansi %></title>
-  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <%
   const isAdmin = user && user.role === 'admin';
   const isPegawai = user && user.role === 'pegawai';
-  const on = (...prefixes) => prefixes.some((p) => path === p || path.startsWith(p + '/')) ? 'active' : '';
-  const onExact = (p) => path === p ? 'active' : '';
+  const on = (...prefixes) => prefixes.some((p) => path === p || path.startsWith(p + '/'));
+  const navLink = (active) => ui.cn('inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-highlight',
+    active && 'bg-white/10 text-white shadow-[inset_0_-3px_0_var(--highlight)]');
+  const adminNav = [
+    { href: '/admin', label: 'Dashboard', active: path === '/admin' },
+    { label: 'Absensi', id: 'mAbsensi', active: on('/admin/absensi', '/admin/rekap'), items: [['/admin/absensi', 'Data absensi'], ['/admin/rekap', 'Rekap per pegawai'], ['/admin/absensi/input', 'Input atau koreksi manual']] },
+    { href: '/admin/klarifikasi', label: 'Klarifikasi', active: on('/admin/klarifikasi'), count: pendingKlarifikasi },
+    { href: '/admin/pegawai', label: 'Pegawai', active: on('/admin/pegawai') },
+    { label: 'Jadwal', id: 'mJadwal', active: on('/admin/shift', '/admin/jadwal', '/admin/hari-libur'), items: [['/admin/jadwal', 'Jadwal shift pegawai'], ['/admin/shift', 'Master shift'], ['/admin/hari-libur', 'Hari libur nasional']] },
+    { href: '/admin/mesin', label: 'Mesin fingerprint', active: on('/admin/mesin') },
+    { href: '/admin/pengaturan', label: 'Pengaturan', active: on('/admin/pengaturan') },
+  ];
+  const pegNav = [
+    ['/pegawai', 'Beranda', 'house', path === '/pegawai'],
+    ['/pegawai/absen', 'Absen', 'scan-face', on('/pegawai/absen')],
+    ['/pegawai/dinas-luar', 'Dinas luar', 'map-pin', on('/pegawai/dinas-luar')],
+    ['/pegawai/riwayat', 'Riwayat', 'calendar-days', on('/pegawai/riwayat')],
+    ['/pegawai/klarifikasi', 'Klarifikasi', 'message-square-text', on('/pegawai/klarifikasi')],
+  ];
 %>
-<body class="<%= isPegawai ? 'has-bottom-nav' : '' %>">
-<a class="visually-hidden-focusable btn btn-light position-absolute m-2" style="z-index: 2000" href="#konten">Lewati ke konten</a>
-<nav class="navbar navbar-expand-lg topbar" aria-label="Navigasi utama">
-  <div class="container-xl">
-    <a class="navbar-brand" href="/"><%- include('brand') %></a>
-    <% if (isPegawai) { %>
-    <div class="dropdown d-md-none ms-auto">
-      <button class="btn btn-sm text-white dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: rgba(255,255,255,.5)">Akun</button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li><span class="dropdown-item-text small text-muted"><%= user.nama %> · <%= user.username %></span></li>
-        <li><a class="dropdown-item" href="/akun/password">Ubah password</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><form method="post" action="/logout"><button class="dropdown-item text-danger">Keluar</button></form></li>
-      </ul>
-    </div>
-    <% } %>
+<body class="min-h-dvh <%= isPegawai ? 'has-bottom-nav' : '' %>">
+<a href="#konten" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] <%= ui.button({ variant: 'outline' }) %>">Lewati ke konten</a>
+<header class="bg-navy text-white">
+  <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2 lg:px-6">
+    <a href="/" class="flex min-h-11 min-w-0 items-center gap-2.5 font-bold"><%- include('brand') %></a>
     <% if (user) { %>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false">
-      <i class="bi bi-list" aria-hidden="true"></i> Menu
-    </button>
-    <div class="collapse navbar-collapse" id="nav">
-      <ul class="navbar-nav me-auto">
-        <% if (isAdmin) { %>
-          <li class="nav-item"><a class="nav-link <%= onExact('/admin') %>" href="/admin">Dashboard</a></li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle <%= on('/admin/absensi', '/admin/rekap') %>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Absensi</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="/admin/absensi">Data absensi</a></li>
-              <li><a class="dropdown-item" href="/admin/rekap">Rekap per pegawai</a></li>
-              <li><a class="dropdown-item" href="/admin/absensi/input">Input atau koreksi manual</a></li>
-            </ul>
-          </li>
-          <li class="nav-item"><a class="nav-link <%= on('/admin/klarifikasi') %>" href="/admin/klarifikasi">Klarifikasi<% if (pendingKlarifikasi) { %><span class="nav-count" title="<%= pendingKlarifikasi %> menunggu persetujuan"><%= pendingKlarifikasi %></span><% } %></a></li>
-          <li class="nav-item"><a class="nav-link <%= on('/admin/pegawai') %>" href="/admin/pegawai">Pegawai</a></li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle <%= on('/admin/shift', '/admin/jadwal', '/admin/hari-libur') %>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Jadwal</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="/admin/jadwal">Jadwal shift pegawai</a></li>
-              <li><a class="dropdown-item" href="/admin/shift">Master shift</a></li>
-              <li><a class="dropdown-item" href="/admin/hari-libur">Hari libur nasional</a></li>
-            </ul>
-          </li>
-          <li class="nav-item"><a class="nav-link <%= on('/admin/mesin') %>" href="/admin/mesin">Mesin fingerprint</a></li>
-          <li class="nav-item"><a class="nav-link <%= on('/admin/pengaturan') %>" href="/admin/pengaturan">Pengaturan</a></li>
-        <% } else { %>
-          <li class="nav-item pegawai-links"><a class="nav-link <%= onExact('/pegawai') %>" href="/pegawai">Beranda</a></li>
-          <li class="nav-item pegawai-links"><a class="nav-link <%= on('/pegawai/absen') %>" href="/pegawai/absen">Absen wajah</a></li>
-          <li class="nav-item pegawai-links"><a class="nav-link <%= on('/pegawai/dinas-luar') %>" href="/pegawai/dinas-luar">Dinas luar</a></li>
-          <li class="nav-item pegawai-links"><a class="nav-link <%= on('/pegawai/riwayat') %>" href="/pegawai/riwayat">Riwayat</a></li>
-          <li class="nav-item pegawai-links"><a class="nav-link <%= on('/pegawai/klarifikasi') %>" href="/pegawai/klarifikasi">Klarifikasi</a></li>
-        <% } %>
-      </ul>
-      <div class="d-flex flex-wrap align-items-center gap-2">
-        <% if (isAdmin) { %><a href="/kiosk" class="btn btn-kiosk btn-sm" target="_blank" rel="noopener">Buka kiosk wajah</a><% } %>
-        <div class="dropdown">
-          <a class="nav-link text-white dropdown-toggle py-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="min-height: 44px; display: inline-flex; align-items: center;">
-            <%= user.nama || user.username %>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><span class="dropdown-item-text small text-muted"><%= isAdmin ? 'Administrator' : 'Pegawai' %> · <%= user.username %></span></li>
-            <li><a class="dropdown-item" href="/akun/password">Ubah password</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><form method="post" action="/logout"><button class="dropdown-item text-danger">Keluar</button></form></li>
-          </ul>
+    <nav class="ml-4 hidden flex-1 items-center gap-1 lg:flex" aria-label="Navigasi utama">
+      <% if (isAdmin) { adminNav.forEach((n) => { if (n.items) { %>
+        <div class="relative">
+          <button type="button" class="<%= navLink(n.active) %>" data-dropdown aria-controls="<%= n.id %>" aria-expanded="false" aria-haspopup="menu"><%= n.label %> <%- ui.icon('chevron-down', 'size-4 opacity-70') %></button>
+          <div id="<%= n.id %>" role="menu" class="<%= ui.dropdownContent('absolute left-0 top-full mt-1 w-60') %>">
+            <% n.items.forEach(([href, label]) => { %><a role="menuitem" class="<%= ui.dropdownItem() %>" href="<%= href %>"><%= label %></a><% }) %>
+          </div>
+        </div>
+      <% } else { %>
+        <a class="<%= navLink(n.active) %>" href="<%= n.href %>" <%- n.active ? 'aria-current="page"' : '' %>><%= n.label %><% if (n.count) { %><span class="<%= ui.badge({ variant: 'highlight' }, 'ml-1') %>" title="<%= n.count %> menunggu persetujuan"><%= n.count %></span><% } %></a>
+      <% } }) } else { pegNav.forEach(([href, label, , active]) => { %>
+        <a class="<%= navLink(active) %>" href="<%= href %>" <%- active ? 'aria-current="page"' : '' %>><%= label %></a>
+      <% }) } %>
+    </nav>
+    <div class="ml-auto flex items-center gap-2">
+      <% if (isAdmin) { %><a href="/kiosk" target="_blank" rel="noopener" class="<%= ui.button({ variant: 'secondary', size: 'sm' }, 'hidden lg:inline-flex') %>">Buka kiosk wajah</a><% } %>
+      <div class="relative">
+        <button type="button" class="<%= navLink(false) %> min-h-11" data-dropdown aria-controls="mAkun" aria-expanded="false" aria-haspopup="menu">
+          <span class="max-w-40 truncate"><%= user.nama || user.username %></span> <%- ui.icon('chevron-down', 'size-4 opacity-70') %>
+        </button>
+        <div id="mAkun" role="menu" class="<%= ui.dropdownContent('absolute right-0 top-full mt-1 w-56') %>">
+          <div class="<%= ui.dropdownLabel %>"><span class="block text-xs font-normal text-muted-foreground"><%= isAdmin ? 'Administrator' : 'Pegawai' %> · <%= user.username %></span></div>
+          <div class="<%= ui.dropdownSeparator %>"></div>
+          <a role="menuitem" class="<%= ui.dropdownItem() %>" href="/akun/password">Ubah password</a>
+          <form method="post" action="/logout"><button role="menuitem" class="<%= ui.dropdownItem('destructive') %>">Keluar</button></form>
         </div>
       </div>
+      <% if (isAdmin) { %>
+        <button type="button" class="<%= ui.button({ variant: 'ghost' }, 'text-white hover:bg-white/10 hover:text-white lg:hidden') %>" data-dialog-open="navSheet" aria-controls="navSheet" aria-expanded="false"><%- ui.icon('menu') %> Menu</button>
+      <% } %>
     </div>
     <% } %>
   </div>
-</nav>
+</header>
+<% if (isAdmin) { %>
+<dialog id="navSheet" class="<%= ui.sheet('right') %>" aria-label="Menu navigasi">
+  <div class="flex items-center justify-between border-b p-4">
+    <span class="font-semibold">Menu</span>
+    <button type="button" class="<%= ui.button({ variant: 'ghost', size: 'icon' }) %>" data-dialog-close aria-label="Tutup menu"><%- ui.icon('x') %></button>
+  </div>
+  <nav class="flex flex-col gap-1 overflow-y-auto px-3 pb-6" aria-label="Navigasi utama">
+    <% adminNav.forEach((n) => { if (n.items) { %>
+      <div class="px-3 pt-3 pb-1 text-xs font-semibold text-muted-foreground"><%= n.label %></div>
+      <% n.items.forEach(([href, label]) => { %><a class="<%= ui.button({ variant: path === href ? 'secondary' : 'ghost' }, 'justify-start') %>" href="<%= href %>"><%= label %></a><% }) %>
+    <% } else { %>
+      <a class="<%= ui.button({ variant: n.active ? 'secondary' : 'ghost' }, 'justify-start') %>" href="<%= n.href %>"><%= n.label %><% if (n.count) { %><span class="<%= ui.badge({ variant: 'highlight' }, 'ml-auto') %>"><%= n.count %></span><% } %></a>
+    <% } }) %>
+    <div class="<%= ui.separator('my-2') %>"></div>
+    <a class="<%= ui.button({ variant: 'outline' }) %>" href="/kiosk" target="_blank" rel="noopener">Buka kiosk wajah</a>
+  </nav>
+</dialog>
+<% } %>
 <% if (isPegawai) { %>
-<nav class="bottom-nav" aria-label="Navigasi pegawai">
-  <a href="/pegawai" class="<%= onExact('/pegawai') %>"><i class="bi bi-house" aria-hidden="true"></i>Beranda</a>
-  <a href="/pegawai/absen" class="<%= on('/pegawai/absen') %>"><i class="bi bi-person-bounding-box" aria-hidden="true"></i>Absen</a>
-  <a href="/pegawai/dinas-luar" class="<%= on('/pegawai/dinas-luar') %>"><i class="bi bi-geo-alt" aria-hidden="true"></i>Dinas luar</a>
-  <a href="/pegawai/riwayat" class="<%= on('/pegawai/riwayat') %>"><i class="bi bi-calendar3" aria-hidden="true"></i>Riwayat</a>
-  <a href="/pegawai/klarifikasi" class="<%= on('/pegawai/klarifikasi') %>"><i class="bi bi-chat-square-text" aria-hidden="true"></i>Klarifikasi</a>
+<nav class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Navigasi pegawai">
+  <% pegNav.forEach(([href, label, icon, active]) => { %>
+    <a href="<%= href %>" class="<%= ui.cn('flex min-h-15 flex-col items-center justify-center gap-0.5 text-[0.72rem] font-semibold text-muted-foreground', active && 'text-navy shadow-[inset_0_3px_0_var(--highlight)]') %>" <%- active ? 'aria-current="page"' : '' %>><%- ui.icon(icon, 'size-5') %><%= label %></a>
+  <% }) %>
 </nav>
 <% } %>
-<main class="container-xl py-4" id="konten" tabindex="-1">
-  <% if (flash) { %>
-    <div class="alert alert-<%= flash.type %> alert-dismissible fade show" role="<%= flash.type === 'danger' ? 'alert' : 'status' %>">
-      <%= flash.message %>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup pesan"></button>
+<main class="mx-auto max-w-7xl px-4 py-6 lg:px-6" id="konten" tabindex="-1">
+  <% if (flash) { const v = { success: 'success', danger: 'destructive', warning: 'warning' }[flash.type] || 'default'; %>
+    <div data-slot="alert" class="<%= ui.alert(v, 'mb-4 pr-12') %>" role="<%= flash.type === 'danger' ? 'alert' : 'status' %>">
+      <%- ui.icon(flash.type === 'danger' ? 'circle-alert' : flash.type === 'warning' ? 'triangle-alert' : 'circle-check') %>
+      <div class="<%= ui.alertTitle('line-clamp-none font-normal') %>"><%= flash.message %></div>
+      <button type="button" data-dismiss class="<%= ui.button({ variant: 'ghost', size: 'icon-sm' }, 'absolute top-1.5 right-1.5') %>" aria-label="Tutup pesan"><%- ui.icon('x') %></button>
     </div>
   <% } %>

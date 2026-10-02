@@ -55,6 +55,7 @@ Dibangun dengan Node.js + Express + SQLite bawaan Node (`node:sqlite`), jadi tid
 - **Ekspor Excel** (sheet Rekap + Detail) serta **CSV** (detail atau rekap).
 
 ### Tampilan
+- Antarmuka memakai komponen [shadcn/ui](https://ui.shadcn.com/) (Button, Card, Table, Badge, Alert, Dialog, Sheet, DropdownMenu, Tabs, Switch, dan lainnya) yang dipindahkan ke template EJS dengan Tailwind CSS v4. Penjelasannya ada di `DESIGN.md` bagian Komponen.
 - Arah desain tertulis di `DESIGN.md`: palet navy dan biru instansi di atas latar kertas hangat, huruf Plus Jakarta Sans (disajikan lokal), dan motif garis hari kerja yang menunjukkan jam masuk/pulang terhadap shift.
 - Logo instansi diunggah di **Pengaturan** (PNG/JPG/WebP, maksimal 1 MB). Tanpa logo, yang tampil hanya nama instansi.
 - Di HP: tabel berubah menjadi kartu, pegawai memakai navigasi bawah, dan filter bisa dilipat. Semua halaman lolos pemeriksaan WCAG 2 AA (axe-core) dan bisa dipakai dengan keyboard.
@@ -86,6 +87,15 @@ Buka `http://localhost:3000` dan login sebagai admin: **admin / admin123** (sege
 | `COOKIE_SECURE` | – | `1` bila memakai HTTPS |
 | `TRUST_PROXY` | – | `1` bila di belakang reverse proxy |
 
+### Mengubah tampilan
+
+CSS hasil build (`public/css/app.css`) sudah disertakan, jadi `npm start` langsung jalan. Bila mengubah template atau `src/styles/app.css`, bangun ulang CSS-nya:
+
+```bash
+npm run build:css   # sekali
+npm run watch:css   # otomatis saat file berubah
+```
+
 ### Pengujian
 
 ```bash
@@ -111,7 +121,10 @@ src/attendance.js       Logika absensi, shift, keterlambatan, shift malam
 src/face.js             Pencocokan descriptor wajah (server)
 src/excel.js            Baca/tulis Excel & CSV
 src/routes/             Route admin, pegawai, shift, absensi, klarifikasi
+src/ui.js               Komponen shadcn/ui (class + varian) untuk template
+src/styles/app.css      Sumber Tailwind: token tema shadcn dan gaya khusus
 views/                  Template EJS
+public/js/app.js        Perilaku Dialog, Sheet, DropdownMenu, AlertDialog
 public/js/face.js       Utilitas kamera, deteksi wajah, GPS
 test/                   Pengujian otomatis (node:test)
 ```

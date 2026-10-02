@@ -34,8 +34,8 @@ Warna shift dipilih admin. Teks chip shift otomatis hitam atau putih sesuai kece
 
 ## Permukaan, radius, bayangan
 
-- Panel datar berbatas garis 1px. Bayangan hanya untuk elemen yang benar-benar melayang di atas halaman: menu dropdown, modal, dan menu sel jadwal.
-- Radius: panel 12px, kontrol 8px, chip dan badge 6px. Tidak ada elemen berbentuk pil kecuali tombol navigasi bawah.
+- Panel memakai Card shadcn: batas garis 1px dengan bayangan `shadow-sm` bawaan shadcn yang sangat tipis. Bayangan tebal (`shadow-lg`) hanya untuk elemen yang melayang: DropdownMenu, Dialog, Sheet, dan menu sel jadwal.
+- Radius mengikuti token `--radius: 0.75rem` shadcn: Card 14px (`rounded-xl`), kontrol 8–10px (`rounded-md`). Badge berbentuk pil sesuai shadcn.
 
 ## Motif identitas: garis hari kerja
 
@@ -55,7 +55,18 @@ MOTION 1: hanya transisi hover/fokus 120ms dan indikator proses (spinner) saat a
 
 ## Tema
 
-Tema terang tetap untuk aplikasi admin dan pegawai. Alasannya: dipakai di kantor siang hari, dan hasilnya disandingkan dengan dokumen cetak/ekspor Excel. Kiosk memakai tema gelap tetap karena berupa layar bersama yang menyala sepanjang hari dan harus mudah dibaca dari jarak jauh.
+Tema terang tetap untuk aplikasi admin dan pegawai. Alasannya: dipakai di kantor siang hari, dan hasilnya disandingkan dengan dokumen cetak/ekspor Excel. Kiosk memakai tema gelap tetap (kelas `.dark` shadcn pada `<html>`) karena berupa layar bersama yang menyala sepanjang hari dan harus mudah dibaca dari jarak jauh.
+
+## Komponen: shadcn/ui
+
+Semua komponen antarmuka mengikuti [shadcn/ui](https://ui.shadcn.com/) gaya new-york-v4. Karena aplikasi ini dirender server (EJS, bukan React), komponennya dipindahkan sebagai berikut:
+
+- Class dan varian disalin dari sumber shadcn ke `src/ui.js`, dirangkai dengan `class-variance-authority` dan `tailwind-merge` seperti fungsi `cn()` shadcn. Template memanggilnya lewat `ui.button({ variant: 'outline' })`, `ui.card()`, `ui.badge()`, dan seterusnya. Perubahan dari sumber asli ditandai komentar `app:`.
+- Token warna shadcn (`--background`, `--primary`, `--muted`, dan lainnya) diisi dari palet di atas, di `src/styles/app.css`. Tailwind CSS v4 membangunnya menjadi `public/css/app.css` (`npm run build:css`).
+- Komponen yang di React memakai Radix diganti elemen bawaan browser plus skrip kecil di `public/js/app.js`: Dialog, Sheet, dan AlertDialog memakai `<dialog>`; DropdownMenu memakai tombol `data-dropdown` dengan navigasi panah dan Escape; Select memakai NativeSelect; Switch memakai checkbox; Collapsible memakai `<details>`.
+- Varian tambahan: tombol `highlight` (aksen kuning tindakan) dan `outline-destructive` (hapus yang bukan aksi utama), badge status (`hadir`, `terlambat`, `alpa`, `dinas`, `netral`), dan Alert `warning`/`success`.
+- Ikon dari Lucide (ikon resmi shadcn), disisipkan sebagai SVG oleh `ui.icon()`.
+- Kontrol diberi tinggi minimal 44px di layar sentuh dan layar di bawah 1024px.
 
 ## Logo
 

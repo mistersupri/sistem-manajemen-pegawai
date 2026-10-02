@@ -1,26 +1,20 @@
 <% const ringkas = [`${T.fmtTglPendek(f.dari, false)} sampai ${T.fmtTglPendek(f.sampai)}`, f.unit, f.status && STATUS_LABEL[f.status], f.q && `"${f.q}"`].filter(Boolean).join(' · '); %>
-<details class="filter-panel">
-  <summary>Periode dan filter <span class="ringkas"><%= ringkas %></span></summary>
-  <form class="filter-body" method="get">
-    <div class="row g-2 align-items-end">
-      <div class="col-6 col-md-2"><label class="form-label small" for="fdari">Dari</label><input type="date" id="fdari" name="dari" class="form-control" value="<%= f.dari %>"></div>
-      <div class="col-6 col-md-2"><label class="form-label small" for="fsampai">Sampai</label><input type="date" id="fsampai" name="sampai" class="form-control" value="<%= f.sampai %>"></div>
-      <div class="col-md-2"><label class="form-label small" for="funit">Unit</label>
-        <select id="funit" name="unit" class="form-select"><option value="">Semua unit</option>
-          <% units.forEach((u) => { %><option <%= f.unit === u ? 'selected' : '' %>><%= u %></option><% }) %>
-        </select>
-      </div>
-      <% if (typeof showStatus !== 'undefined' && showStatus) { %>
-      <div class="col-md-2"><label class="form-label small" for="fstatus">Status</label>
-        <select id="fstatus" name="status" class="form-select"><option value="">Semua status</option>
-          <% Object.entries(STATUS_LABEL).forEach(([k, v]) => { %><option value="<%= k %>" <%= f.status === k ? 'selected' : '' %>><%= v %></option><% }) %>
-        </select>
-      </div>
-      <% } %>
-      <div class="col-md-2"><label class="form-label small" for="fq">Pegawai</label><input id="fq" name="q" class="form-control" placeholder="Nama atau NIP" value="<%= f.q %>"></div>
-      <div class="col-md-2 d-flex gap-2">
-        <button class="btn btn-primary flex-fill">Terapkan</button>
-      </div>
+<details data-collapsible class="<%= ui.card('mb-4 gap-0 py-0') %>">
+  <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 px-6 py-3 font-medium [&::-webkit-details-marker]:hidden">
+    Periode dan filter <span class="flex items-center gap-2 text-right text-sm font-normal text-muted-foreground"><%= ringkas %> <%- ui.icon('chevron-down') %></span>
+  </summary>
+  <form method="get" class="grid gap-3 border-t px-6 py-4 sm:grid-cols-2 lg:items-end <%= typeof showStatus !== 'undefined' && showStatus ? 'lg:grid-cols-[1fr_1fr_1.2fr_1fr_1.2fr_auto]' : 'lg:grid-cols-[1fr_1fr_1.2fr_1.2fr_auto]' %>">
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fdari">Dari</label><input type="date" id="fdari" name="dari" class="<%= ui.input() %>" value="<%= f.dari %>"></div>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fsampai">Sampai</label><input type="date" id="fsampai" name="sampai" class="<%= ui.input() %>" value="<%= f.sampai %>"></div>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="funit">Unit</label>
+      <div class="<%= ui.selectWrap() %>"><select id="funit" name="unit" class="<%= ui.select() %>"><option value="">Semua unit</option><% units.forEach((u) => { %><option <%= f.unit === u ? 'selected' : '' %>><%= u %></option><% }) %></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
     </div>
+    <% if (typeof showStatus !== 'undefined' && showStatus) { %>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fstatus">Status</label>
+      <div class="<%= ui.selectWrap() %>"><select id="fstatus" name="status" class="<%= ui.select() %>"><option value="">Semua status</option><% Object.entries(STATUS_LABEL).forEach(([k, v]) => { %><option value="<%= k %>" <%= f.status === k ? 'selected' : '' %>><%= v %></option><% }) %></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
+    </div>
+    <% } %>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fq">Pegawai</label><input id="fq" name="q" class="<%= ui.input() %>" placeholder="Nama atau NIP" value="<%= f.q %>"></div>
+    <button class="<%= ui.button() %>">Terapkan</button>
   </form>
 </details>

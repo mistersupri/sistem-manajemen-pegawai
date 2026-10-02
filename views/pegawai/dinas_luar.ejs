@@ -1,71 +1,68 @@
 <%- include('../partials/header') %>
-<div class="page-head">
-  <div>
-    <h1>Absen dinas luar</h1>
-    <div class="sub">Ambil foto selfie di lokasi tugas. Foto otomatis diberi stempel jam kantor, koordinat GPS, dan alamat.</div>
-  </div>
+<div class="mb-6">
+  <h1 class="text-2xl font-bold tracking-tight">Absen dinas luar</h1>
+  <p class="mt-1 text-sm text-muted-foreground">Ambil foto selfie di lokasi tugas. Foto otomatis diberi stempel jam kantor, koordinat GPS, dan alamat.</p>
 </div>
 <% if (!hasFace) { %>
-  <div class="card"><%- include('../partials/empty', { judul: 'Wajah Anda belum terdaftar', alasan: 'Foto dinas luar dicocokkan dengan wajah terdaftar agar tidak bisa diwakilkan. Daftarkan wajah satu kali terlebih dahulu.', aksi: [{ href: '/pegawai/wajah', label: 'Daftarkan wajah', utama: true }] }) %></div>
+  <div class="<%= ui.card('py-0') %>"><%- include('../partials/empty', { judul: 'Wajah Anda belum terdaftar', alasan: 'Foto dinas luar dicocokkan dengan wajah terdaftar agar tidak bisa diwakilkan. Daftarkan wajah satu kali terlebih dahulu.', aksi: [{ href: '/pegawai/wajah', label: 'Daftarkan wajah', utama: true }] }) %></div>
 <% } else { %>
-<div class="row g-4">
-  <div class="col-lg-7">
+<% const toggle = 'flex min-h-9 cursor-pointer items-center justify-center rounded-md px-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground peer-checked:bg-background peer-checked:text-foreground peer-checked:shadow-sm peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 pointer-coarse:min-h-11 max-lg:min-h-11'; %>
+<div class="grid items-start gap-6 lg:grid-cols-[7fr_5fr]">
+  <div>
     <div class="camera-wrap mirror" id="camWrap">
       <video id="video" autoplay muted playsinline></video>
       <canvas class="overlay" id="overlay"></canvas>
       <div class="camera-status" id="status" aria-live="polite">Menyiapkan kamera...</div>
     </div>
-    <div id="previewWrap" class="d-none">
-      <img id="preview" class="w-100 rounded border" alt="Pratinjau foto dengan stempel waktu dan lokasi">
+    <div id="previewWrap" hidden>
+      <img id="preview" class="w-full rounded-xl border" alt="Pratinjau foto dengan stempel waktu dan lokasi">
     </div>
   </div>
-  <div class="col-lg-5">
-    <div class="card">
-      <div class="card-body">
-        <div class="mb-3">
-          <div class="small text-muted">Lokasi GPS</div>
-          <div id="loc" class="small" aria-live="polite">Mengambil lokasi...</div>
-          <div id="addr" class="small text-muted"></div>
-          <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="btnLoc">Perbarui lokasi</button>
+  <div class="grid gap-6">
+    <section class="<%= ui.card() %>" aria-label="Absen dinas luar">
+      <div class="<%= ui.cardContent('grid gap-4') %>">
+        <div>
+          <div class="text-sm text-muted-foreground">Lokasi GPS</div>
+          <div id="loc" class="text-sm" aria-live="polite">Mengambil lokasi...</div>
+          <div id="addr" class="text-sm text-muted-foreground"></div>
+          <button type="button" class="<%= ui.button({ variant: 'outline', size: 'sm' }, 'mt-2') %>" id="btnLoc"><%- ui.icon('locate-fixed') %> Perbarui lokasi</button>
         </div>
-        <div class="mb-3">
-          <label class="form-label" for="ket">Tujuan atau keterangan tugas <span class="text-danger">*</span></label>
-          <input id="ket" class="form-control" maxlength="300" placeholder="Contoh: rapat koordinasi di Dinas Pendidikan Provinsi" required>
+        <div class="grid gap-2">
+          <label class="<%= ui.label() %>" for="ket">Tujuan atau keterangan tugas <span class="text-destructive" aria-hidden="true">*</span></label>
+          <input id="ket" class="<%= ui.input() %>" maxlength="300" placeholder="Contoh: rapat koordinasi di Dinas Pendidikan Provinsi" required>
         </div>
-        <fieldset class="mb-3">
-          <legend class="form-label fs-6">Jenis absen</legend>
-          <div class="btn-group w-100" role="group">
-            <input type="radio" class="btn-check" name="mode" id="mMasuk" value="masuk" checked>
-            <label class="btn btn-outline-primary" for="mMasuk">Masuk</label>
-            <input type="radio" class="btn-check" name="mode" id="mPulang" value="pulang">
-            <label class="btn btn-outline-primary" for="mPulang">Pulang</label>
+        <fieldset>
+          <legend class="<%= ui.label('mb-2') %>">Jenis absen</legend>
+          <div class="grid grid-cols-2 gap-1 rounded-lg bg-muted p-[3px]">
+            <div><input type="radio" class="peer sr-only" name="mode" id="mMasuk" value="masuk" checked><label class="<%= toggle %>" for="mMasuk">Masuk</label></div>
+            <div><input type="radio" class="peer sr-only" name="mode" id="mPulang" value="pulang"><label class="<%= toggle %>" for="mPulang">Pulang</label></div>
           </div>
         </fieldset>
-        <div id="stepCapture" class="d-grid">
-          <button class="btn btn-primary btn-lg" id="btnCapture" disabled>Ambil foto</button>
+        <div id="stepCapture" class="grid">
+          <button class="<%= ui.button({ size: 'lg' }, 'h-12 text-base') %>" id="btnCapture" disabled><%- ui.icon('camera') %> Ambil foto</button>
         </div>
-        <div id="stepConfirm" class="d-none d-grid gap-2">
-          <button class="btn btn-primary btn-lg" id="btnSend">Kirim absensi</button>
-          <button class="btn btn-outline-secondary" id="btnRetake">Ulangi foto</button>
+        <div id="stepConfirm" class="grid gap-2" hidden>
+          <button class="<%= ui.button({ size: 'lg' }, 'h-12 text-base') %>" id="btnSend">Kirim absensi</button>
+          <button class="<%= ui.button({ variant: 'outline' }) %>" id="btnRetake">Ulangi foto</button>
         </div>
-        <div id="msg" class="mt-3" aria-live="polite"></div>
+        <div id="msg" aria-live="polite"></div>
       </div>
-    </div>
+    </section>
     <% if (recent.length) { %>
-    <div class="card mt-3">
-      <div class="card-header"><h2 class="h6 mb-0">Dinas luar terakhir</h2></div>
-      <ul class="list-group list-group-flush small">
+    <section class="<%= ui.card('gap-0 py-0') %>" aria-labelledby="dlTerakhir">
+      <h2 class="<%= ui.cardTitle('border-b px-6 py-4') %>" id="dlTerakhir">Dinas luar terakhir</h2>
+      <ul class="divide-y text-sm">
         <% recent.forEach((r) => { %>
-          <li class="list-group-item d-flex justify-content-between">
-            <span><%= T.fmtTglPendek(r.tanggal) %> · <span class="num"><%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %> sampai <%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %></span></span>
+          <li class="flex flex-wrap justify-between gap-2 px-6 py-2.5">
+            <span><%= T.fmtTglPendek(r.tanggal) %> · <span class="tabular"><%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %> sampai <%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %></span></span>
             <span>
-              <% if (r.foto_masuk) { %><a href="/uploads/<%= r.foto_masuk %>" target="_blank">foto masuk</a><% } %>
-              <% if (r.foto_pulang) { %> · <a href="/uploads/<%= r.foto_pulang %>" target="_blank">foto pulang</a><% } %>
+              <% if (r.foto_masuk) { %><a href="/uploads/<%= r.foto_masuk %>" target="_blank" rel="noopener">foto masuk</a><% } %>
+              <% if (r.foto_pulang) { %> · <a href="/uploads/<%= r.foto_pulang %>" target="_blank" rel="noopener">foto pulang</a><% } %>
             </span>
           </li>
         <% }) %>
       </ul>
-    </div>
+    </section>
     <% } %>
   </div>
 </div>
@@ -88,7 +85,7 @@
   let pending = null; // { photo, descriptor }
 
   const now = await FaceKit.serverClock();
-  const show = (type, text) => { $('msg').innerHTML = `<div class="alert alert-${type} py-2">${esc(text)}</div>`; };
+  const show = (type, text) => { $('msg').innerHTML = uiAlert(type, esc(text)); };
 
   async function refreshLocation() {
     $('loc').textContent = 'Mengambil lokasi...';
@@ -100,7 +97,7 @@
       $('addr').textContent = alamat || '(alamat tidak tersedia)';
     } catch (e) {
       gps = null;
-      $('loc').innerHTML = `<span class="text-danger">${esc(e.message)}</span>`;
+      $('loc').innerHTML = `<span class="text-destructive">${esc(e.message)}</span>`;
     }
   }
   $('btnLoc').addEventListener('click', refreshLocation);
@@ -182,18 +179,18 @@
     stamp(canvas, now(), ket);
     pending = { photo: canvas.toDataURL('image/jpeg', 0.85), descriptor: FaceKit.toArray(detection.descriptor) };
     $('preview').src = pending.photo;
-    $('camWrap').classList.add('d-none');
-    $('previewWrap').classList.remove('d-none');
-    $('stepCapture').classList.add('d-none');
-    $('stepConfirm').classList.remove('d-none');
+    $('camWrap').hidden = true;
+    $('previewWrap').hidden = false;
+    $('stepCapture').hidden = true;
+    $('stepConfirm').hidden = false;
   });
 
   $('btnRetake').addEventListener('click', () => {
     pending = null;
-    $('camWrap').classList.remove('d-none');
-    $('previewWrap').classList.add('d-none');
-    $('stepCapture').classList.remove('d-none');
-    $('stepConfirm').classList.add('d-none');
+    $('camWrap').hidden = false;
+    $('previewWrap').hidden = true;
+    $('stepCapture').hidden = false;
+    $('stepConfirm').hidden = true;
     status.textContent = 'Posisikan wajah Anda, lalu klik Ambil Foto.';
   });
 

@@ -1,6 +1,15 @@
 </main>
-<footer class="container-xl site-footer">Sistem Absensi &amp; Manajemen Pegawai · <%= settings.nama_instansi %></footer>
-<script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<footer class="mx-auto max-w-7xl px-4 pt-4 pb-8 text-sm text-muted-foreground lg:px-6">Sistem Absensi &amp; Manajemen Pegawai · <%= settings.nama_instansi %></footer>
+<dialog id="confirmDialog" class="<%= ui.dialog() %>" role="alertdialog" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+  <div class="<%= ui.dialogHeader %>">
+    <h2 id="confirmTitle" class="<%= ui.dialogTitle %>">Konfirmasi</h2>
+    <p id="confirmText" class="<%= ui.dialogDescription %>" data-confirm-text></p>
+  </div>
+  <div class="<%= ui.dialogFooter %>">
+    <button type="button" class="<%= ui.button({ variant: 'outline' }) %>" data-dialog-close data-confirm-cancel>Batal</button>
+    <button type="button" class="<%= ui.button({ variant: 'destructive' }) %>" data-confirm-ok>Ya, lanjutkan</button>
+  </div>
+</dialog>
 <script src="/static/js/app.js"></script>
 </body>
 </html>

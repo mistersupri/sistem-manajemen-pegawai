@@ -8,6 +8,7 @@ const { db, getSettings } = require('./src/db');
 const auth = require('./src/auth');
 const T = require('./src/time');
 const { UPLOAD_DIR } = require('./src/uploads');
+const ui = require('./src/ui');
 const { STATUS_LABEL, METODE_LABEL } = require('./src/attendance');
 const { JENIS, STATUS_KLARIFIKASI } = require('./src/routes/clarifications');
 
@@ -32,8 +33,6 @@ app.disable('x-powered-by');
 
 const nm = (p) => path.join(__dirname, 'node_modules', p);
 app.use('/static', express.static(path.join(__dirname, 'public')));
-app.use('/vendor/bootstrap', express.static(nm('bootstrap/dist')));
-app.use('/vendor/bootstrap-icons', express.static(nm('bootstrap-icons/font')));
 app.use('/vendor/face-api', express.static(nm('@vladmandic/face-api/dist')));
 app.use('/models', express.static(nm('@vladmandic/face-api/model'), { maxAge: '7d' }));
 app.use('/vendor/font', express.static(nm('@fontsource/plus-jakarta-sans/files'), { maxAge: '30d' }));
@@ -62,6 +61,7 @@ app.use((req, res, next) => {
   res.locals.JENIS = JENIS;
   res.locals.STATUS_KLARIFIKASI = STATUS_KLARIFIKASI;
   res.locals.chipText = chipText;
+  res.locals.ui = ui;
   res.locals.pendingKlarifikasi = req.user && req.user.role === 'admin'
     ? db.prepare("SELECT COUNT(*) AS n FROM clarifications WHERE status = 'menunggu'").get().n : 0;
   res.locals.path = req.path;

@@ -1,65 +1,58 @@
 <%- include('../partials/header') %>
 <% const filtered = query.q || query.unit || query.status || query.wajah; %>
-<div class="page-head">
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1>Pegawai</h1>
-    <div class="sub"><%= employees.length %> pegawai<%= filtered ? ' sesuai filter' : '' %></div>
+    <h1 class="text-2xl font-bold tracking-tight">Pegawai</h1>
+    <p class="mt-1 text-sm text-muted-foreground"><%= employees.length %> pegawai<%= filtered ? ' sesuai filter' : '' %></p>
   </div>
-  <div class="actions">
-    <a href="/admin/pegawai/baru" class="btn btn-primary">Tambah pegawai</a>
-    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#importModal">Impor dari Excel</button>
-    <div class="btn-group">
-      <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Ekspor</button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="/admin/pegawai/export?format=xlsx">Excel (.xlsx)</a></li>
-        <li><a class="dropdown-item" href="/admin/pegawai/export?format=csv">CSV</a></li>
-      </ul>
+  <div class="flex flex-wrap gap-2">
+    <a href="/admin/pegawai/baru" class="<%= ui.button() %>"><%- ui.icon('plus') %> Tambah pegawai</a>
+    <button type="button" class="<%= ui.button({ variant: 'outline' }) %>" data-dialog-open="importDialog"><%- ui.icon('upload') %> Impor dari Excel</button>
+    <div class="relative">
+      <button type="button" class="<%= ui.button({ variant: 'outline' }) %>" data-dropdown aria-controls="mEkspor" aria-expanded="false" aria-haspopup="menu"><%- ui.icon('download') %> Ekspor <%- ui.icon('chevron-down') %></button>
+      <div id="mEkspor" role="menu" class="<%= ui.dropdownContent('absolute right-0 top-full mt-1 w-48') %>">
+        <a role="menuitem" class="<%= ui.dropdownItem() %>" href="/admin/pegawai/export?format=xlsx">Excel (.xlsx)</a>
+        <a role="menuitem" class="<%= ui.dropdownItem() %>" href="/admin/pegawai/export?format=csv">CSV</a>
+      </div>
     </div>
   </div>
 </div>
 
 <% if (importResult) { %>
-  <div class="alert alert-<%= importResult.errors.length ? 'warning' : 'success' %>" role="status">
-    <b>Hasil impor:</b> <%= importResult.created %> pegawai baru, <%= importResult.updated %> diperbarui<% if (importResult.errors.length) { %>, <%= importResult.errors.length %> baris gagal:<% } else { %>.<% } %>
+  <div data-slot="alert" class="<%= ui.alert(importResult.errors.length ? 'warning' : 'success', 'mb-4') %>" role="status">
+    <div class="<%= ui.alertTitle('line-clamp-none') %>">Hasil impor: <%= importResult.created %> pegawai baru, <%= importResult.updated %> diperbarui<% if (importResult.errors.length) { %>, <%= importResult.errors.length %> baris gagal<% } %>.</div>
     <% if (importResult.errors.length) { %>
-      <ul class="mb-0 mt-2 small"><% importResult.errors.slice(0, 50).forEach((e) => { %><li><%= e %></li><% }) %></ul>
+      <div data-slot="alert-description" class="<%= ui.alertDescription() %>"><ul class="list-disc pl-4"><% importResult.errors.slice(0, 50).forEach((e) => { %><li><%= e %></li><% }) %></ul></div>
     <% } %>
   </div>
 <% } %>
 
-<details class="filter-panel">
-  <summary>Cari dan filter <span class="ringkas"><%= [query.q && `"${query.q}"`, query.unit, query.status, query.wajah === 'belum' && 'wajah belum terdaftar'].filter(Boolean).join(' · ') || 'Semua pegawai' %></span></summary>
-  <form class="filter-body" method="get">
-    <div class="row g-2 align-items-end">
-      <div class="col-md-4"><label class="form-label small" for="fq">Nama, NIP, atau jabatan</label><input class="form-control" id="fq" name="q" value="<%= query.q || '' %>"></div>
-      <div class="col-md-3"><label class="form-label small" for="fu">Unit kerja</label>
-        <select class="form-select" id="fu" name="unit">
-          <option value="">Semua unit</option>
-          <% units.forEach((u) => { %><option <%= query.unit === u ? 'selected' : '' %>><%= u %></option><% }) %>
-        </select>
-      </div>
-      <div class="col-md-2"><label class="form-label small" for="fs">Status</label>
-        <select class="form-select" id="fs" name="status">
-          <option value="">Semua</option>
-          <option value="aktif" <%= query.status === 'aktif' ? 'selected' : '' %>>Aktif</option>
-          <option value="nonaktif" <%= query.status === 'nonaktif' ? 'selected' : '' %>>Nonaktif</option>
-        </select>
-      </div>
-      <div class="col-md-3 d-flex gap-2">
-        <button class="btn btn-primary flex-fill">Terapkan</button>
-        <% if (filtered) { %><a class="btn btn-outline-secondary" href="/admin/pegawai">Reset</a><% } %>
-      </div>
+<details data-collapsible class="<%= ui.card('mb-4 gap-0 py-0') %>">
+  <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 px-6 py-3 font-medium [&::-webkit-details-marker]:hidden">
+    Cari dan filter
+    <span class="flex items-center gap-2 text-right text-sm font-normal text-muted-foreground"><%= [query.q && `"${query.q}"`, query.unit, query.status, query.wajah === 'belum' && 'wajah belum terdaftar'].filter(Boolean).join(' · ') || 'Semua pegawai' %> <%- ui.icon('chevron-down') %></span>
+  </summary>
+  <form method="get" class="grid gap-3 border-t px-6 py-4 md:grid-cols-[2fr_1.5fr_1fr_auto] md:items-end">
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fq">Nama, NIP, atau jabatan</label><input class="<%= ui.input() %>" id="fq" name="q" value="<%= query.q || '' %>"></div>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fu">Unit kerja</label>
+      <div class="<%= ui.selectWrap() %>"><select class="<%= ui.select() %>" id="fu" name="unit"><option value="">Semua unit</option><% units.forEach((u) => { %><option <%= query.unit === u ? 'selected' : '' %>><%= u %></option><% }) %></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
     </div>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="fs">Status</label>
+      <div class="<%= ui.selectWrap() %>"><select class="<%= ui.select() %>" id="fs" name="status"><option value="">Semua</option><option value="aktif" <%= query.status === 'aktif' ? 'selected' : '' %>>Aktif</option><option value="nonaktif" <%= query.status === 'nonaktif' ? 'selected' : '' %>>Nonaktif</option></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
+    </div>
+    <div class="flex gap-2"><button class="<%= ui.button() %>">Terapkan</button><% if (filtered) { %><a class="<%= ui.button({ variant: 'outline' }) %>" href="/admin/pegawai">Reset</a><% } %></div>
   </form>
 </details>
 
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover table-stack">
-      <thead><tr><th>Nama</th><th>NIP / ID mesin</th><th>Jabatan dan unit</th><th>Shift default</th><th>Wajah</th><th>Status</th><th class="text-end">Aksi</th></tr></thead>
-      <tbody>
+<div class="<%= ui.card('gap-0 py-0') %>">
+  <div class="<%= ui.tableContainer %>">
+    <table class="<%= ui.table('table-stack') %>">
+      <thead class="<%= ui.tableHeader %>"><tr class="<%= ui.tableRow() %>">
+        <th class="<%= ui.tableHead('pl-6') %>">Nama</th><th class="<%= ui.tableHead() %>">NIP / ID mesin</th><th class="<%= ui.tableHead() %>">Jabatan dan unit</th><th class="<%= ui.tableHead() %>">Shift default</th><th class="<%= ui.tableHead() %>">Wajah</th><th class="<%= ui.tableHead() %>">Status</th><th class="<%= ui.tableHead('pr-6 text-right') %>">Aksi</th>
+      </tr></thead>
+      <tbody class="<%= ui.tableBody %>">
       <% if (!employees.length) { %>
-        <tr class="empty-row"><td colspan="7">
+        <tr><td colspan="7">
           <% if (filtered) { %>
             <%- include('../partials/empty', { judul: 'Tidak ada pegawai yang cocok', alasan: 'Coba kata kunci lain atau hapus filter unit dan status.', aksi: [{ href: '/admin/pegawai', label: 'Tampilkan semua pegawai' }] }) %>
           <% } else { %>
@@ -68,20 +61,20 @@
         </td></tr>
       <% } %>
       <% employees.forEach((e) => { %>
-        <tr>
-          <td class="stack-head"><div class="fw-semibold"><%= e.nama %></div><% if (e.email) { %><span class="cell-sub"><%= e.email %></span><% } %></td>
-          <td data-label="NIP / ID mesin" class="num"><%= e.nip %><% if (e.id_mesin) { %><span class="cell-sub">ID mesin <%= e.id_mesin %></span><% } %></td>
-          <td data-label="Jabatan dan unit"><%= e.jabatan || '' %><span class="cell-sub"><%= e.unit_kerja || '' %></span><% if (!e.jabatan && !e.unit_kerja) { %><span class="text-muted">Belum diisi</span><% } %></td>
-          <td data-label="Shift default"><% if (e.shift_kode) { %><span class="shift-chip" style="background: <%= e.shift_warna %>; color: <%= chipText(e.shift_warna) %>"><%= e.shift_kode %></span> <%= e.shift_nama %><% } else { %><span class="text-muted">Tanpa shift</span><% } %></td>
-          <td data-label="Wajah"><% if (e.face_descriptors) { %><span class="badge ok">Terdaftar</span><% } else { %><a href="/admin/pegawai/<%= e.id %>/wajah">Daftarkan</a><% } %></td>
-          <td data-label="Status"><span class="badge <%= e.status === 'aktif' ? 'ok' : 'netral' %>"><%= e.status === 'aktif' ? 'Aktif' : 'Nonaktif' %></span></td>
-          <td>
-            <div class="row-actions">
-              <a href="/admin/pegawai/<%= e.id %>/edit" class="btn btn-sm btn-outline-secondary">Ubah</a>
-              <a href="/admin/pegawai/<%= e.id %>/wajah" class="btn btn-sm btn-outline-secondary">Wajah</a>
-              <a href="/admin/absensi?q=<%= encodeURIComponent(e.nip) %>" class="btn btn-sm btn-outline-secondary">Absensi</a>
-              <form method="post" action="/admin/pegawai/<%= e.id %>/hapus" data-confirm="Hapus pegawai <%= e.nama %> beserta seluruh data absensinya?">
-                <button class="btn btn-sm btn-outline-danger" aria-label="Hapus <%= e.nama %>">Hapus</button>
+        <tr class="<%= ui.tableRow() %>">
+          <td class="<%= ui.tableCell('stack-head pl-6') %>"><div class="font-medium"><%= e.nama %></div><% if (e.email) { %><div class="text-sm text-muted-foreground"><%= e.email %></div><% } %></td>
+          <td data-label="NIP / ID mesin" class="<%= ui.tableCell() %>"><%= e.nip %><% if (e.id_mesin) { %><span class="block text-xs text-muted-foreground">ID mesin <%= e.id_mesin %></span><% } %></td>
+          <td data-label="Jabatan dan unit" class="<%= ui.tableCell() %>"><%= e.jabatan || '' %><span class="block text-xs text-muted-foreground"><%= e.unit_kerja || '' %></span><% if (!e.jabatan && !e.unit_kerja) { %><span class="text-muted-foreground">Belum diisi</span><% } %></td>
+          <td data-label="Shift default" class="<%= ui.tableCell() %>"><% if (e.shift_kode) { %><span class="shift-chip" style="background: <%= e.shift_warna %>; color: <%= chipText(e.shift_warna) %>"><%= e.shift_kode %></span> <%= e.shift_nama %><% } else { %><span class="text-muted-foreground">Tanpa shift</span><% } %></td>
+          <td data-label="Wajah" class="<%= ui.tableCell() %>"><% if (e.face_descriptors) { %><span class="<%= ui.badge({ variant: 'hadir' }) %>">Terdaftar</span><% } else { %><a href="/admin/pegawai/<%= e.id %>/wajah">Daftarkan</a><% } %></td>
+          <td data-label="Status" class="<%= ui.tableCell() %>"><span class="<%= ui.badge({ variant: e.status === 'aktif' ? 'hadir' : 'netral' }) %>"><%= e.status === 'aktif' ? 'Aktif' : 'Nonaktif' %></span></td>
+          <td class="<%= ui.tableCell('pr-6') %>">
+            <div class="row-actions flex flex-wrap justify-end gap-1.5">
+              <a href="/admin/pegawai/<%= e.id %>/edit" class="<%= ui.button({ variant: 'outline', size: 'sm' }) %>">Ubah</a>
+              <a href="/admin/pegawai/<%= e.id %>/wajah" class="<%= ui.button({ variant: 'outline', size: 'sm' }) %>">Wajah</a>
+              <a href="/admin/absensi?q=<%= encodeURIComponent(e.nip) %>" class="<%= ui.button({ variant: 'outline', size: 'sm' }) %>">Absensi</a>
+              <form method="post" action="/admin/pegawai/<%= e.id %>/hapus" data-confirm="Hapus pegawai <%= e.nama %> beserta seluruh data absensinya? Tindakan ini tidak bisa dibatalkan." data-confirm-label="Hapus pegawai">
+                <button class="<%= ui.button({ variant: 'outline-destructive', size: 'sm' }) %>" aria-label="Hapus <%= e.nama %>">Hapus</button>
               </form>
             </div>
           </td>
@@ -92,18 +85,19 @@
   </div>
 </div>
 
-<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importTitle" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content" method="post" action="/admin/pegawai/import" enctype="multipart/form-data" data-loading="Mengimpor...">
-      <div class="modal-header"><h2 class="modal-title h5" id="importTitle">Impor data pegawai</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button></div>
-      <div class="modal-body">
-        <p class="small">Unggah file <b>Excel (.xlsx)</b> atau <b>CSV</b>. NIP yang sudah ada akan diperbarui. NIP baru ditambahkan beserta akun login: username = NIP, password = NIP bila kolom password kosong.</p>
-        <p class="small">Unduh template: <a href="/admin/pegawai/template">Excel</a> · <a href="/admin/pegawai/template?format=csv">CSV</a></p>
-        <label class="form-label" for="impFile">File</label>
-        <input type="file" id="impFile" name="file" class="form-control" accept=".xlsx,.csv" required>
-      </div>
-      <div class="modal-footer"><button class="btn btn-primary">Impor</button></div>
-    </form>
-  </div>
-</div>
+<dialog id="importDialog" class="<%= ui.dialog() %>" aria-labelledby="importTitle">
+  <form method="post" action="/admin/pegawai/import" enctype="multipart/form-data" class="grid gap-4" data-loading="Mengimpor...">
+    <div class="<%= ui.dialogHeader %>">
+      <h2 class="<%= ui.dialogTitle %>" id="importTitle">Impor data pegawai</h2>
+      <p class="<%= ui.dialogDescription %>">Unggah file Excel (.xlsx) atau CSV. NIP yang sudah ada diperbarui. NIP baru ditambahkan beserta akun login: username = NIP, password = NIP bila kolom password kosong.</p>
+    </div>
+    <p class="text-sm">Unduh template: <a href="/admin/pegawai/template">Excel</a> · <a href="/admin/pegawai/template?format=csv">CSV</a></p>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="impFile">File</label><input type="file" id="impFile" name="file" class="<%= ui.input('h-auto py-1.5') %>" accept=".xlsx,.csv" required></div>
+    <div class="<%= ui.dialogFooter %>">
+      <button type="button" class="<%= ui.button({ variant: 'outline' }) %>" data-dialog-close>Batal</button>
+      <button class="<%= ui.button() %>">Impor</button>
+    </div>
+  </form>
+  <button type="button" class="<%= ui.dialogClose %>" data-dialog-close aria-label="Tutup"><%- ui.icon('x') %></button>
+</dialog>
 <%- include('../partials/footer') %>

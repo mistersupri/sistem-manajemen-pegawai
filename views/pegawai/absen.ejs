@@ -1,45 +1,39 @@
 <%- include('../partials/header') %>
-<div class="page-head">
-  <div>
-    <h1>Absen wajah</h1>
-    <div class="sub"><%= rec && rec.jam_masuk ? `Sudah absen masuk pukul ${rec.jam_masuk.slice(11, 16)}${rec.jam_pulang ? `, pulang ${rec.jam_pulang.slice(11, 16)}` : ''}.` : 'Belum absen hari ini.' %></div>
-  </div>
+<div class="mb-6">
+  <h1 class="text-2xl font-bold tracking-tight">Absen wajah</h1>
+  <p class="mt-1 text-sm text-muted-foreground"><%= rec && rec.jam_masuk ? `Sudah absen masuk pukul ${rec.jam_masuk.slice(11, 16)}${rec.jam_pulang ? `, pulang ${rec.jam_pulang.slice(11, 16)}` : ''}.` : 'Belum absen hari ini.' %></p>
 </div>
 <% if (!enabled) { %>
-  <div class="card"><%- include('../partials/empty', { judul: 'Absen dari HP sedang dinonaktifkan', alasan: 'Admin hanya mengizinkan absen lewat kiosk wajah di kantor. Bila sedang bertugas di luar kantor, gunakan absen dinas luar.', aksi: [{ href: '/pegawai/dinas-luar', label: 'Absen dinas luar', utama: true }] }) %></div>
+  <div class="<%= ui.card('py-0') %>"><%- include('../partials/empty', { judul: 'Absen dari HP sedang dinonaktifkan', alasan: 'Admin hanya mengizinkan absen lewat kiosk wajah di kantor. Bila sedang bertugas di luar kantor, gunakan absen dinas luar.', aksi: [{ href: '/pegawai/dinas-luar', label: 'Absen dinas luar', utama: true }] }) %></div>
 <% } else if (!hasFace) { %>
-  <div class="card"><%- include('../partials/empty', { judul: 'Wajah Anda belum terdaftar', alasan: 'Daftarkan wajah satu kali, sekitar satu menit, lalu Anda bisa absen dari halaman ini.', aksi: [{ href: '/pegawai/wajah', label: 'Daftarkan wajah', utama: true }] }) %></div>
+  <div class="<%= ui.card('py-0') %>"><%- include('../partials/empty', { judul: 'Wajah Anda belum terdaftar', alasan: 'Daftarkan wajah satu kali, sekitar satu menit, lalu Anda bisa absen dari halaman ini.', aksi: [{ href: '/pegawai/wajah', label: 'Daftarkan wajah', utama: true }] }) %></div>
 <% } else { %>
-<div class="row g-4">
-  <div class="col-lg-7">
-    <div class="camera-wrap mirror">
-      <video id="video" autoplay muted playsinline></video>
-      <canvas class="overlay" id="overlay"></canvas>
-      <div class="face-guide"></div>
-      <div class="camera-status" id="status" aria-live="polite">Memuat model pengenal wajah...</div>
-    </div>
+<div class="grid items-start gap-6 lg:grid-cols-[7fr_5fr]">
+  <div class="camera-wrap mirror">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas class="overlay" id="overlay"></canvas>
+    <div class="face-guide"></div>
+    <div class="camera-status" id="status" aria-live="polite">Memuat model pengenal wajah...</div>
   </div>
-  <div class="col-lg-5">
-    <div class="card">
-      <div class="card-body">
-        <div class="mb-3">
-          <div class="small text-muted">Jam kantor</div>
-          <div class="h3 mb-0 num" id="clock">--:--:--</div>
-        </div>
-        <div class="mb-3">
-          <div class="small text-muted">Lokasi</div>
-          <div id="loc" class="small" aria-live="polite">Mengambil lokasi GPS...</div>
-        </div>
-        <div class="d-grid gap-2">
-          <button class="btn <%= nextMode === 'masuk' ? 'btn-primary' : 'btn-outline-primary' %> btn-lg" data-mode="masuk" disabled>Absen masuk</button>
-          <button class="btn <%= nextMode === 'pulang' ? 'btn-primary' : 'btn-outline-primary' %> btn-lg" data-mode="pulang" disabled>Absen pulang</button>
-          <div class="small text-muted">Tombol aktif setelah wajah terdeteksi di kamera.</div>
-        </div>
-        <div id="msg" class="mt-3" aria-live="polite"></div>
-        <p class="small text-muted mt-3 mb-0">Sedang bertugas di luar kantor? Gunakan <a href="/pegawai/dinas-luar">absen dinas luar</a>.</p>
+  <section class="<%= ui.card() %>" aria-label="Absen">
+    <div class="<%= ui.cardContent('grid gap-4') %>">
+      <div>
+        <div class="text-sm text-muted-foreground">Jam kantor</div>
+        <div class="text-3xl font-bold tabular" id="clock">--:--:--</div>
       </div>
+      <div>
+        <div class="text-sm text-muted-foreground">Lokasi</div>
+        <div id="loc" class="text-sm" aria-live="polite">Mengambil lokasi GPS...</div>
+      </div>
+      <div class="grid gap-2">
+        <button class="<%= ui.button({ variant: nextMode === 'masuk' ? 'default' : 'outline', size: 'lg' }, 'h-12 text-base') %>" data-mode="masuk" disabled>Absen masuk</button>
+        <button class="<%= ui.button({ variant: nextMode === 'pulang' ? 'default' : 'outline', size: 'lg' }, 'h-12 text-base') %>" data-mode="pulang" disabled>Absen pulang</button>
+        <p class="text-sm text-muted-foreground">Tombol aktif setelah wajah terdeteksi di kamera.</p>
+      </div>
+      <div id="msg" aria-live="polite"></div>
+      <p class="text-sm text-muted-foreground">Sedang bertugas di luar kantor? Gunakan <a href="/pegawai/dinas-luar">absen dinas luar</a>.</p>
     </div>
-  </div>
+  </section>
 </div>
 <script src="/vendor/face-api/face-api.js"></script>
 <script src="/static/js/face.js"></script>
@@ -68,7 +62,7 @@
       locEl.innerHTML = `Terdeteksi: ${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)} (±${gps.accuracy} m)`;
     } catch (e) {
       gps = null;
-      locEl.innerHTML = `<span class="text-danger">${esc(e.message)}</span>`;
+      locEl.innerHTML = `<span class="text-destructive">${esc(e.message)}</span>`;
     }
   }
   refreshLocation();
@@ -85,7 +79,7 @@
     if (!current || busy) return;
     busy = true;
     buttons.forEach((x) => { x.disabled = true; });
-    msg.innerHTML = '<div class="alert alert-info py-2">Memproses absensi...</div>';
+    msg.innerHTML = uiAlert('info', 'Memproses absensi...');
     const det = current;
     const photo = FaceKit.capture(video, { maxWidth: 480 }).toDataURL('image/jpeg', 0.8);
     if (!gps) await refreshLocation();
@@ -96,13 +90,13 @@
       });
       const extra = r.terlambat_menit && r.mode === 'masuk' ? ` (terlambat ${r.terlambat_menit} menit)`
         : r.pulang_cepat_menit && r.mode === 'pulang' ? ` (pulang cepat ${r.pulang_cepat_menit} menit)` : '';
-      msg.innerHTML = `<div class="alert alert-success">Absen <b>${r.mode}</b> berhasil pukul <b>${esc(r.jam)}</b>${esc(extra)}.<br><small>Status: ${esc(r.status_label)} · kemiripan wajah ${r.similarity}%</small></div>`;
+      msg.innerHTML = uiAlert('success', `Absen <b>${r.mode}</b> berhasil pukul <b>${esc(r.jam)}</b>${esc(extra)}.<br><small>Status: ${esc(r.status_label)} · kemiripan wajah ${r.similarity}%</small>`);
       FaceKit.stopCamera(video);
       status.textContent = 'Absensi tercatat.';
       setTimeout(() => { window.location.href = '/pegawai'; }, 2500);
       return;
     } catch (e) {
-      msg.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`;
+      msg.innerHTML = uiAlert('danger', esc(e.message));
       blink.reset();
     }
     busy = false;

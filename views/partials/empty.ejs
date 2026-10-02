@@ -1,7 +1,7 @@
-<div class="empty-state">
-  <h3><%= judul %></h3>
-  <p><%= alasan %></p>
+<div class="max-w-xl px-6 py-8">
+  <h3 class="font-semibold"><%= judul %></h3>
+  <p class="mt-1 text-sm text-muted-foreground"><%= alasan %></p>
   <% if (typeof aksi !== 'undefined' && aksi) { %>
-    <div class="d-flex flex-wrap gap-2"><% aksi.forEach((a) => { %><a class="btn btn-sm <%= a.utama ? 'btn-primary' : 'btn-outline-secondary' %>" href="<%= a.href %>"><%= a.label %></a><% }) %></div>
+    <div class="mt-4 flex flex-wrap gap-2"><% aksi.forEach((a) => { %><a class="<%= ui.button({ variant: a.utama ? 'default' : 'outline', size: 'sm' }) %>" href="<%= a.href %>"><%= a.label %></a><% }) %></div>
   <% } %>
 </div>

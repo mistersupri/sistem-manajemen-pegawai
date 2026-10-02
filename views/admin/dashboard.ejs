@@ -1,113 +1,118 @@
 <%- include('../partials/header') %>
-<div class="page-head">
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1>Absensi hari ini</h1>
-    <div class="sub"><%= T.fmtTanggalIndo(today) %></div>
+    <h1 class="text-2xl font-bold tracking-tight">Absensi hari ini</h1>
+    <p class="mt-1 text-sm text-muted-foreground"><%= T.fmtTanggalIndo(today) %></p>
   </div>
-  <div class="actions">
-    <a href="/admin/absensi/export?dari=<%= today %>&sampai=<%= today %>" class="btn btn-outline-secondary">Unduh Excel hari ini</a>
-  </div>
+  <a href="/admin/absensi/export?dari=<%= today %>&sampai=<%= today %>" class="<%= ui.button({ variant: 'outline' }) %>"><%- ui.icon('download') %> Unduh Excel hari ini</a>
 </div>
 
-<section class="card mb-4" aria-labelledby="ringkasan">
-  <div class="card-body">
-    <h2 id="ringkasan" class="visually-hidden">Ringkasan</h2>
+<section class="<%= ui.card('mb-6') %>" aria-label="Ringkasan hari ini">
+  <div class="<%= ui.cardContent() %>">
     <% if (!totalAktif) { %>
       <%- include('../partials/empty', { judul: 'Belum ada data pegawai', alasan: 'Tambahkan pegawai atau impor dari Excel. Pegawai dari mesin fingerprint juga bisa dibuat lewat menu Mesin.', aksi: [{ href: '/admin/pegawai/baru', label: 'Tambah pegawai', utama: true }, { href: '/admin/pegawai', label: 'Impor dari Excel' }] }) %>
     <% } else if (!terjadwal) { %>
-      <p class="mb-0">Hari ini libur untuk semua pegawai (<%= libur %> orang). Tidak ada yang dijadwalkan bekerja.</p>
+      <p>Hari ini libur untuk semua pegawai (<%= libur %> orang). Tidak ada yang dijadwalkan bekerja.</p>
     <% } else { %>
-      <div class="summary-line mb-3">
-        <div><span class="big num"><%= hadirCount %></span> <span class="text-muted">dari <%= terjadwal %> pegawai terjadwal sudah hadir</span></div>
-        <div class="item text-muted"><b class="text-body num"><%= counts.terlambat %></b> terlambat</div>
-        <div class="item text-muted"><b class="text-body num"><%= counts.dinas_luar %></b> dinas luar</div>
-        <div class="item text-muted"><b class="text-body num"><%= counts.izin + counts.sakit + counts.cuti %></b> izin, sakit, cuti</div>
-        <% if (libur) { %><div class="item text-muted"><b class="text-body num"><%= libur %></b> libur</div><% } %>
+      <div class="mb-4 flex flex-wrap items-baseline gap-x-8 gap-y-2">
+        <p><span class="text-4xl font-bold text-navy tabular"><%= hadirCount %></span> <span class="text-muted-foreground">dari <%= terjadwal %> pegawai terjadwal sudah hadir</span></p>
+        <p class="text-muted-foreground"><b class="text-lg text-foreground tabular"><%= counts.terlambat %></b> terlambat</p>
+        <p class="text-muted-foreground"><b class="text-lg text-foreground tabular"><%= counts.dinas_luar %></b> dinas luar</p>
+        <p class="text-muted-foreground"><b class="text-lg text-foreground tabular"><%= counts.izin + counts.sakit + counts.cuti %></b> izin, sakit, cuti</p>
+        <% if (libur) { %><p class="text-muted-foreground"><b class="text-lg text-foreground tabular"><%= libur %></b> libur</p><% } %>
       </div>
-      <div class="progress" role="progressbar" aria-label="Kehadiran hari ini" aria-valuenow="<%= hadirCount %>" aria-valuemin="0" aria-valuemax="<%= terjadwal %>">
-        <div class="progress-bar" style="width: <%= Math.round(hadirCount / terjadwal * 100) %>%"></div>
+      <div class="<%= ui.progress() %>" role="progressbar" aria-label="Kehadiran hari ini" aria-valuenow="<%= hadirCount %>" aria-valuemin="0" aria-valuemax="<%= terjadwal %>">
+        <div class="<%= ui.progressBar %>" style="width: <%= Math.round(hadirCount / terjadwal * 100) %>%"></div>
       </div>
     <% } %>
   </div>
 </section>
 
 <% if (mesinGagal.length) { %>
-  <div class="alert alert-danger" role="alert">
-    <b>Tarik data mesin gagal:</b>
-    <% mesinGagal.forEach((m, i) => { %><%= i ? ', ' : '' %><%= m.nama %> (<%= m.last_sync_status %>)<% }) %>.
-    Scan dari mesin ini belum masuk ke absensi. <a href="/admin/mesin" class="alert-link">Periksa koneksi mesin</a>.
+  <div data-slot="alert" class="<%= ui.alert('destructive', 'mb-6') %>" role="alert">
+    <%- ui.icon('circle-alert') %>
+    <div class="<%= ui.alertTitle() %>">Tarik data mesin gagal</div>
+    <div data-slot="alert-description" class="<%= ui.alertDescription() %>">
+      <p><% mesinGagal.forEach((m, i) => { %><%= i ? ', ' : '' %><%= m.nama %> (<%= m.last_sync_status %>)<% }) %>. Scan dari mesin ini belum masuk ke absensi. <a href="/admin/mesin">Periksa koneksi mesin</a>.</p>
+    </div>
   </div>
 <% } %>
 
-<div class="row g-4 mb-4 attention">
-  <div class="col-lg-5">
-    <section class="card h-100" aria-labelledby="belum">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 id="belum">Belum absen</h2><span class="count"><%= belumAbsen.length %></span>
-      </div>
-      <% if (!belumAbsen.length) { %>
-        <div class="card-body text-muted"><%= terjadwal ? 'Semua pegawai yang terjadwal hari ini sudah tercatat.' : 'Tidak ada pegawai yang terjadwal hari ini.' %></div>
-      <% } else { %>
-      <ul class="list-group list-group-flush" style="max-height: 420px; overflow-y: auto" tabindex="0" aria-label="Daftar pegawai yang belum absen">
+<div class="mb-6 grid gap-6 lg:grid-cols-[5fr_7fr]">
+  <section class="<%= ui.card('gap-0 py-0') %>" aria-labelledby="belum">
+    <div class="<%= ui.cardHeader('border-b py-4 [.border-b]:pb-4') %>">
+      <h2 id="belum" class="<%= ui.cardTitle() %>">Belum absen</h2>
+      <div class="<%= ui.cardAction() %>"><span class="<%= ui.badge({ variant: 'secondary' }) %>"><%= belumAbsen.length %> orang</span></div>
+    </div>
+    <% if (!belumAbsen.length) { %>
+      <p class="px-6 py-5 text-sm text-muted-foreground"><%= terjadwal ? 'Semua pegawai yang terjadwal hari ini sudah tercatat.' : 'Tidak ada pegawai yang terjadwal hari ini.' %></p>
+    <% } else { %>
+      <ul class="max-h-[26rem] divide-y overflow-y-auto" tabindex="0" aria-label="Daftar pegawai yang belum absen">
         <% belumAbsen.forEach((e) => { %>
-          <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
-            <div><div class="fw-semibold"><%= e.nama %></div><span class="cell-sub"><%= e.unit_kerja || 'Unit belum diisi' %></span></div>
-            <span class="text-muted small text-nowrap jam"><%= e.shift ? `${e.shift.kode} mulai ${e.shift.jam_masuk}` : 'Tanpa shift' %></span>
+          <li class="flex items-center justify-between gap-3 px-6 py-3">
+            <div class="min-w-0"><div class="truncate font-medium"><%= e.nama %></div><div class="text-sm text-muted-foreground"><%= e.unit_kerja || 'Unit belum diisi' %></div></div>
+            <span class="shrink-0 text-sm text-muted-foreground tabular"><%= e.shift ? `${e.shift.kode} mulai ${e.shift.jam_masuk}` : 'Tanpa shift' %></span>
           </li>
         <% }) %>
       </ul>
-      <% } %>
-    </section>
-  </div>
-  <div class="col-lg-7 d-flex flex-column gap-4">
-    <section class="card" aria-labelledby="klar">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 id="klar">Klarifikasi menunggu persetujuan</h2>
-        <% if (pending) { %><span class="nav-count"><%= pending %></span><% } %>
+    <% } %>
+  </section>
+  <div class="grid content-start gap-6">
+    <section class="<%= ui.card('gap-0 py-0') %>" aria-labelledby="klar">
+      <div class="<%= ui.cardHeader('border-b py-4 [.border-b]:pb-4') %>">
+        <h2 id="klar" class="<%= ui.cardTitle() %>">Klarifikasi menunggu persetujuan</h2>
+        <% if (pending) { %><div class="<%= ui.cardAction() %>"><span class="<%= ui.badge({ variant: 'highlight' }) %>"><%= pending %> menunggu</span></div><% } %>
       </div>
       <% if (!klarifikasi.length) { %>
-        <div class="card-body text-muted">Tidak ada klarifikasi yang menunggu.</div>
+        <p class="px-6 py-5 text-sm text-muted-foreground">Tidak ada klarifikasi yang menunggu.</p>
       <% } else { %>
-        <ul class="list-group list-group-flush">
+        <ul class="divide-y">
           <% klarifikasi.forEach((c) => { %>
-            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
-              <div><div class="fw-semibold"><%= c.nama %></div><span class="cell-sub"><%= JENIS[c.jenis] %> · untuk <%= T.fmtTglPendek(c.tanggal, false) %></span></div>
-              <a class="btn btn-sm btn-primary" href="/admin/klarifikasi/<%= c.id %>">Tinjau</a>
+            <li class="flex items-center justify-between gap-3 px-6 py-3">
+              <div class="min-w-0"><div class="font-medium"><%= c.nama %></div><div class="text-sm text-muted-foreground"><%= JENIS[c.jenis] %> · untuk <%= T.fmtTglPendek(c.tanggal, false) %></div></div>
+              <a class="<%= ui.button({ size: 'sm' }) %>" href="/admin/klarifikasi/<%= c.id %>">Tinjau</a>
             </li>
           <% }) %>
         </ul>
-        <% if (pending > klarifikasi.length) { %><div class="card-footer"><a href="/admin/klarifikasi">Lihat semua <%= pending %> klarifikasi</a></div><% } %>
+        <% if (pending > klarifikasi.length) { %><div class="border-t px-6 py-3 text-sm"><a href="/admin/klarifikasi">Lihat semua <%= pending %> klarifikasi</a></div><% } %>
       <% } %>
     </section>
     <% if (tanpaWajah) { %>
-      <div class="alert alert-warning mb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span><b><%= tanpaWajah %></b> pegawai aktif belum mendaftarkan wajah, jadi belum bisa absen di kiosk atau HP.</span>
-        <a href="/admin/pegawai?wajah=belum" class="btn btn-sm btn-outline-secondary">Lihat daftarnya</a>
+      <div data-slot="alert" class="<%= ui.alert('warning') %>" role="status">
+        <%- ui.icon('scan-face') %>
+        <div class="<%= ui.alertTitle('line-clamp-none') %>"><%= tanpaWajah %> pegawai aktif belum mendaftarkan wajah</div>
+        <div data-slot="alert-description" class="<%= ui.alertDescription() %>">
+          <p>Mereka belum bisa absen di kiosk atau HP.</p>
+          <a href="/admin/pegawai?wajah=belum" class="<%= ui.button({ variant: 'outline', size: 'sm' }, 'mt-1 text-foreground') %>">Lihat daftarnya</a>
+        </div>
       </div>
     <% } %>
   </div>
 </div>
 
-<section class="card" aria-labelledby="tercatat">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h2 id="tercatat" class="h6 mb-0">Sudah tercatat hari ini</h2>
-    <span class="dayline-scale d-none d-md-flex" style="width: 220px" aria-hidden="true"><span>05.00</span><span>13.30</span><span>22.00</span></span>
+<section class="<%= ui.card('gap-0 py-0') %>" aria-labelledby="tercatat">
+  <div class="<%= ui.cardHeader('border-b py-4 [.border-b]:pb-4') %>">
+    <h2 id="tercatat" class="<%= ui.cardTitle() %>">Sudah tercatat hari ini</h2>
   </div>
-  <div class="table-responsive">
-    <table class="table table-hover table-stack">
-      <thead><tr><th>Pegawai</th><th>Masuk</th><th>Pulang</th><th>Status</th><th style="width: 240px">Garis hari kerja</th><th><span class="visually-hidden">Aksi</span></th></tr></thead>
-      <tbody>
+  <div class="<%= ui.tableContainer %>">
+    <table class="<%= ui.table('table-stack') %>">
+      <thead class="<%= ui.tableHeader %>"><tr class="<%= ui.tableRow() %>">
+        <th class="<%= ui.tableHead('pl-6') %>">Pegawai</th><th class="<%= ui.tableHead() %>">Masuk</th><th class="<%= ui.tableHead() %>">Pulang</th><th class="<%= ui.tableHead() %>">Status</th>
+        <th class="<%= ui.tableHead('w-60') %>"><span class="flex justify-between text-xs font-normal text-muted-foreground"><span>Garis hari kerja</span><span>05.00 sampai 22.00</span></span></th>
+        <th class="<%= ui.tableHead('pr-6') %>"><span class="sr-only">Aksi</span></th>
+      </tr></thead>
+      <tbody class="<%= ui.tableBody %>">
       <% if (!records.length) { %>
-        <tr class="empty-row"><td colspan="6"><%- include('../partials/empty', { judul: 'Belum ada absensi hari ini', alasan: 'Absensi masuk dari kiosk wajah, HP pegawai, atau mesin fingerprint. Untuk mesin USB, impor file ekspornya agar data tampil di sini.', aksi: [{ href: '/kiosk', label: 'Buka kiosk wajah', utama: true }, { href: '/admin/mesin', label: 'Tarik atau impor data mesin' }] }) %></td></tr>
+        <tr><td colspan="6"><%- include('../partials/empty', { judul: 'Belum ada absensi hari ini', alasan: 'Absensi masuk dari kiosk wajah, HP pegawai, atau mesin fingerprint. Untuk mesin USB, impor file ekspornya agar data tampil di sini.', aksi: [{ href: '/kiosk', label: 'Buka kiosk wajah', utama: true }, { href: '/admin/mesin', label: 'Tarik atau impor data mesin' }] }) %></td></tr>
       <% } %>
       <% records.forEach((r) => { %>
-        <tr>
-          <td class="stack-head"><div class="fw-semibold"><%= r.nama %></div><span class="cell-sub"><%= r.unit_kerja || r.nip %></span></td>
-          <td data-label="Masuk" class="jam"><%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %></td>
-          <td data-label="Pulang" class="jam"><%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %></td>
-          <td data-label="Status"><%- include('../partials/status_badge', { status: r.status }) %><% if (r.terlambat_menit) { %> <span class="small text-muted num"><%= r.terlambat_menit %> mnt</span><% } %></td>
-          <td class="stack-hide"><%- include('../partials/dayline', { shiftMasuk: r.shift_masuk, shiftPulang: r.shift_pulang, masuk: r.jam_masuk, pulang: r.jam_pulang, telat: r.terlambat_menit > 0 }) %></td>
-          <td class="text-end"><a href="/admin/absensi/<%= r.id %>" class="btn btn-sm btn-outline-secondary">Detail</a></td>
+        <tr class="<%= ui.tableRow() %>">
+          <td class="<%= ui.tableCell('stack-head pl-6') %>"><div class="font-medium"><%= r.nama %></div><div class="text-sm text-muted-foreground"><%= r.unit_kerja || r.nip %></div></td>
+          <td data-label="Masuk" class="<%= ui.tableCell() %>"><%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %><%- include('../partials/metode', { m: r.metode_masuk }) %></td>
+          <td data-label="Pulang" class="<%= ui.tableCell() %>"><%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %><%- include('../partials/metode', { m: r.metode_pulang }) %></td>
+          <td data-label="Status" class="<%= ui.tableCell() %>"><%- include('../partials/status_badge', { status: r.status }) %><% if (r.terlambat_menit) { %><span class="block text-xs text-muted-foreground">telat <%= r.terlambat_menit %> mnt</span><% } %></td>
+          <td class="<%= ui.tableCell('stack-hide') %>"><%- include('../partials/dayline', { shiftMasuk: r.shift_masuk, shiftPulang: r.shift_pulang, masuk: r.jam_masuk, pulang: r.jam_pulang, telat: r.terlambat_menit > 0 }) %></td>
+          <td class="<%= ui.tableCell('pr-6 text-right') %>"><a href="/admin/absensi/<%= r.id %>" class="<%= ui.button({ variant: 'outline', size: 'sm' }) %>">Detail</a></td>
         </tr>
       <% }) %>
       </tbody>

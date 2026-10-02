@@ -1,72 +1,64 @@
 <%- include('../partials/header') %>
-<div class="page-head">
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1><%= rec.nama %></h1>
-    <div class="sub"><%= T.fmtTanggalIndo(rec.tanggal) %> · NIP <span class="num"><%= rec.nip %></span><%= rec.unit_kerja ? ` · ${rec.unit_kerja}` : '' %></div>
+    <h1 class="text-2xl font-bold tracking-tight"><%= rec.nama %></h1>
+    <p class="mt-1 text-sm text-muted-foreground"><%= T.fmtTanggalIndo(rec.tanggal) %> · NIP <%= rec.nip %><%= rec.unit_kerja ? ` · ${rec.unit_kerja}` : '' %></p>
   </div>
-  <div class="actions">
-    <a href="/admin/absensi/input?employee_id=<%= rec.employee_id %>&tanggal=<%= rec.tanggal %>" class="btn btn-primary">Koreksi</a>
-    <form method="post" action="/admin/absensi/<%= rec.id %>/hapus" data-confirm="Hapus data absensi <%= rec.nama %> tanggal <%= rec.tanggal %>?" data-loading="Menghapus..."><button class="btn btn-outline-danger">Hapus</button></form>
+  <div class="flex flex-wrap gap-2">
+    <a href="/admin/absensi/input?employee_id=<%= rec.employee_id %>&tanggal=<%= rec.tanggal %>" class="<%= ui.button() %>">Koreksi</a>
+    <form method="post" action="/admin/absensi/<%= rec.id %>/hapus" data-confirm="Hapus data absensi <%= rec.nama %> tanggal <%= T.fmtTglPendek(rec.tanggal) %>? Foto absen juga ikut terhapus." data-confirm-label="Hapus absensi" data-loading="Menghapus..."><button class="<%= ui.button({ variant: 'outline-destructive' }) %>">Hapus</button></form>
   </div>
 </div>
-<section class="card mb-4" aria-label="Ringkasan">
-  <div class="card-body">
-    <div class="row g-3 align-items-center">
-      <div class="col-md-3"><div class="small text-muted">Status</div><%- include('../partials/status_badge', { status: rec.status }) %><% if (rec.dispensasi) { %> <span class="badge netral">Dispensasi</span><% } %></div>
-      <div class="col-md-3"><div class="small text-muted">Shift</div><%= rec.shift_kode ? `${rec.shift_nama}, ${rec.shift_masuk} sampai ${rec.shift_pulang}` : 'Tanpa shift' %></div>
-      <div class="col-md-3 num"><div class="small text-muted">Terlambat / pulang cepat</div><%= rec.terlambat_menit %> mnt / <%= rec.pulang_cepat_menit %> mnt</div>
-      <div class="col-md-3"><div class="small text-muted">Keterangan</div><%= rec.keterangan || 'Tidak ada' %></div>
-    </div>
-    <div class="mt-3">
+<section class="<%= ui.card('mb-6') %>" aria-label="Ringkasan">
+  <div class="<%= ui.cardContent('grid gap-5') %>">
+    <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div><dt class="text-sm text-muted-foreground">Status</dt><dd class="mt-1 flex flex-wrap gap-1"><%- include('../partials/status_badge', { status: rec.status }) %><% if (rec.dispensasi) { %><span class="<%= ui.badge({ variant: 'netral' }) %>">Dispensasi</span><% } %></dd></div>
+      <div><dt class="text-sm text-muted-foreground">Shift</dt><dd class="mt-1"><%= rec.shift_kode ? `${rec.shift_nama}, ${rec.shift_masuk} sampai ${rec.shift_pulang}` : 'Tanpa shift' %></dd></div>
+      <div><dt class="text-sm text-muted-foreground">Terlambat / pulang cepat</dt><dd class="mt-1 tabular"><%= rec.terlambat_menit %> mnt / <%= rec.pulang_cepat_menit %> mnt</dd></div>
+      <div><dt class="text-sm text-muted-foreground">Keterangan</dt><dd class="mt-1"><%= rec.keterangan || 'Tidak ada' %></dd></div>
+    </dl>
+    <div>
       <%- include('../partials/dayline', { shiftMasuk: rec.shift_masuk, shiftPulang: rec.shift_pulang, masuk: rec.jam_masuk, pulang: rec.jam_pulang, telat: rec.terlambat_menit > 0 }) %>
-      <div class="dayline-scale" aria-hidden="true"><span>05.00</span><span>09.00</span><span>13.00</span><span>17.00</span><span>22.00</span></div>
+      <div class="flex justify-between text-xs text-muted-foreground" aria-hidden="true"><span>05.00</span><span>09.00</span><span>13.00</span><span>17.00</span><span>22.00</span></div>
     </div>
   </div>
 </section>
-<div class="row g-4">
+<div class="grid gap-6 md:grid-cols-2">
   <% [['masuk', rec.jam_masuk, rec.metode_masuk, rec.foto_masuk, rec.lat_masuk, rec.lng_masuk, rec.alamat_masuk, rec.skor_wajah_masuk],
       ['pulang', rec.jam_pulang, rec.metode_pulang, rec.foto_pulang, rec.lat_pulang, rec.lng_pulang, rec.alamat_pulang, rec.skor_wajah_pulang]]
      .forEach(([label, jam, metode, foto, lat, lng, alamat, skor]) => { %>
-  <div class="col-md-6">
-    <section class="card h-100" aria-label="Absen <%= label %>">
-      <div class="card-header">Absen <%= label %></div>
-      <div class="card-body">
-        <% if (!jam) { %><p class="text-muted mb-0">Belum ada absen <%= label %>. Bila pegawai lupa, ia bisa mengajukan klarifikasi atau admin mengisinya lewat Koreksi.</p><% } else { %>
-          <div class="h3 mb-0 num"><%= jam.slice(11, 16) %></div>
-          <div class="text-muted small mb-2"><%= T.fmtTglPendek(jam.slice(0, 10)) %> · <%= METODE_LABEL[metode] || metode %><% if (skor != null) { %> · kemiripan wajah <%= Math.round(skor) %>%<% } %></div>
-          <% if (foto) { %><a href="/uploads/<%= foto %>" target="_blank" rel="noopener"><img src="/uploads/<%= foto %>" class="photo-thumb" alt="Foto saat absen <%= label %>"></a><% } %>
-          <%- include('../partials/location', { lat, lng, alamat }) %>
-        <% } %>
-      </div>
-    </section>
-  </div>
+  <section class="<%= ui.card() %>" aria-label="Absen <%= label %>">
+    <div class="<%= ui.cardHeader() %>"><h2 class="<%= ui.cardTitle() %>">Absen <%= label %></h2></div>
+    <div class="<%= ui.cardContent() %>">
+      <% if (!jam) { %><p class="text-sm text-muted-foreground">Belum ada absen <%= label %>. Bila pegawai lupa, ia bisa mengajukan klarifikasi atau admin mengisinya lewat Koreksi.</p><% } else { %>
+        <div class="text-3xl font-bold tabular"><%= jam.slice(11, 16) %></div>
+        <p class="mb-3 text-sm text-muted-foreground"><%= T.fmtTglPendek(jam.slice(0, 10)) %> · <%= METODE_LABEL[metode] || metode %><% if (skor != null) { %> · kemiripan wajah <%= Math.round(skor) %>%<% } %></p>
+        <% if (foto) { %><a href="/uploads/<%= foto %>" target="_blank" rel="noopener"><img src="/uploads/<%= foto %>" class="w-full max-w-80 rounded-lg border" alt="Foto saat absen <%= label %>"></a><% } %>
+        <%- include('../partials/location', { lat, lng, alamat }) %>
+      <% } %>
+    </div>
+  </section>
   <% }) %>
-</div>
-<div class="row g-4 mt-0">
   <% if (scans.length) { %>
-  <div class="col-md-6">
-    <section class="card" aria-label="Scan mesin">
-      <div class="card-header">Scan mesin fingerprint hari itu</div>
-      <ul class="list-group list-group-flush small">
-        <% scans.forEach((l) => { %><li class="list-group-item d-flex justify-content-between"><span class="num"><%= l.waktu.slice(11, 16) %><%= l.waktu.slice(0, 10) !== rec.tanggal ? ` (${T.fmtTglPendek(l.waktu.slice(0, 10), false)})` : '' %></span><span class="text-muted"><%= l.mesin || (l.sumber === 'lan' ? 'LAN' : 'File USB') %></span></li><% }) %>
-      </ul>
-    </section>
-  </div>
+  <section class="<%= ui.card('gap-0 py-0') %>" aria-label="Scan mesin">
+    <div class="<%= ui.cardHeader('border-b py-4 [.border-b]:pb-4') %>"><h2 class="<%= ui.cardTitle() %>">Scan mesin fingerprint hari itu</h2></div>
+    <ul class="divide-y text-sm">
+      <% scans.forEach((l) => { %><li class="flex justify-between px-6 py-2.5"><span class="tabular"><%= l.waktu.slice(11, 16) %><%= l.waktu.slice(0, 10) !== rec.tanggal ? ` (${T.fmtTglPendek(l.waktu.slice(0, 10), false)})` : '' %></span><span class="text-muted-foreground"><%= l.mesin || (l.sumber === 'lan' ? 'LAN' : 'File USB') %></span></li><% }) %>
+    </ul>
+  </section>
   <% } %>
   <% if (klarifikasi.length) { %>
-  <div class="col-md-6">
-    <section class="card" aria-label="Klarifikasi terkait">
-      <div class="card-header">Klarifikasi untuk tanggal ini</div>
-      <ul class="list-group list-group-flush">
-        <% klarifikasi.forEach((k) => { %>
-          <li class="list-group-item d-flex justify-content-between gap-2"><span><b><%= JENIS[k.jenis] || k.jenis %>:</b> <%= k.alasan %></span><a href="/admin/klarifikasi/<%= k.id %>" class="text-nowrap"><span class="badge klar-<%= k.status %>"><%= STATUS_KLARIFIKASI[k.status] %></span></a></li>
-        <% }) %>
-      </ul>
-    </section>
-  </div>
+  <section class="<%= ui.card('gap-0 py-0') %>" aria-label="Klarifikasi terkait">
+    <div class="<%= ui.cardHeader('border-b py-4 [.border-b]:pb-4') %>"><h2 class="<%= ui.cardTitle() %>">Klarifikasi untuk tanggal ini</h2></div>
+    <ul class="divide-y text-sm">
+      <% klarifikasi.forEach((k) => { %>
+        <li class="flex justify-between gap-3 px-6 py-3"><span><b><%= JENIS[k.jenis] || k.jenis %>:</b> <%= k.alasan %></span><a href="/admin/klarifikasi/<%= k.id %>" class="<%= ui.statusBadge(k.status) %>"><%= STATUS_KLARIFIKASI[k.status] %></a></li>
+      <% }) %>
+    </ul>
+  </section>
   <% } %>
   <% if (rec.face_photo) { %>
-  <div class="col-md-6"><div class="small text-muted mb-1">Foto referensi wajah terdaftar</div><img src="/uploads/<%= rec.face_photo %>" class="photo-thumb" style="max-width: 160px" alt="Foto referensi wajah <%= rec.nama %>"></div>
+  <div><p class="mb-1 text-sm text-muted-foreground">Foto referensi wajah terdaftar</p><img src="/uploads/<%= rec.face_photo %>" class="w-40 rounded-lg border" alt="Foto referensi wajah <%= rec.nama %>"></div>
   <% } %>
 </div>
 <%- include('../partials/footer') %>

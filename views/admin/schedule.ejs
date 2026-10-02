@@ -5,60 +5,58 @@
   const prev = `${mm === 1 ? yy - 1 : yy}-${T.pad(mm === 1 ? 12 : mm - 1)}`;
   const next = `${mm === 12 ? yy + 1 : yy}-${T.pad(mm === 12 ? 1 : mm + 1)}`;
 %>
-<div class="page-head">
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1>Jadwal shift · <%= T.BULAN[mm - 1] %> <%= yy %></h1>
-    <div class="sub">Pilih sel untuk mengubah jadwal satu hari. Gunakan tombol panah untuk berpindah sel dan Enter untuk membuka pilihan.</div>
+    <h1 class="text-2xl font-bold tracking-tight">Jadwal shift · <%= T.BULAN[mm - 1] %> <%= yy %></h1>
+    <p class="mt-1 text-sm text-muted-foreground">Pilih sel untuk mengubah jadwal satu hari. Gunakan tombol panah untuk berpindah sel dan Enter untuk membuka pilihan.</p>
   </div>
-  <div class="actions">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkModal">Atur banyak sekaligus</button>
-    <a class="btn btn-outline-secondary" href="/admin/jadwal/export?bulan=<%= bulan %>&unit=<%= encodeURIComponent(unit) %>">Ekspor Excel</a>
-    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#importModal">Impor</button>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" class="<%= ui.button() %>" data-dialog-open="bulkDialog">Atur banyak sekaligus</button>
+    <a class="<%= ui.button({ variant: 'outline' }) %>" href="/admin/jadwal/export?bulan=<%= bulan %>&unit=<%= encodeURIComponent(unit) %>"><%- ui.icon('download') %> Ekspor Excel</a>
+    <button type="button" class="<%= ui.button({ variant: 'outline' }) %>" data-dialog-open="importDialog"><%- ui.icon('upload') %> Impor</button>
   </div>
 </div>
 
-<form class="card card-body mb-3" method="get" aria-label="Pilih bulan dan unit">
-  <div class="d-flex flex-wrap gap-2 align-items-end">
-    <a class="btn btn-outline-secondary" href="?bulan=<%= prev %>&unit=<%= encodeURIComponent(unit) %>" aria-label="Bulan sebelumnya"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
-    <div><label class="form-label small" for="bulan">Bulan</label><input type="month" id="bulan" name="bulan" class="form-control" value="<%= bulan %>"></div>
-    <a class="btn btn-outline-secondary" href="?bulan=<%= next %>&unit=<%= encodeURIComponent(unit) %>" aria-label="Bulan berikutnya"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
-    <div style="min-width: 200px"><label class="form-label small" for="unitSel">Unit kerja</label>
-      <select id="unitSel" name="unit" class="form-select"><option value="">Semua unit</option>
-        <% units.forEach((u) => { %><option <%= unit === u ? 'selected' : '' %>><%= u %></option><% }) %>
-      </select>
+<form class="<%= ui.card('mb-4 gap-4 py-4') %>" method="get" aria-label="Pilih bulan dan unit">
+  <div class="<%= ui.cardContent('flex flex-wrap items-end gap-2 px-4') %>">
+    <a class="<%= ui.button({ variant: 'outline', size: 'icon' }) %>" href="?bulan=<%= prev %>&unit=<%= encodeURIComponent(unit) %>" aria-label="Bulan sebelumnya"><%- ui.icon('chevron-left') %></a>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="bulan">Bulan</label><input type="month" id="bulan" name="bulan" class="<%= ui.input('w-44') %>" value="<%= bulan %>"></div>
+    <a class="<%= ui.button({ variant: 'outline', size: 'icon' }) %>" href="?bulan=<%= next %>&unit=<%= encodeURIComponent(unit) %>" aria-label="Bulan berikutnya"><%- ui.icon('chevron-right') %></a>
+    <div class="grid min-w-52 gap-2"><label class="<%= ui.label() %>" for="unitSel">Unit kerja</label>
+      <div class="<%= ui.selectWrap() %>"><select id="unitSel" name="unit" class="<%= ui.select() %>"><option value="">Semua unit</option><% units.forEach((u) => { %><option <%= unit === u ? 'selected' : '' %>><%= u %></option><% }) %></select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
     </div>
-    <button class="btn btn-primary">Tampilkan</button>
+    <button class="<%= ui.button() %>">Tampilkan</button>
   </div>
-  <div class="d-flex flex-wrap gap-3 small mt-3" aria-label="Keterangan">
-    <% shifts.filter((s) => s.aktif).forEach((s) => { %><span><span class="shift-chip" style="background: <%= s.warna %>; color: <%= chipText(s.warna) %>"><%= s.kode %></span> <span class="num"><%= s.jam_masuk %> sampai <%= s.jam_pulang %></span></span><% }) %>
-    <span><span class="shift-chip default" style="border-color: var(--biru)">REG</span> bergaris = mengikuti shift default</span>
-    <span><span class="libur-tag">L</span> = libur dijadwalkan</span>
-    <span><span class="text-muted fw-bold">L</span> = bukan hari kerja / tanggal merah</span>
+  <div class="<%= ui.cardContent('flex flex-wrap gap-x-4 gap-y-2 border-t px-4 pt-3 text-sm') %>" aria-label="Keterangan">
+    <% shifts.filter((s) => s.aktif).forEach((s) => { %><span><span class="shift-chip" style="background: <%= s.warna %>; color: <%= chipText(s.warna) %>"><%= s.kode %></span> <%= s.jam_masuk %> sampai <%= s.jam_pulang %></span><% }) %>
+    <span><span class="shift-chip default" style="border-color: var(--primary)">REG</span> bergaris = mengikuti shift default</span>
+    <span><span class="font-bold text-status-alpa-foreground">L</span> = libur dijadwalkan</span>
+    <span><span class="font-bold text-muted-foreground">L</span> = bukan hari kerja / tanggal merah</span>
   </div>
 </form>
 
-<div class="card">
+<div class="<%= ui.card('gap-0 py-0') %>">
   <% if (!employees.length) { %>
     <%- include('../partials/empty', { judul: 'Tidak ada pegawai aktif', alasan: unit ? `Tidak ada pegawai aktif di unit ${unit}.` : 'Tambahkan pegawai terlebih dahulu, lalu atur jadwalnya di sini.', aksi: [{ href: '/admin/pegawai/baru', label: 'Tambah pegawai', utama: true }] }) %>
   <% } else { %>
-  <div class="table-responsive">
-    <table class="table table-bordered schedule-table mb-0" role="grid" aria-label="Jadwal shift <%= T.BULAN[mm - 1] %> <%= yy %>">
+  <div class="<%= ui.tableContainer %> rounded-xl">
+    <table class="<%= ui.table('schedule-table border-separate border-spacing-0 text-xs') %>" role="grid" aria-label="Jadwal shift <%= T.BULAN[mm - 1] %> <%= yy %>">
       <thead>
         <tr>
-          <th class="name" scope="col">Pegawai</th>
+          <th class="name border-b p-2 text-left font-medium" scope="col">Pegawai</th>
           <% days.forEach((d) => { const wd = T.parseDateTime(d).getDay(); %>
-            <th scope="col" class="<%= !workday[d] ? 'weekend' : '' %>" title="<%= libur[d] || '' %>"><div class="num"><%= +d.slice(8) %></div><div class="fw-normal"><%= T.HARI_PENDEK[wd] %></div></th>
+            <th scope="col" class="border-b border-l p-1 font-medium <%= !workday[d] ? 'weekend' : '' %>" title="<%= libur[d] || '' %>"><div class="tabular"><%= +d.slice(8) %></div><div class="font-normal text-muted-foreground"><%= T.HARI_PENDEK[wd] %></div></th>
           <% }) %>
         </tr>
       </thead>
       <tbody>
       <% employees.forEach((e, ei) => { %>
         <tr data-default="<%= e.default_shift_id || '' %>">
-          <th scope="row" class="name"><div class="fw-semibold"><%= e.nama %></div><span class="cell-sub fw-normal"><%= e.unit_kerja || '' %></span></th>
+          <th scope="row" class="name border-b p-2 font-normal"><div class="font-medium"><%= e.nama %></div><div class="text-muted-foreground"><%= e.unit_kerja || '' %></div></th>
           <% days.forEach((d, di) => {
                const v = map[`${e.id}|${d}`];
                const val = v === undefined ? 'default' : v; %>
-            <td class="<%= !workday[d] ? 'weekend' : '' %>">
+            <td class="border-b border-l p-0 <%= !workday[d] ? 'weekend' : '' %>">
               <button type="button" class="cell-btn" tabindex="<%= ei === 0 && di === 0 ? 0 : -1 %>" data-row="<%= ei %>" data-col="<%= di %>"
                 data-emp="<%= e.id %>" data-nama="<%= e.nama %>" data-date="<%= d %>" data-tgl="<%= T.fmtTglPendek(d, false) %>"
                 data-workday="<%= workday[d] ? 1 : 0 %>" data-libur="<%= libur[d] || '' %>" data-value="<%= val %>" aria-haspopup="menu"></button>
@@ -72,72 +70,61 @@
   <% } %>
 </div>
 
-<div class="cell-menu" id="cellMenu" role="menu" aria-label="Pilih shift">
+<div class="<%= ui.dropdownContent('absolute w-60').replace('ui-dropdown', '') %>" id="cellMenu" role="menu" aria-label="Pilih shift">
   <% shifts.filter((s) => s.aktif).forEach((s) => { %>
-    <button type="button" class="dropdown-item" role="menuitem" data-set="<%= s.id %>"><span class="shift-chip" style="background: <%= s.warna %>; color: <%= chipText(s.warna) %>"><%= s.kode %></span> <%= s.nama %></button>
+    <button type="button" class="<%= ui.dropdownItem() %>" role="menuitem" data-set="<%= s.id %>"><span class="shift-chip" style="background: <%= s.warna %>; color: <%= chipText(s.warna) %>"><%= s.kode %></span> <%= s.nama %></button>
   <% }) %>
-  <button type="button" class="dropdown-item" role="menuitem" data-set="L"><span class="libur-tag">L</span> Libur</button>
-  <div class="dropdown-divider"></div>
-  <button type="button" class="dropdown-item" role="menuitem" data-set="default">Ikuti shift default</button>
+  <button type="button" class="<%= ui.dropdownItem() %>" role="menuitem" data-set="L"><span class="font-bold text-status-alpa-foreground">L</span> Libur</button>
+  <div class="<%= ui.dropdownSeparator %>"></div>
+  <button type="button" class="<%= ui.dropdownItem() %>" role="menuitem" data-set="default">Ikuti shift default</button>
 </div>
-<div id="cellStatus" class="visually-hidden" aria-live="polite"></div>
+<div id="cellStatus" class="sr-only" aria-live="polite"></div>
 
-<div class="modal fade" id="bulkModal" tabindex="-1" aria-labelledby="bulkTitle" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <form class="modal-content" method="post" action="/admin/jadwal/massal" data-loading="Menerapkan...">
-      <div class="modal-header"><h2 class="modal-title h5" id="bulkTitle">Atur jadwal banyak pegawai</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button></div>
-      <div class="modal-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label" for="empSel">Pegawai</label>
-            <select id="empSel" name="employee_ids" class="form-select" multiple size="10" required aria-describedby="empHelp">
-              <% employees.forEach((e) => { %><option value="<%= e.id %>"><%= e.nama %><%= e.unit_kerja ? ` (${e.unit_kerja})` : '' %></option><% }) %>
-            </select>
-            <div class="form-text" id="empHelp">Tahan Ctrl (atau Cmd) untuk memilih lebih dari satu.</div>
-            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="selectAll">Pilih semua pegawai</button>
+<dialog id="bulkDialog" class="<%= ui.dialog('sm:max-w-2xl') %>" aria-labelledby="bulkTitle">
+  <form method="post" action="/admin/jadwal/massal" class="grid gap-4" data-loading="Menerapkan...">
+    <div class="<%= ui.dialogHeader %>"><h2 class="<%= ui.dialogTitle %>" id="bulkTitle">Atur jadwal banyak pegawai</h2><p class="<%= ui.dialogDescription %>">Terapkan satu shift, libur, atau shift default untuk beberapa pegawai pada rentang tanggal.</p></div>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="grid content-start gap-2">
+        <label class="<%= ui.label() %>" for="empSel">Pegawai</label>
+        <select id="empSel" name="employee_ids" class="<%= ui.textarea('min-h-52') %>" multiple required aria-describedby="empHelp">
+          <% employees.forEach((e) => { %><option value="<%= e.id %>"><%= e.nama %><%= e.unit_kerja ? ` (${e.unit_kerja})` : '' %></option><% }) %>
+        </select>
+        <p class="text-sm text-muted-foreground" id="empHelp">Tahan Ctrl (atau Cmd) untuk memilih lebih dari satu.</p>
+        <button type="button" class="<%= ui.button({ variant: 'outline', size: 'sm' }, 'w-fit') %>" id="selectAll">Pilih semua pegawai</button>
+      </div>
+      <div class="grid content-start gap-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="grid gap-2"><label class="<%= ui.label() %>" for="bd">Dari</label><input type="date" id="bd" name="dari" class="<%= ui.input() %>" value="<%= days[0] %>" required></div>
+          <div class="grid gap-2"><label class="<%= ui.label() %>" for="bs">Sampai</label><input type="date" id="bs" name="sampai" class="<%= ui.input() %>" value="<%= days[days.length - 1] %>" required></div>
+        </div>
+        <fieldset class="grid gap-2">
+          <legend class="<%= ui.label('mb-2') %>">Hanya hari (kosongkan untuk semua hari)</legend>
+          <div class="flex flex-wrap gap-x-4 gap-y-1">
+            <% T.HARI.forEach((h, i) => { %><label class="<%= ui.label('min-h-9 font-normal') %>"><input class="<%= ui.checkbox() %>" type="checkbox" name="hari" value="<%= i %>"> <%= h %></label><% }) %>
           </div>
-          <div class="col-md-6">
-            <div class="row g-2">
-              <div class="col-6"><label class="form-label" for="bd">Dari</label><input type="date" id="bd" name="dari" class="form-control" value="<%= days[0] %>" required></div>
-              <div class="col-6"><label class="form-label" for="bs">Sampai</label><input type="date" id="bs" name="sampai" class="form-control" value="<%= days[days.length - 1] %>" required></div>
-              <div class="col-12">
-                <div class="form-label">Hanya hari (kosongkan untuk semua hari)</div>
-                <div class="d-flex flex-wrap gap-2">
-                  <% T.HARI.forEach((h, i) => { %>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" name="hari" value="<%= i %>" id="h<%= i %>"><label class="form-check-label" for="h<%= i %>"><%= h %></label></div>
-                  <% }) %>
-                </div>
-              </div>
-              <div class="col-12">
-                <label class="form-label" for="bv">Jadwal</label>
-                <select id="bv" name="value" class="form-select" required>
-                  <% shifts.filter((s) => s.aktif).forEach((s) => { %><option value="<%= s.id %>"><%= s.kode %> · <%= s.nama %> (<%= s.jam_masuk %> sampai <%= s.jam_pulang %>)</option><% }) %>
-                  <option value="L">Libur</option>
-                  <option value="default">Ikuti shift default</option>
-                </select>
-              </div>
-            </div>
-          </div>
+        </fieldset>
+        <div class="grid gap-2"><label class="<%= ui.label() %>" for="bv">Jadwal</label>
+          <div class="<%= ui.selectWrap() %>"><select id="bv" name="value" class="<%= ui.select() %>" required>
+            <% shifts.filter((s) => s.aktif).forEach((s) => { %><option value="<%= s.id %>"><%= s.kode %> · <%= s.nama %> (<%= s.jam_masuk %> sampai <%= s.jam_pulang %>)</option><% }) %>
+            <option value="L">Libur</option><option value="default">Ikuti shift default</option>
+          </select><%- ui.icon('chevron-down', ui.selectIcon) %></div>
         </div>
       </div>
-      <div class="modal-footer"><button class="btn btn-primary">Terapkan jadwal</button></div>
-    </form>
-  </div>
-</div>
+    </div>
+    <div class="<%= ui.dialogFooter %>"><button type="button" class="<%= ui.button({ variant: 'outline' }) %>" data-dialog-close>Batal</button><button class="<%= ui.button() %>">Terapkan jadwal</button></div>
+  </form>
+  <button type="button" class="<%= ui.dialogClose %>" data-dialog-close aria-label="Tutup"><%- ui.icon('x') %></button>
+</dialog>
 
-<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="impTitle" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content" method="post" action="/admin/jadwal/import" enctype="multipart/form-data" data-loading="Mengimpor...">
-      <div class="modal-header"><h2 class="modal-title h5" id="impTitle">Impor jadwal shift</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button></div>
-      <div class="modal-body small">
-        <p>Gunakan file hasil <b>Ekspor</b> sebagai template: kolom <code>NIP</code>, <code>Nama</code>, lalu satu kolom per tanggal (format <code>YYYY-MM-DD</code>) berisi kode shift atau <code>L</code> untuk libur. Sel kosong diabaikan.</p>
-        <label class="form-label" for="impJ">File</label>
-        <input type="file" id="impJ" name="file" class="form-control" accept=".xlsx,.csv" required>
-      </div>
-      <div class="modal-footer"><button class="btn btn-primary">Impor jadwal</button></div>
-    </form>
-  </div>
-</div>
+<dialog id="importDialog" class="<%= ui.dialog() %>" aria-labelledby="impTitle">
+  <form method="post" action="/admin/jadwal/import" enctype="multipart/form-data" class="grid gap-4" data-loading="Mengimpor...">
+    <div class="<%= ui.dialogHeader %>"><h2 class="<%= ui.dialogTitle %>" id="impTitle">Impor jadwal shift</h2>
+      <p class="<%= ui.dialogDescription %>">Gunakan file hasil Ekspor sebagai template: kolom NIP, Nama, lalu satu kolom per tanggal (format YYYY-MM-DD) berisi kode shift atau L untuk libur. Sel kosong diabaikan.</p></div>
+    <div class="grid gap-2"><label class="<%= ui.label() %>" for="impJ">File</label><input type="file" id="impJ" name="file" class="<%= ui.input('h-auto py-1.5') %>" accept=".xlsx,.csv" required></div>
+    <div class="<%= ui.dialogFooter %>"><button type="button" class="<%= ui.button({ variant: 'outline' }) %>" data-dialog-close>Batal</button><button class="<%= ui.button() %>">Impor jadwal</button></div>
+  </form>
+  <button type="button" class="<%= ui.dialogClose %>" data-dialog-close aria-label="Tutup"><%- ui.icon('x') %></button>
+</dialog>
 
 <script>
 const SHIFTS = <%- JSON.stringify(shiftById).replace(/</g, '\\u003c') %>;
@@ -158,9 +145,9 @@ const SHIFTS = <%- JSON.stringify(shiftById).replace(/</g, '\\u003c') %>;
     const isDefault = v === 'default';
     let html;
     let text;
-    if (v === 'L') { html = '<span class="libur-tag">L</span>'; text = 'libur'; }
+    if (v === 'L') { html = '<span class="font-bold text-status-alpa-foreground">L</span>'; text = 'libur'; }
     else if (isDefault && def && btn.dataset.workday !== '1') {
-      html = '<span class="text-muted fw-bold">L</span>';
+      html = '<span class="font-bold text-muted-foreground">L</span>';
       text = btn.dataset.libur ? `libur nasional (${btn.dataset.libur})` : 'bukan hari kerja';
     } else {
       const s = SHIFTS[isDefault ? def : v];
@@ -169,7 +156,7 @@ const SHIFTS = <%- JSON.stringify(shiftById).replace(/</g, '\\u003c') %>;
           ? `<span class="shift-chip default" style="border-color: ${s.warna}">${esc(s.kode)}</span>`
           : `<span class="shift-chip" style="background: ${s.warna}; color: ${chipText(s.warna)}">${esc(s.kode)}</span>`;
         text = `${s.nama}${isDefault ? ' (shift default)' : ''}`;
-      } else { html = '<span class="text-muted">·</span>'; text = 'tanpa shift'; }
+      } else { html = '<span class="text-muted-foreground">·</span>'; text = 'tanpa shift'; }
     }
     btn.innerHTML = html;
     btn.setAttribute('aria-label', `${btn.dataset.nama}, ${btn.dataset.tgl}: ${text}`);
@@ -196,7 +183,7 @@ const SHIFTS = <%- JSON.stringify(shiftById).replace(/</g, '\\u003c') %>;
   let current = null;
   const items = [...menu.querySelectorAll('[role=menuitem]')];
   function closeMenu(returnFocus) {
-    menu.classList.remove('show');
+    menu.dataset.state = 'closed';
     if (returnFocus && current) current.focus();
   }
   function openMenu(btn) {
@@ -204,7 +191,7 @@ const SHIFTS = <%- JSON.stringify(shiftById).replace(/</g, '\\u003c') %>;
     cells.forEach((b) => { b.tabIndex = -1; });
     btn.tabIndex = 0;
     const r = btn.getBoundingClientRect();
-    menu.classList.add('show');
+    menu.dataset.state = 'open';
     const left = Math.min(r.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - menu.offsetWidth - 8);
     menu.style.left = `${Math.max(8, left)}px`;
     menu.style.top = `${r.bottom + window.scrollY + 4}px`;
@@ -222,7 +209,7 @@ const SHIFTS = <%- JSON.stringify(shiftById).replace(/</g, '\\u003c') %>;
   items.forEach((b) => b.addEventListener('click', async () => {
     const btn = current;
     closeMenu(true);
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm text-secondary" aria-hidden="true"></span>';
+    btn.innerHTML = '<svg class="size-4 animate-spin text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
     try {
       const r = await fetch('/api/jadwal', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
