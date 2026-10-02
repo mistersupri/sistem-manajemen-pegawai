@@ -132,7 +132,7 @@ router.post('/admin/mesin/impor', requireAdmin, importUpload.single('file'), asy
   }));
 });
 
-// ---------- Pemetaan ID mesin -> pegawai ----------
+// Pemetaan ID mesin -> pegawai
 router.get('/admin/mesin/pemetaan', requireAdmin, (req, res) => {
   const employees = db.prepare("SELECT id, nip, nama, unit_kerja, id_mesin FROM employees WHERE status = 'aktif' ORDER BY nama").all();
   const shifts = db.prepare('SELECT * FROM shifts WHERE aktif = 1 ORDER BY jam_masuk').all();
@@ -192,7 +192,7 @@ router.post('/admin/mesin/pemetaan/buat', requireAdmin, (req, res) => {
   res.redirect('/admin/mesin/pemetaan');
 });
 
-// ---------- Log scan mentah ----------
+// Log scan mentah
 function logFilters(q) {
   const today = T.fmtDate(new Date());
   return {

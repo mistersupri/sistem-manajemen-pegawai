@@ -1,53 +1,59 @@
 <%- include('../partials/header') %>
-<h1 class="h4 mb-3"><i class="bi bi-chat-square-text"></i> Klarifikasi Absen</h1>
+<div class="page-head">
+  <div>
+    <h1>Klarifikasi absen</h1>
+    <div class="sub">Untuk lupa absen, terlambat, izin, sakit, cuti, atau dinas luar. Admin akan meninjau dan memperbarui absensi Anda.</div>
+  </div>
+</div>
 <div class="row g-4">
   <div class="col-lg-5">
-    <form method="post" enctype="multipart/form-data" class="card shadow-sm">
-      <div class="card-header bg-white"><b>Ajukan Klarifikasi</b></div>
+    <form method="post" enctype="multipart/form-data" class="card" data-loading="Mengirim...">
+      <div class="card-header"><h2 class="h6 mb-0">Ajukan klarifikasi</h2></div>
       <div class="card-body">
-        <% if (error) { %><div class="alert alert-danger py-2"><%= error %></div><% } %>
-        <div class="mb-3"><label class="form-label">Tanggal Absen</label><input type="date" name="tanggal" class="form-control" value="<%= form.tanggal || '' %>" min="<%= minDate %>" max="<%= maxDate %>" required></div>
-        <div class="mb-3"><label class="form-label">Jenis Klarifikasi</label>
+        <% if (error) { %><div class="alert alert-danger py-2" role="alert"><%= error %></div><% } %>
+        <div class="mb-3"><label class="form-label" for="ktgl">Tanggal absen</label><input type="date" id="ktgl" name="tanggal" class="form-control" value="<%= form.tanggal || '' %>" min="<%= minDate %>" max="<%= maxDate %>" required></div>
+        <div class="mb-3"><label class="form-label" for="jenis">Jenis klarifikasi</label>
           <select name="jenis" id="jenis" class="form-select" required>
-            <option value="">- pilih -</option>
+            <option value="">Pilih jenis</option>
             <% Object.entries(JENIS).forEach(([k, v]) => { %><option value="<%= k %>" <%= form.jenis === k ? 'selected' : '' %>><%= v %></option><% }) %>
           </select>
         </div>
         <div class="row g-2 mb-3" id="jamRow">
-          <div class="col-6" id="jmBox"><label class="form-label">Jam Masuk Sebenarnya</label><input type="time" name="jam_masuk" class="form-control" value="<%= form.jam_masuk || '' %>"></div>
-          <div class="col-6" id="jpBox"><label class="form-label">Jam Pulang Sebenarnya</label><input type="time" name="jam_pulang" class="form-control" value="<%= form.jam_pulang || '' %>"></div>
+          <div class="col-6" id="jmBox"><label class="form-label" for="kjm">Jam masuk sebenarnya</label><input type="time" id="kjm" name="jam_masuk" class="form-control" value="<%= form.jam_masuk || '' %>"></div>
+          <div class="col-6" id="jpBox"><label class="form-label" for="kjp">Jam pulang sebenarnya</label><input type="time" id="kjp" name="jam_pulang" class="form-control" value="<%= form.jam_pulang || '' %>"></div>
         </div>
-        <div class="mb-3"><label class="form-label">Alasan / Penjelasan</label><textarea name="alasan" class="form-control" rows="4" minlength="10" required><%= form.alasan || '' %></textarea></div>
-        <div class="mb-3"><label class="form-label">Lampiran Bukti (opsional)</label><input type="file" name="lampiran" class="form-control" accept="image/jpeg,image/png,application/pdf"><div class="form-text">Surat dokter, surat tugas, foto, dsb. JPG/PNG/PDF maks 5 MB.</div></div>
-        <button class="btn btn-primary w-100"><i class="bi bi-send"></i> Kirim Klarifikasi</button>
+        <div class="mb-3"><label class="form-label" for="kal">Alasan</label><textarea id="kal" aria-describedby="kalHelp" name="alasan" class="form-control" rows="4" minlength="10" required><%= form.alasan || '' %></textarea><div class="form-text" id="kalHelp">Minimal 10 karakter. Jelaskan apa yang terjadi, misalnya "Mesin absen mati saat saya tiba pukul 07.20".</div></div>
+        <div class="mb-3"><label class="form-label" for="klamp">Lampiran bukti (opsional)</label><input type="file" id="klamp" name="lampiran" class="form-control" accept="image/jpeg,image/png,application/pdf" aria-describedby="klampHelp"><div class="form-text" id="klampHelp">Surat dokter, surat tugas, atau foto. JPG, PNG, atau PDF maksimal 5 MB.</div></div>
+        <button class="btn btn-primary w-100">Kirim klarifikasi</button>
       </div>
     </form>
   </div>
   <div class="col-lg-7">
-    <div class="card shadow-sm">
-      <div class="card-header bg-white"><b>Riwayat Klarifikasi</b></div>
+    <section class="card" aria-labelledby="riwKlar">
+      <div class="card-header"><h2 class="h6 mb-0" id="riwKlar">Pengajuan Anda</h2></div>
+      <% if (!list.length) { %>
+        <%- include('../partials/empty', { judul: 'Belum ada pengajuan', alasan: 'Klarifikasi yang Anda kirim akan tercatat di sini beserta keputusan admin.' }) %>
+      <% } %>
       <ul class="list-group list-group-flush">
-        <% if (!list.length) { %><li class="list-group-item text-muted text-center py-4">Belum ada klarifikasi.</li><% } %>
         <% list.forEach((c) => { %>
           <li class="list-group-item">
-            <div class="d-flex justify-content-between">
-              <div><b><%= JENIS[c.jenis] %></b> · <%= T.fmtTanggalIndo(c.tanggal) %></div>
+            <div class="d-flex justify-content-between gap-2">
+              <div><b><%= JENIS[c.jenis] %></b><span class="cell-sub">untuk <%= T.fmtTglPendek(c.tanggal) %></span></div>
               <span class="badge klar-<%= c.status %> align-self-start"><%= STATUS_KLARIFIKASI[c.status] %></span>
             </div>
-            <div class="small mt-1" style="white-space: pre-wrap"><%= c.alasan %></div>
+            <div class="small mt-2" style="white-space: pre-wrap"><%= c.alasan %></div>
             <div class="small text-muted mt-1">
-              <% if (c.jam_masuk_usulan) { %>Masuk <%= c.jam_masuk_usulan %> <% } %><% if (c.jam_pulang_usulan) { %>· Pulang <%= c.jam_pulang_usulan %> <% } %>
-              <% if (c.lampiran) { %>· <a href="/uploads/<%= c.lampiran %>" target="_blank"><i class="bi bi-paperclip"></i> lampiran</a><% } %>
-              · diajukan <%= c.created_at.slice(0, 16) %>
+              <%= [c.jam_masuk_usulan && `Masuk ${c.jam_masuk_usulan}`, c.jam_pulang_usulan && `Pulang ${c.jam_pulang_usulan}`, `Diajukan ${T.fmtTglPendek(c.created_at.slice(0, 10), false)}, ${c.created_at.slice(11, 16)}`].filter(Boolean).join(' · ') %>
+              <% if (c.lampiran) { %>· <a href="/uploads/<%= c.lampiran %>" target="_blank" rel="noopener">lihat lampiran</a><% } %>
             </div>
-            <% if (c.catatan_admin) { %><div class="small mt-1"><i class="bi bi-reply"></i> Admin: <%= c.catatan_admin %></div><% } %>
+            <% if (c.catatan_admin) { %><div class="small mt-2 p-2 rounded" style="background: var(--kertas)"><b>Catatan admin:</b> <%= c.catatan_admin %></div><% } %>
             <% if (c.status === 'menunggu') { %>
-              <form method="post" action="/pegawai/klarifikasi/<%= c.id %>/batal" class="mt-2" data-confirm="Batalkan klarifikasi ini?"><button class="btn btn-sm btn-outline-danger">Batalkan</button></form>
+              <form method="post" action="/pegawai/klarifikasi/<%= c.id %>/batal" class="mt-2" data-confirm="Batalkan klarifikasi ini?" data-loading="Membatalkan..."><button class="btn btn-sm btn-outline-danger">Batalkan pengajuan</button></form>
             <% } %>
           </li>
         <% }) %>
       </ul>
-    </div>
+    </section>
   </div>
 </div>
 <script>

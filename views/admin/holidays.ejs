@@ -1,25 +1,29 @@
 <%- include('../partials/header') %>
-<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-  <h1 class="h4 mb-0"><i class="bi bi-calendar-x"></i> Hari Libur Nasional &amp; Cuti Bersama</h1>
-  <form method="get" class="d-flex gap-2">
-    <a class="btn btn-light" href="?tahun=<%= +tahun - 1 %>"><i class="bi bi-chevron-left"></i></a>
-    <input type="number" name="tahun" class="form-control" style="width: 110px" value="<%= tahun %>">
-    <a class="btn btn-light" href="?tahun=<%= +tahun + 1 %>"><i class="bi bi-chevron-right"></i></a>
+<div class="page-head">
+  <div>
+    <h1>Hari libur nasional dan cuti bersama</h1>
+    <div class="sub">Pada tanggal ini shift default tidak berlaku, jadi pegawai tidak dihitung tanpa keterangan.</div>
+  </div>
+  <form method="get" class="actions" aria-label="Pilih tahun">
+    <a class="btn btn-outline-secondary" href="?tahun=<%= +tahun - 1 %>" aria-label="Tahun <%= +tahun - 1 %>"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+    <label class="visually-hidden" for="tahun">Tahun</label>
+    <input type="number" id="tahun" name="tahun" class="form-control num" style="width: 110px" value="<%= tahun %>" onchange="this.form.submit()">
+    <a class="btn btn-outline-secondary" href="?tahun=<%= +tahun + 1 %>" aria-label="Tahun <%= +tahun + 1 %>"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
   </form>
 </div>
 <div class="row g-4">
   <div class="col-lg-7">
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead><tr><th>Tanggal</th><th>Keterangan</th><th></th></tr></thead>
+        <table class="table table-hover table-stack">
+          <thead><tr><th>Tanggal</th><th>Keterangan</th><th class="text-end">Aksi</th></tr></thead>
           <tbody>
-          <% if (!list.length) { %><tr><td colspan="3" class="text-center text-muted py-4">Belum ada hari libur untuk tahun <%= tahun %>.</td></tr><% } %>
+          <% if (!list.length) { %><tr class="empty-row"><td colspan="3"><%- include('../partials/empty', { judul: `Belum ada hari libur untuk ${tahun}`, alasan: 'Tambahkan tanggal merah dan cuti bersama sesuai SKB pemerintah lewat formulir di samping.' }) %></td></tr><% } %>
           <% list.forEach((h) => { %>
             <tr>
-              <td class="text-nowrap"><%= T.fmtTanggalIndo(h.tanggal) %></td>
-              <td><%= h.keterangan %></td>
-              <td class="text-end"><form method="post" action="/admin/hari-libur/hapus" data-confirm="Hapus hari libur ini?"><input type="hidden" name="tanggal" value="<%= h.tanggal %>"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form></td>
+              <td class="stack-head text-nowrap fw-semibold"><%= T.fmtTglPendek(h.tanggal) %></td>
+              <td data-label="Keterangan"><%= h.keterangan %></td>
+              <td class="text-end"><form method="post" action="/admin/hari-libur/hapus" data-confirm="Hapus hari libur <%= h.keterangan %>?"><input type="hidden" name="tanggal" value="<%= h.tanggal %>"><button class="btn btn-sm btn-outline-danger">Hapus</button></form></td>
             </tr>
           <% }) %>
           </tbody>
@@ -28,16 +32,16 @@
     </div>
   </div>
   <div class="col-lg-5">
-    <form method="post" class="card shadow-sm">
-      <div class="card-header bg-white"><b>Tambah Hari Libur</b></div>
+    <form method="post" class="card" data-loading="Menyimpan...">
+      <div class="card-header"><h2 class="h6 mb-0">Tambah hari libur</h2></div>
       <div class="card-body">
         <div class="row g-2">
-          <div class="col-6"><label class="form-label">Tanggal</label><input type="date" name="dari" class="form-control" required></div>
-          <div class="col-6"><label class="form-label">Sampai (opsional)</label><input type="date" name="sampai" class="form-control"></div>
-          <div class="col-12"><label class="form-label">Keterangan</label><input name="keterangan" class="form-control" placeholder="mis. Hari Buruh / Cuti Bersama Idul Fitri" required maxlength="200"></div>
+          <div class="col-6"><label class="form-label" for="hd">Tanggal</label><input type="date" id="hd" name="dari" class="form-control" required></div>
+          <div class="col-6"><label class="form-label" for="hs">Sampai (opsional)</label><input type="date" id="hs" name="sampai" class="form-control"></div>
+          <div class="col-12"><label class="form-label" for="hk">Keterangan</label><input id="hk" name="keterangan" class="form-control" placeholder="Contoh: Cuti bersama Idul Fitri" required maxlength="200"></div>
         </div>
       </div>
-      <div class="card-footer bg-white"><button class="btn btn-primary"><i class="bi bi-plus-lg"></i> Simpan</button></div>
+      <div class="card-footer"><button class="btn btn-primary">Simpan hari libur</button></div>
     </form>
     <p class="small text-muted mt-2">Pada hari libur, shift default tidak berlaku sehingga pegawai tidak dihitung "tanpa keterangan". Pegawai yang tetap bertugas (mis. piket) dapat diberi shift lewat <a href="/admin/jadwal">Jadwal Shift</a>.</p>
   </div>

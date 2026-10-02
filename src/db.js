@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS shifts (
   jam_masuk TEXT NOT NULL,
   jam_pulang TEXT NOT NULL,
   toleransi_menit INTEGER NOT NULL DEFAULT 0,
-  warna TEXT NOT NULL DEFAULT '#0d6efd',
+  warna TEXT NOT NULL DEFAULT '#1d5fa8',
   aktif INTEGER NOT NULL DEFAULT 1
 );
 
@@ -155,7 +155,7 @@ CREATE INDEX IF NOT EXISTS idx_schedule_tanggal ON shift_schedules(tanggal);
 CREATE INDEX IF NOT EXISTS idx_clarif_status ON clarifications(status);
 `);
 
-// ---- Mesin fingerprint ----
+// Mesin fingerprint
 db.exec(`
 CREATE TABLE IF NOT EXISTS devices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -218,6 +218,7 @@ const DEFAULT_SETTINGS = {
   enforce_geofence: '0',
   self_checkin: '1',
   liveness: '0',
+  logo: '',
   hari_kerja: '1,2,3,4,5',
   timezone_label: 'WIB',
 };
@@ -227,10 +228,10 @@ for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) insertSetting.run(k, v);
 
 if (!db.prepare('SELECT 1 FROM shifts LIMIT 1').get()) {
   const ins = db.prepare('INSERT INTO shifts (kode, nama, jam_masuk, jam_pulang, toleransi_menit, warna) VALUES (?,?,?,?,?,?)');
-  ins.run('REG', 'Reguler', '07:30', '16:00', 15, '#0d6efd');
-  ins.run('PAGI', 'Shift Pagi', '06:00', '14:00', 10, '#198754');
-  ins.run('SIANG', 'Shift Siang', '14:00', '22:00', 10, '#fd7e14');
-  ins.run('MALAM', 'Shift Malam', '22:00', '06:00', 10, '#6f42c1');
+  ins.run('REG', 'Reguler', '07:30', '16:00', 15, '#1d5fa8');
+  ins.run('PAGI', 'Shift Pagi', '06:00', '14:00', 10, '#1b7a43');
+  ins.run('SIANG', 'Shift Siang', '14:00', '22:00', 10, '#f2b33d');
+  ins.run('MALAM', 'Shift Malam', '22:00', '06:00', 10, '#123b6d');
 }
 
 if (!db.prepare("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1").get()) {

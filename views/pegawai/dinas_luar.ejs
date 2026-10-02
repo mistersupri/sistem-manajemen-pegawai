@@ -1,56 +1,63 @@
 <%- include('../partials/header') %>
-<h1 class="h4 mb-1"><i class="bi bi-geo-alt"></i> Absen Dinas Luar</h1>
-<p class="text-muted">Ambil foto selfie di lokasi tugas. Foto akan diberi stempel waktu server, koordinat GPS, dan alamat secara otomatis.</p>
+<div class="page-head">
+  <div>
+    <h1>Absen dinas luar</h1>
+    <div class="sub">Ambil foto selfie di lokasi tugas. Foto otomatis diberi stempel jam kantor, koordinat GPS, dan alamat.</div>
+  </div>
+</div>
 <% if (!hasFace) { %>
-  <div class="alert alert-warning">Wajah Anda belum terdaftar. <a href="/pegawai/wajah">Daftarkan wajah</a> terlebih dahulu agar foto dinas luar dapat diverifikasi.</div>
+  <div class="card"><%- include('../partials/empty', { judul: 'Wajah Anda belum terdaftar', alasan: 'Foto dinas luar dicocokkan dengan wajah terdaftar agar tidak bisa diwakilkan. Daftarkan wajah satu kali terlebih dahulu.', aksi: [{ href: '/pegawai/wajah', label: 'Daftarkan wajah', utama: true }] }) %></div>
 <% } else { %>
 <div class="row g-4">
   <div class="col-lg-7">
     <div class="camera-wrap mirror" id="camWrap">
       <video id="video" autoplay muted playsinline></video>
       <canvas class="overlay" id="overlay"></canvas>
-      <div class="camera-status" id="status">Menyiapkan kamera...</div>
+      <div class="camera-status" id="status" aria-live="polite">Menyiapkan kamera...</div>
     </div>
     <div id="previewWrap" class="d-none">
-      <img id="preview" class="w-100 rounded border" alt="Pratinjau foto">
+      <img id="preview" class="w-100 rounded border" alt="Pratinjau foto dengan stempel waktu dan lokasi">
     </div>
   </div>
   <div class="col-lg-5">
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="card-body">
         <div class="mb-3">
           <div class="small text-muted">Lokasi GPS</div>
-          <div id="loc" class="small">Mengambil lokasi...</div>
+          <div id="loc" class="small" aria-live="polite">Mengambil lokasi...</div>
           <div id="addr" class="small text-muted"></div>
-          <button class="btn btn-link btn-sm px-0" id="btnLoc"><i class="bi bi-arrow-clockwise"></i> Perbarui lokasi</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="btnLoc">Perbarui lokasi</button>
         </div>
         <div class="mb-3">
-          <label class="form-label" for="ket">Tujuan / Keterangan Dinas *</label>
-          <input id="ket" class="form-control" maxlength="300" placeholder="mis. Rapat koordinasi di Dinas Pendidikan Provinsi">
+          <label class="form-label" for="ket">Tujuan atau keterangan tugas <span class="text-danger">*</span></label>
+          <input id="ket" class="form-control" maxlength="300" placeholder="Contoh: rapat koordinasi di Dinas Pendidikan Provinsi" required>
         </div>
-        <div class="btn-group w-100 mb-3" role="group">
-          <input type="radio" class="btn-check" name="mode" id="mMasuk" value="masuk" checked>
-          <label class="btn btn-outline-success" for="mMasuk">Absen Masuk</label>
-          <input type="radio" class="btn-check" name="mode" id="mPulang" value="pulang">
-          <label class="btn btn-outline-warning" for="mPulang">Absen Pulang</label>
-        </div>
+        <fieldset class="mb-3">
+          <legend class="form-label fs-6">Jenis absen</legend>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="mode" id="mMasuk" value="masuk" checked>
+            <label class="btn btn-outline-primary" for="mMasuk">Masuk</label>
+            <input type="radio" class="btn-check" name="mode" id="mPulang" value="pulang">
+            <label class="btn btn-outline-primary" for="mPulang">Pulang</label>
+          </div>
+        </fieldset>
         <div id="stepCapture" class="d-grid">
-          <button class="btn btn-primary btn-lg" id="btnCapture" disabled><i class="bi bi-camera"></i> Ambil Foto</button>
+          <button class="btn btn-primary btn-lg" id="btnCapture" disabled>Ambil foto</button>
         </div>
         <div id="stepConfirm" class="d-none d-grid gap-2">
-          <button class="btn btn-success btn-lg" id="btnSend"><i class="bi bi-send"></i> Kirim Absensi</button>
-          <button class="btn btn-outline-secondary" id="btnRetake"><i class="bi bi-arrow-repeat"></i> Ulangi Foto</button>
+          <button class="btn btn-primary btn-lg" id="btnSend">Kirim absensi</button>
+          <button class="btn btn-outline-secondary" id="btnRetake">Ulangi foto</button>
         </div>
-        <div id="msg" class="mt-3"></div>
+        <div id="msg" class="mt-3" aria-live="polite"></div>
       </div>
     </div>
     <% if (recent.length) { %>
-    <div class="card shadow-sm mt-3">
-      <div class="card-header bg-white"><b>Riwayat dinas luar</b></div>
+    <div class="card mt-3">
+      <div class="card-header"><h2 class="h6 mb-0">Dinas luar terakhir</h2></div>
       <ul class="list-group list-group-flush small">
         <% recent.forEach((r) => { %>
           <li class="list-group-item d-flex justify-content-between">
-            <span><%= r.tanggal %> · <%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %> – <%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %></span>
+            <span><%= T.fmtTglPendek(r.tanggal) %> · <span class="num"><%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %> sampai <%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %></span></span>
             <span>
               <% if (r.foto_masuk) { %><a href="/uploads/<%= r.foto_masuk %>" target="_blank">foto masuk</a><% } %>
               <% if (r.foto_pulang) { %> · <a href="/uploads/<%= r.foto_pulang %>" target="_blank">foto pulang</a><% } %>
@@ -88,7 +95,7 @@
     $('addr').textContent = '';
     try {
       gps = await FaceKit.getLocation(20000);
-      $('loc').innerHTML = `<i class="bi bi-geo-alt-fill text-success"></i> ${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)} (akurasi ±${gps.accuracy} m)`;
+      $('loc').innerHTML = `Terdeteksi: ${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)} (akurasi ±${gps.accuracy} m)`;
       alamat = await FaceKit.reverseGeocode(gps.lat, gps.lng);
       $('addr').textContent = alamat || '(alamat tidak tersedia)';
     } catch (e) {

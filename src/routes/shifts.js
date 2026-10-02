@@ -8,7 +8,7 @@ const { ExcelJS, readTable, addSheet, sendWorkbook } = require('../excel');
 
 const router = express.Router();
 
-// ---------- Master shift ----------
+// Master shift
 function normalizeShift(b) {
   const data = {
     kode: String(b.kode || '').trim().toUpperCase(),
@@ -68,7 +68,7 @@ router.post('/admin/shift/:id/hapus', requireAdmin, (req, res) => {
   res.redirect('/admin/shift');
 });
 
-// ---------- Jadwal shift (per pegawai per tanggal) ----------
+// Jadwal shift (per pegawai per tanggal)
 function monthDays(bulan) {
   const [y, m] = bulan.split('-').map(Number);
   const last = new Date(y, m, 0).getDate();
@@ -222,7 +222,7 @@ router.post('/admin/jadwal/import', requireAdmin, importUpload.single('file'), a
   res.redirect(`/admin/jadwal${firstMonth ? `?bulan=${firstMonth}` : ''}`);
 });
 
-// ---------- Hari libur nasional / cuti bersama ----------
+// Hari libur nasional / cuti bersama
 router.get('/admin/hari-libur', requireAdmin, (req, res) => {
   const tahun = /^\d{4}$/.test(req.query.tahun || '') ? req.query.tahun : T.fmtDate(new Date()).slice(0, 4);
   const list = db.prepare("SELECT * FROM hari_libur WHERE tanggal LIKE ? ORDER BY tanggal").all(`${tahun}-%`);

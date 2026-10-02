@@ -1,25 +1,31 @@
 <%- include('../partials/header') %>
-<h1 class="h4 mb-3"><i class="bi bi-clock-history"></i> Master Shift Kerja</h1>
+<div class="page-head">
+  <div>
+    <h1>Master shift</h1>
+    <div class="sub">Jam kerja yang bisa dipakai sebagai shift default pegawai atau di jadwal harian.</div>
+  </div>
+  <div class="actions"><a href="/admin/jadwal" class="btn btn-outline-secondary">Atur jadwal pegawai</a></div>
+</div>
 <div class="row g-4">
   <div class="col-lg-8">
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead><tr><th>Kode</th><th>Nama</th><th>Jam Kerja</th><th>Toleransi</th><th>Pegawai</th><th>Status</th><th class="text-end">Aksi</th></tr></thead>
+        <table class="table table-hover table-stack">
+          <thead><tr><th>Shift</th><th>Jam kerja</th><th>Toleransi</th><th>Pegawai</th><th>Status</th><th class="text-end">Aksi</th></tr></thead>
           <tbody>
+          <% if (!list.length) { %><tr class="empty-row"><td colspan="6"><%- include('../partials/empty', { judul: 'Belum ada shift', alasan: 'Buat shift pertama lewat formulir di samping, misalnya Reguler 07.30 sampai 16.00.' }) %></td></tr><% } %>
           <% list.forEach((s) => { %>
-            <tr class="<%= s.aktif ? '' : 'text-muted' %>">
-              <td><span class="shift-chip" style="background: <%= s.warna %>"><%= s.kode %></span></td>
-              <td><%= s.nama %></td>
-              <td><%= s.jam_masuk %> – <%= s.jam_pulang %><% if (s.jam_pulang <= s.jam_masuk) { %> <span class="badge bg-dark">lintas hari</span><% } %></td>
-              <td><%= s.toleransi_menit %> menit</td>
-              <td><%= s.jumlah_pegawai %></td>
-              <td><%= s.aktif ? 'Aktif' : 'Nonaktif' %></td>
-              <td class="text-end text-nowrap">
-                <a href="/admin/shift?edit=<%= s.id %>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-                <form method="post" action="/admin/shift/<%= s.id %>/hapus" class="d-inline" data-confirm="Hapus shift <%= s.nama %>?">
-                  <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                </form>
+            <tr>
+              <td class="stack-head"><span class="shift-chip" style="background: <%= s.warna %>; color: <%= chipText(s.warna) %>"><%= s.kode %></span> <span class="fw-semibold"><%= s.nama %></span></td>
+              <td data-label="Jam kerja" class="num"><%= s.jam_masuk %> sampai <%= s.jam_pulang %><% if (s.jam_pulang <= s.jam_masuk) { %><span class="cell-sub">Pulang keesokan hari</span><% } %></td>
+              <td data-label="Toleransi" class="num"><%= s.toleransi_menit %> menit</td>
+              <td data-label="Pegawai" class="num"><%= s.jumlah_pegawai %></td>
+              <td data-label="Status"><span class="badge <%= s.aktif ? 'ok' : 'netral' %>"><%= s.aktif ? 'Aktif' : 'Nonaktif' %></span></td>
+              <td>
+                <div class="row-actions">
+                  <a href="/admin/shift?edit=<%= s.id %>" class="btn btn-sm btn-outline-secondary">Ubah</a>
+                  <form method="post" action="/admin/shift/<%= s.id %>/hapus" data-confirm="Hapus shift <%= s.nama %>?"><button class="btn btn-sm btn-outline-danger" aria-label="Hapus shift <%= s.nama %>">Hapus</button></form>
+                </div>
               </td>
             </tr>
           <% }) %>
@@ -27,32 +33,28 @@
         </table>
       </div>
     </div>
-    <div class="alert alert-light border mt-3 small mb-0">
-      <b>Cara kerja shift:</b> setiap pegawai memiliki <i>shift default</i> (diatur di data pegawai). Untuk pola bergilir,
-      atur di menu <a href="/admin/jadwal">Jadwal Shift</a> per tanggal (termasuk hari libur). Keterlambatan dihitung bila absen
-      masuk melebihi jam masuk + toleransi; shift yang jam pulangnya lebih kecil dari jam masuk dianggap lintas hari (shift malam).
-    </div>
+    <p class="small text-muted mt-3 mb-0">Terlambat dihitung bila absen masuk melewati jam masuk ditambah toleransi. Shift yang jam pulangnya lebih kecil dari jam masuk dianggap shift malam yang selesai keesokan hari.</p>
   </div>
   <div class="col-lg-4">
-    <% const e = edit || { warna: '#0d6efd', toleransi_menit: 10, aktif: 1 }; %>
-    <form method="post" action="/admin/shift" class="card shadow-sm">
-      <div class="card-header bg-white"><b><%= edit && edit.id ? 'Ubah Shift' : 'Tambah Shift' %></b></div>
+    <% const e = edit || { warna: '#1d5fa8', toleransi_menit: 10, aktif: 1 }; %>
+    <form method="post" action="/admin/shift" class="card" data-loading="Menyimpan...">
+      <div class="card-header"><h2 class="h6 mb-0"><%= edit && edit.id ? `Ubah shift ${edit.kode}` : 'Tambah shift' %></h2></div>
       <div class="card-body">
-        <% if (errors.length) { %><div class="alert alert-danger py-2 small"><% errors.forEach((x) => { %><div><%= x %></div><% }) %></div><% } %>
+        <% if (errors.length) { %><div class="alert alert-danger py-2 small" role="alert"><% errors.forEach((x) => { %><div><%= x %></div><% }) %></div><% } %>
         <input type="hidden" name="id" value="<%= e.id || '' %>">
         <div class="row g-2">
-          <div class="col-4"><label class="form-label">Kode</label><input name="kode" class="form-control text-uppercase" value="<%= e.kode || '' %>" required maxlength="10"></div>
-          <div class="col-8"><label class="form-label">Nama</label><input name="nama" class="form-control" value="<%= e.nama || '' %>" required></div>
-          <div class="col-6"><label class="form-label">Jam Masuk</label><input type="time" name="jam_masuk" class="form-control" value="<%= e.jam_masuk || '' %>" required></div>
-          <div class="col-6"><label class="form-label">Jam Pulang</label><input type="time" name="jam_pulang" class="form-control" value="<%= e.jam_pulang || '' %>" required></div>
-          <div class="col-6"><label class="form-label">Toleransi (menit)</label><input type="number" min="0" max="240" name="toleransi_menit" class="form-control" value="<%= e.toleransi_menit %>"></div>
-          <div class="col-6"><label class="form-label">Warna</label><input type="color" name="warna" class="form-control form-control-color w-100" value="<%= e.warna %>"></div>
-          <div class="col-12 form-check ms-1 mt-2"><input type="checkbox" class="form-check-input" id="aktif" name="aktif" value="1" <%= e.aktif ? 'checked' : '' %>><label class="form-check-label" for="aktif">Aktif</label></div>
+          <div class="col-4"><label class="form-label" for="kode">Kode</label><input id="kode" name="kode" class="form-control text-uppercase" value="<%= e.kode || '' %>" required maxlength="10"></div>
+          <div class="col-8"><label class="form-label" for="nama">Nama</label><input id="nama" name="nama" class="form-control" value="<%= e.nama || '' %>" required></div>
+          <div class="col-6"><label class="form-label" for="jm">Jam masuk</label><input type="time" id="jm" name="jam_masuk" class="form-control" value="<%= e.jam_masuk || '' %>" required></div>
+          <div class="col-6"><label class="form-label" for="jp">Jam pulang</label><input type="time" id="jp" name="jam_pulang" class="form-control" value="<%= e.jam_pulang || '' %>" required></div>
+          <div class="col-6"><label class="form-label" for="tol">Toleransi (menit)</label><input type="number" id="tol" min="0" max="240" name="toleransi_menit" class="form-control" value="<%= e.toleransi_menit %>"></div>
+          <div class="col-6"><label class="form-label" for="warna">Warna penanda</label><input type="color" id="warna" name="warna" class="form-control form-control-color w-100" value="<%= e.warna %>"></div>
+          <div class="col-12 form-check mt-2 ms-1"><input type="checkbox" class="form-check-input" id="aktif" name="aktif" value="1" <%= e.aktif ? 'checked' : '' %>><label class="form-check-label" for="aktif">Aktif (bisa dipilih di jadwal)</label></div>
         </div>
       </div>
-      <div class="card-footer bg-white d-flex gap-2">
-        <button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button>
-        <% if (edit) { %><a href="/admin/shift" class="btn btn-light">Batal</a><% } %>
+      <div class="card-footer d-flex gap-2">
+        <button class="btn btn-primary">Simpan shift</button>
+        <% if (edit) { %><a href="/admin/shift" class="btn btn-outline-secondary">Batal</a><% } %>
       </div>
     </form>
   </div>

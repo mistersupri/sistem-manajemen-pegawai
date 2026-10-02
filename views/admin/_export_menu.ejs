@@ -1,9 +1,9 @@
 <% const qs = `dari=${f.dari}&sampai=${f.sampai}&unit=${encodeURIComponent(f.unit)}&status=${f.status}&q=${encodeURIComponent(f.q)}`; %>
 <div class="btn-group">
-  <button class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-download"></i> Ekspor</button>
+  <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Ekspor periode ini</button>
   <ul class="dropdown-menu dropdown-menu-end">
-    <li><a class="dropdown-item" href="/admin/absensi/export?format=xlsx&<%= qs %>"><i class="bi bi-file-earmark-excel"></i> Excel (Rekap + Detail)</a></li>
-    <li><a class="dropdown-item" href="/admin/absensi/export?format=csv&<%= qs %>"><i class="bi bi-filetype-csv"></i> CSV Detail</a></li>
-    <li><a class="dropdown-item" href="/admin/absensi/export?format=rekap-csv&<%= qs %>"><i class="bi bi-filetype-csv"></i> CSV Rekap</a></li>
+    <li><a class="dropdown-item" href="/admin/absensi/export?format=xlsx&<%= qs %>">Excel (rekap dan detail)</a></li>
+    <li><a class="dropdown-item" href="/admin/absensi/export?format=csv&<%= qs %>">CSV detail</a></li>
+    <li><a class="dropdown-item" href="/admin/absensi/export?format=rekap-csv&<%= qs %>">CSV rekap</a></li>
   </ul>
 </div>

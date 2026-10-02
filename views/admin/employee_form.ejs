@@ -1,75 +1,83 @@
 <%- include('../partials/header') %>
-<div class="d-flex align-items-center justify-content-between mb-3">
-  <h1 class="h4 mb-0"><%= title %></h1>
-  <a href="/admin/pegawai" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
+<div class="page-head">
+  <div>
+    <h1><%= emp.id ? 'Ubah data pegawai' : 'Tambah pegawai' %></h1>
+    <div class="sub"><%= emp.id ? emp.nama : 'Akun login dibuat otomatis dengan username NIP.' %></div>
+  </div>
+  <div class="actions"><a href="/admin/pegawai" class="btn btn-outline-secondary">Kembali ke daftar</a></div>
 </div>
-<% if (errors.length) { %><div class="alert alert-danger"><ul class="mb-0"><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div><% } %>
-<form method="post" action="<%= emp.id ? `/admin/pegawai/${emp.id}` : '/admin/pegawai' %>" class="card shadow-sm">
+<% if (errors.length) { %><div class="alert alert-danger" role="alert"><b>Data belum bisa disimpan:</b><ul class="mb-0"><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div><% } %>
+<form method="post" action="<%= emp.id ? `/admin/pegawai/${emp.id}` : '/admin/pegawai' %>" class="card" data-loading="Menyimpan...">
   <div class="card-body">
-    <div class="row g-3">
-      <div class="col-md-4"><label class="form-label">NIP *</label><input name="nip" class="form-control" value="<%= emp.nip || '' %>" required maxlength="30"></div>
-      <div class="col-md-8"><label class="form-label">Nama Lengkap *</label><input name="nama" class="form-control" value="<%= emp.nama || '' %>" required></div>
+    <h2 class="h6 mb-3">Identitas</h2>
+    <div class="row g-3 mb-4">
+      <div class="col-md-4"><label class="form-label" for="nip">NIP <span class="text-danger">*</span></label><input id="nip" name="nip" class="form-control num" value="<%= emp.nip || '' %>" required maxlength="30"></div>
+      <div class="col-md-8"><label class="form-label" for="nama">Nama lengkap <span class="text-danger">*</span></label><input id="nama" name="nama" class="form-control" value="<%= emp.nama || '' %>" required></div>
       <div class="col-md-4">
-        <label class="form-label">Jenis Kelamin</label>
-        <select name="jenis_kelamin" class="form-select">
-          <option value="">-</option>
+        <label class="form-label" for="jk">Jenis kelamin</label>
+        <select id="jk" name="jenis_kelamin" class="form-select">
+          <option value="">Belum diisi</option>
           <option value="L" <%= emp.jenis_kelamin === 'L' ? 'selected' : '' %>>Laki-laki</option>
           <option value="P" <%= emp.jenis_kelamin === 'P' ? 'selected' : '' %>>Perempuan</option>
         </select>
       </div>
-      <div class="col-md-4"><label class="form-label">Jabatan</label><input name="jabatan" class="form-control" value="<%= emp.jabatan || '' %>"></div>
+      <div class="col-md-4"><label class="form-label" for="jabatan">Jabatan</label><input id="jabatan" name="jabatan" class="form-control" value="<%= emp.jabatan || '' %>"></div>
       <div class="col-md-4">
-        <label class="form-label">Unit Kerja</label>
-        <input name="unit_kerja" class="form-control" value="<%= emp.unit_kerja || '' %>" list="unitList">
+        <label class="form-label" for="unit">Unit kerja</label>
+        <input id="unit" name="unit_kerja" class="form-control" value="<%= emp.unit_kerja || '' %>" list="unitList">
         <datalist id="unitList"><% units.forEach((u) => { %><option value="<%= u %>"><% }) %></datalist>
       </div>
-      <div class="col-md-4"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="<%= emp.email || '' %>"></div>
-      <div class="col-md-4"><label class="form-label">Telepon</label><input name="telepon" class="form-control" value="<%= emp.telepon || '' %>"></div>
-      <div class="col-md-4"><label class="form-label">Tanggal Masuk</label><input type="date" name="tanggal_masuk" class="form-control" value="<%= emp.tanggal_masuk || '' %>"></div>
-      <div class="col-12"><label class="form-label">Alamat</label><textarea name="alamat" class="form-control" rows="2"><%= emp.alamat || '' %></textarea></div>
+      <div class="col-md-4"><label class="form-label" for="email">Email</label><input type="email" id="email" name="email" class="form-control" value="<%= emp.email || '' %>"></div>
+      <div class="col-md-4"><label class="form-label" for="telp">Telepon</label><input id="telp" name="telepon" class="form-control" value="<%= emp.telepon || '' %>" inputmode="tel"></div>
+      <div class="col-md-4"><label class="form-label" for="tm">Tanggal masuk</label><input type="date" id="tm" name="tanggal_masuk" class="form-control" value="<%= emp.tanggal_masuk || '' %>"></div>
+      <div class="col-12"><label class="form-label" for="alamat">Alamat</label><textarea id="alamat" name="alamat" class="form-control" rows="2"><%= emp.alamat || '' %></textarea></div>
+    </div>
+    <h2 class="h6 mb-3">Absensi</h2>
+    <div class="row g-3">
       <div class="col-md-6">
-        <label class="form-label">Shift Default</label>
-        <select name="default_shift_id" class="form-select">
-          <option value="">- Tanpa shift -</option>
+        <label class="form-label" for="shift">Shift default</label>
+        <select id="shift" name="default_shift_id" class="form-select" aria-describedby="shiftHelp">
+          <option value="">Tanpa shift</option>
           <% shifts.forEach((s) => { %>
-            <option value="<%= s.id %>" <%= Number(emp.default_shift_id) === s.id ? 'selected' : '' %>><%= s.kode %> · <%= s.nama %> (<%= s.jam_masuk %>-<%= s.jam_pulang %>)</option>
+            <option value="<%= s.id %>" <%= Number(emp.default_shift_id) === s.id ? 'selected' : '' %>><%= s.kode %> · <%= s.nama %> (<%= s.jam_masuk %> sampai <%= s.jam_pulang %>)</option>
           <% }) %>
         </select>
-        <div class="form-text">Dipakai bila tidak ada jadwal khusus di menu Jadwal Shift.</div>
+        <div class="form-text" id="shiftHelp">Berlaku di hari kerja bila tidak ada jadwal khusus di menu Jadwal.</div>
       </div>
       <div class="col-md-3">
-        <label class="form-label">ID Mesin Fingerprint</label>
-        <input name="id_mesin" class="form-control" value="<%= emp.id_mesin || '' %>" maxlength="30" placeholder="mis. 202504">
-        <div class="form-text">Nomor ID pegawai di mesin X302 / P280.</div>
+        <label class="form-label" for="idm">ID mesin fingerprint</label>
+        <input id="idm" name="id_mesin" class="form-control num" value="<%= emp.id_mesin || '' %>" maxlength="30" aria-describedby="idmHelp">
+        <div class="form-text" id="idmHelp">Nomor ID pegawai di mesin X302 atau P280.</div>
       </div>
       <div class="col-md-3">
-        <label class="form-label">Status</label>
-        <select name="status" class="form-select">
+        <label class="form-label" for="status">Status</label>
+        <select id="status" name="status" class="form-select">
           <option value="aktif" <%= emp.status === 'aktif' ? 'selected' : '' %>>Aktif</option>
-          <option value="nonaktif" <%= emp.status === 'nonaktif' ? 'selected' : '' %>>Nonaktif</option>
+          <option value="nonaktif" <%= emp.status === 'nonaktif' ? 'selected' : '' %>>Nonaktif (tidak bisa login dan absen)</option>
         </select>
       </div>
       <% if (!emp.id) { %>
-      <div class="col-md-3">
-        <label class="form-label">Password Awal</label>
-        <input type="password" name="password" class="form-control" minlength="6" autocomplete="new-password" placeholder="Kosong = NIP">
+      <div class="col-md-4">
+        <label class="form-label" for="pw">Password awal</label>
+        <input type="password" id="pw" name="password" class="form-control" minlength="6" autocomplete="new-password" aria-describedby="pwHelp">
+        <div class="form-text" id="pwHelp">Kosongkan agar password sama dengan NIP.</div>
       </div>
       <% } else { %>
-      <div class="col-md-3">
-        <label class="form-label">Akun Login</label>
-        <div class="form-control-plaintext"><code><%= emp.username || '-' %></code></div>
+      <div class="col-md-4">
+        <div class="form-label">Akun login</div>
+        <div class="form-control-plaintext num"><%= emp.username || 'Tidak ada akun' %></div>
       </div>
       <% } %>
     </div>
   </div>
-  <div class="card-footer bg-white d-flex justify-content-between">
-    <button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button>
+  <div class="card-footer d-flex flex-wrap justify-content-between gap-2">
+    <button class="btn btn-primary">Simpan</button>
     <% if (emp.id) { %>
-      <button class="btn btn-outline-warning" form="resetForm"><i class="bi bi-arrow-counterclockwise"></i> Reset Password ke NIP</button>
+      <button class="btn btn-outline-secondary" form="resetForm">Reset password ke NIP</button>
     <% } %>
   </div>
 </form>
 <% if (emp.id) { %>
-<form id="resetForm" method="post" action="/admin/pegawai/<%= emp.id %>/reset-password" data-confirm="Reset password pegawai ini menjadi NIP?"></form>
+<form id="resetForm" method="post" action="/admin/pegawai/<%= emp.id %>/reset-password" data-confirm="Reset password pegawai ini menjadi NIP?" data-loading="Mereset..."></form>
 <% } %>
 <%- include('../partials/footer') %>

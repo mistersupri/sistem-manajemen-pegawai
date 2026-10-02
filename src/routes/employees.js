@@ -98,7 +98,7 @@ function parseShiftId(v) {
   return id && db.prepare('SELECT 1 FROM shifts WHERE id = ?').get(id) ? id : null;
 }
 
-// ---------- Daftar pegawai ----------
+// Daftar pegawai
 function queryEmployees(q) {
   const where = [];
   const params = [];
@@ -108,6 +108,7 @@ function queryEmployees(q) {
   }
   if (q.unit) { where.push('e.unit_kerja = ?'); params.push(q.unit); }
   if (q.status) { where.push('e.status = ?'); params.push(q.status); }
+  if (q.wajah === 'belum') where.push("e.face_descriptors IS NULL AND e.status = 'aktif'");
   return db.prepare(`SELECT e.*, s.kode AS shift_kode, s.nama AS shift_nama, s.warna AS shift_warna, u.username
     FROM employees e LEFT JOIN shifts s ON s.id = e.default_shift_id LEFT JOIN users u ON u.employee_id = e.id
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY e.nama`).all(...params);
@@ -188,7 +189,7 @@ router.post('/admin/pegawai/:id/reset-password', requireAdmin, loadEmployee, (re
   res.redirect(`/admin/pegawai/${req.emp.id}/edit`);
 });
 
-// ---------- Pendaftaran wajah ----------
+// Pendaftaran wajah
 router.get('/admin/pegawai/:id/wajah', requireAdmin, loadEmployee, (req, res) => {
   res.render('face_enroll', {
     title: 'Daftarkan Wajah', emp: req.emp, samples: face.samplesOf(req.emp).length,
@@ -245,7 +246,7 @@ router.post('/api/pegawai/wajah-saya', requirePegawai, (req, res) => {
   res.json({ ok: true, samples: total });
 });
 
-// ---------- Export / Import ----------
+// Export / Import
 function exportRows() {
   return queryEmployees({}).map((e) => ({ ...e, kode_shift: e.shift_kode || '', wajah: e.face_descriptors ? 'Ya' : 'Tidak' }));
 }

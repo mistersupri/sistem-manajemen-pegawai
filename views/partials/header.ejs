@@ -2,79 +2,101 @@
 <html lang="id">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title><%= title %> · <%= settings.nama_instansi %></title>
   <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
   <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
-<body>
-<% const active = (p) => path === p || (p !== '/admin' && p !== '/pegawai' && path.startsWith(p)) ? 'active' : ''; %>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary-subtle-dark shadow-sm">
-  <div class="container-fluid">
-    <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-      <i class="bi bi-person-badge-fill"></i>
-      <span class="d-none d-sm-inline"><%= settings.nama_instansi %></span>
-      <span class="d-sm-none">Absensi</span>
-    </a>
+<%
+  const isAdmin = user && user.role === 'admin';
+  const isPegawai = user && user.role === 'pegawai';
+  const on = (...prefixes) => prefixes.some((p) => path === p || path.startsWith(p + '/')) ? 'active' : '';
+  const onExact = (p) => path === p ? 'active' : '';
+%>
+<body class="<%= isPegawai ? 'has-bottom-nav' : '' %>">
+<a class="visually-hidden-focusable btn btn-light position-absolute m-2" style="z-index: 2000" href="#konten">Lewati ke konten</a>
+<nav class="navbar navbar-expand-lg topbar" aria-label="Navigasi utama">
+  <div class="container-xl">
+    <a class="navbar-brand" href="/"><%- include('brand') %></a>
+    <% if (isPegawai) { %>
+    <div class="dropdown d-md-none ms-auto">
+      <button class="btn btn-sm text-white dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: rgba(255,255,255,.5)">Akun</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><span class="dropdown-item-text small text-muted"><%= user.nama %> · <%= user.username %></span></li>
+        <li><a class="dropdown-item" href="/akun/password">Ubah password</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><form method="post" action="/logout"><button class="dropdown-item text-danger">Keluar</button></form></li>
+      </ul>
+    </div>
+    <% } %>
     <% if (user) { %>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-label="Menu">
-      <span class="navbar-toggler-icon"></span>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false">
+      <i class="bi bi-list" aria-hidden="true"></i> Menu
     </button>
     <div class="collapse navbar-collapse" id="nav">
       <ul class="navbar-nav me-auto">
-        <% if (user.role === 'admin') { %>
-          <li class="nav-item"><a class="nav-link <%= active('/admin') %>" href="/admin"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link <%= active('/admin/pegawai') %>" href="/admin/pegawai"><i class="bi bi-people"></i> Pegawai</a></li>
+        <% if (isAdmin) { %>
+          <li class="nav-item"><a class="nav-link <%= onExact('/admin') %>" href="/admin">Dashboard</a></li>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle <%= active('/admin/shift') || active('/admin/jadwal') || active('/admin/hari-libur') %>" href="#" data-bs-toggle="dropdown"><i class="bi bi-clock-history"></i> Shift</a>
+            <a class="nav-link dropdown-toggle <%= on('/admin/absensi', '/admin/rekap') %>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Absensi</a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="/admin/shift">Master Shift</a></li>
-              <li><a class="dropdown-item" href="/admin/jadwal">Jadwal Shift Pegawai</a></li>
-              <li><a class="dropdown-item" href="/admin/hari-libur">Hari Libur Nasional</a></li>
+              <li><a class="dropdown-item" href="/admin/absensi">Data absensi</a></li>
+              <li><a class="dropdown-item" href="/admin/rekap">Rekap per pegawai</a></li>
+              <li><a class="dropdown-item" href="/admin/absensi/input">Input atau koreksi manual</a></li>
             </ul>
           </li>
+          <li class="nav-item"><a class="nav-link <%= on('/admin/klarifikasi') %>" href="/admin/klarifikasi">Klarifikasi<% if (pendingKlarifikasi) { %><span class="nav-count" title="<%= pendingKlarifikasi %> menunggu persetujuan"><%= pendingKlarifikasi %></span><% } %></a></li>
+          <li class="nav-item"><a class="nav-link <%= on('/admin/pegawai') %>" href="/admin/pegawai">Pegawai</a></li>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle <%= active('/admin/absensi') || active('/admin/rekap') %>" href="#" data-bs-toggle="dropdown"><i class="bi bi-calendar-check"></i> Absensi</a>
+            <a class="nav-link dropdown-toggle <%= on('/admin/shift', '/admin/jadwal', '/admin/hari-libur') %>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Jadwal</a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="/admin/absensi">Data Absensi</a></li>
-              <li><a class="dropdown-item" href="/admin/rekap">Rekap Absensi</a></li>
-              <li><a class="dropdown-item" href="/admin/absensi/input">Input / Koreksi Manual</a></li>
+              <li><a class="dropdown-item" href="/admin/jadwal">Jadwal shift pegawai</a></li>
+              <li><a class="dropdown-item" href="/admin/shift">Master shift</a></li>
+              <li><a class="dropdown-item" href="/admin/hari-libur">Hari libur nasional</a></li>
             </ul>
           </li>
-          <li class="nav-item"><a class="nav-link <%= active('/admin/klarifikasi') %>" href="/admin/klarifikasi"><i class="bi bi-chat-square-text"></i> Klarifikasi</a></li>
-          <li class="nav-item"><a class="nav-link <%= active('/admin/mesin') %>" href="/admin/mesin"><i class="bi bi-fingerprint"></i> Mesin</a></li>
-          <li class="nav-item"><a class="nav-link" href="/kiosk" target="_blank"><i class="bi bi-camera-video"></i> Kiosk Wajah</a></li>
-          <li class="nav-item"><a class="nav-link <%= active('/admin/pengaturan') %>" href="/admin/pengaturan"><i class="bi bi-gear"></i> Pengaturan</a></li>
+          <li class="nav-item"><a class="nav-link <%= on('/admin/mesin') %>" href="/admin/mesin">Mesin fingerprint</a></li>
+          <li class="nav-item"><a class="nav-link <%= on('/admin/pengaturan') %>" href="/admin/pengaturan">Pengaturan</a></li>
         <% } else { %>
-          <li class="nav-item"><a class="nav-link <%= active('/pegawai') %>" href="/pegawai"><i class="bi bi-house"></i> Beranda</a></li>
-          <li class="nav-item"><a class="nav-link <%= active('/pegawai/absen') %>" href="/pegawai/absen"><i class="bi bi-person-bounding-box"></i> Absen Wajah</a></li>
-          <li class="nav-item"><a class="nav-link <%= active('/pegawai/dinas-luar') %>" href="/pegawai/dinas-luar"><i class="bi bi-geo-alt"></i> Dinas Luar</a></li>
-          <li class="nav-item"><a class="nav-link <%= active('/pegawai/riwayat') %>" href="/pegawai/riwayat"><i class="bi bi-list-check"></i> Riwayat</a></li>
-          <li class="nav-item"><a class="nav-link <%= active('/pegawai/klarifikasi') %>" href="/pegawai/klarifikasi"><i class="bi bi-chat-square-text"></i> Klarifikasi</a></li>
+          <li class="nav-item pegawai-links"><a class="nav-link <%= onExact('/pegawai') %>" href="/pegawai">Beranda</a></li>
+          <li class="nav-item pegawai-links"><a class="nav-link <%= on('/pegawai/absen') %>" href="/pegawai/absen">Absen wajah</a></li>
+          <li class="nav-item pegawai-links"><a class="nav-link <%= on('/pegawai/dinas-luar') %>" href="/pegawai/dinas-luar">Dinas luar</a></li>
+          <li class="nav-item pegawai-links"><a class="nav-link <%= on('/pegawai/riwayat') %>" href="/pegawai/riwayat">Riwayat</a></li>
+          <li class="nav-item pegawai-links"><a class="nav-link <%= on('/pegawai/klarifikasi') %>" href="/pegawai/klarifikasi">Klarifikasi</a></li>
         <% } %>
       </ul>
-      <div class="dropdown">
-        <a class="nav-link text-white dropdown-toggle" href="#" data-bs-toggle="dropdown">
-          <i class="bi bi-person-circle"></i> <%= user.nama || user.username %>
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li><span class="dropdown-item-text small text-muted"><%= user.role === 'admin' ? 'Administrator' : 'Pegawai' %> · <%= user.username %></span></li>
-          <li><a class="dropdown-item" href="/akun/password"><i class="bi bi-key"></i> Ubah Password</a></li>
-          <li><hr class="dropdown-divider"></li>
-          <li>
-            <form method="post" action="/logout"><button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Keluar</button></form>
-          </li>
-        </ul>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <% if (isAdmin) { %><a href="/kiosk" class="btn btn-kiosk btn-sm" target="_blank" rel="noopener">Buka kiosk wajah</a><% } %>
+        <div class="dropdown">
+          <a class="nav-link text-white dropdown-toggle py-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="min-height: 44px; display: inline-flex; align-items: center;">
+            <%= user.nama || user.username %>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><span class="dropdown-item-text small text-muted"><%= isAdmin ? 'Administrator' : 'Pegawai' %> · <%= user.username %></span></li>
+            <li><a class="dropdown-item" href="/akun/password">Ubah password</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><form method="post" action="/logout"><button class="dropdown-item text-danger">Keluar</button></form></li>
+          </ul>
+        </div>
       </div>
     </div>
     <% } %>
   </div>
 </nav>
-<main class="container-xl py-4">
+<% if (isPegawai) { %>
+<nav class="bottom-nav" aria-label="Navigasi pegawai">
+  <a href="/pegawai" class="<%= onExact('/pegawai') %>"><i class="bi bi-house" aria-hidden="true"></i>Beranda</a>
+  <a href="/pegawai/absen" class="<%= on('/pegawai/absen') %>"><i class="bi bi-person-bounding-box" aria-hidden="true"></i>Absen</a>
+  <a href="/pegawai/dinas-luar" class="<%= on('/pegawai/dinas-luar') %>"><i class="bi bi-geo-alt" aria-hidden="true"></i>Dinas luar</a>
+  <a href="/pegawai/riwayat" class="<%= on('/pegawai/riwayat') %>"><i class="bi bi-calendar3" aria-hidden="true"></i>Riwayat</a>
+  <a href="/pegawai/klarifikasi" class="<%= on('/pegawai/klarifikasi') %>"><i class="bi bi-chat-square-text" aria-hidden="true"></i>Klarifikasi</a>
+</nav>
+<% } %>
+<main class="container-xl py-4" id="konten" tabindex="-1">
   <% if (flash) { %>
-    <div class="alert alert-<%= flash.type %> alert-dismissible fade show" role="alert">
+    <div class="alert alert-<%= flash.type %> alert-dismissible fade show" role="<%= flash.type === 'danger' ? 'alert' : 'status' %>">
       <%= flash.message %>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup pesan"></button>
     </div>
   <% } %>

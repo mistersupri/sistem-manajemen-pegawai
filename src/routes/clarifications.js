@@ -26,7 +26,7 @@ const MAX_DAYS_BACK = 31;
 
 const STATUS_KLARIFIKASI = { menunggu: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak' };
 
-// ---------- Pegawai ----------
+// Pegawai
 router.get('/pegawai/klarifikasi', requirePegawai, (req, res) => {
   const list = db.prepare('SELECT * FROM clarifications WHERE employee_id = ? ORDER BY created_at DESC LIMIT 100')
     .all(req.user.employee_id);
@@ -84,7 +84,7 @@ router.post('/pegawai/klarifikasi/:id/batal', requirePegawai, (req, res) => {
   res.redirect('/pegawai/klarifikasi');
 });
 
-// ---------- Admin ----------
+// Admin
 router.get('/admin/klarifikasi', requireAdmin, (req, res) => {
   const status = STATUS_KLARIFIKASI[req.query.status] ? req.query.status : (req.query.status === 'semua' ? '' : 'menunggu');
   const list = db.prepare(`SELECT c.*, e.nama, e.nip, e.unit_kerja FROM clarifications c JOIN employees e ON e.id = c.employee_id

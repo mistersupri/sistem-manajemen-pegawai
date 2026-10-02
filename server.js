@@ -4,11 +4,25 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 
-const { getSettings } = require('./src/db');
+const { db, getSettings } = require('./src/db');
 const auth = require('./src/auth');
 const T = require('./src/time');
+const { UPLOAD_DIR } = require('./src/uploads');
 const { STATUS_LABEL, METODE_LABEL } = require('./src/attendance');
 const { JENIS, STATUS_KLARIFIKASI } = require('./src/routes/clarifications');
+
+// Warna teks chip shift: hitam atau putih, mana yang kontrasnya lebih tinggi di atas warna shift.
+function chipText(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#ffffff';
+  const lin = (i) => {
+    const v = parseInt(m[1].slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const L = 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
+  const TEKS_GELAP = 0.0196; // luminans #1f2733
+  return 1.05 / (L + 0.05) >= (L + 0.05) / (TEKS_GELAP + 0.05) ? '#ffffff' : '#1f2733';
+}
 
 const app = express();
 app.set('view engine', 'ejs');
@@ -22,6 +36,7 @@ app.use('/vendor/bootstrap', express.static(nm('bootstrap/dist')));
 app.use('/vendor/bootstrap-icons', express.static(nm('bootstrap-icons/font')));
 app.use('/vendor/face-api', express.static(nm('@vladmandic/face-api/dist')));
 app.use('/models', express.static(nm('@vladmandic/face-api/model'), { maxAge: '7d' }));
+app.use('/vendor/font', express.static(nm('@fontsource/plus-jakarta-sans/files'), { maxAge: '30d' }));
 
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(express.json({ limit: '8mb' }));
@@ -46,6 +61,9 @@ app.use((req, res, next) => {
   res.locals.METODE_LABEL = METODE_LABEL;
   res.locals.JENIS = JENIS;
   res.locals.STATUS_KLARIFIKASI = STATUS_KLARIFIKASI;
+  res.locals.chipText = chipText;
+  res.locals.pendingKlarifikasi = req.user && req.user.role === 'admin'
+    ? db.prepare("SELECT COUNT(*) AS n FROM clarifications WHERE status = 'menunggu'").get().n : 0;
   res.locals.path = req.path;
   res.locals.query = req.query;
   next();
@@ -63,6 +81,13 @@ app.use(require('./src/routes/devices'));
 
 app.get('/', auth.requireLogin, (req, res) => {
   res.redirect(req.user.role === 'admin' ? '/admin' : '/pegawai');
+});
+
+// Logo instansi untuk halaman login & navbar (boleh diakses tanpa login)
+app.get('/logo', (req, res) => {
+  const rel = getSettings().logo;
+  if (!rel) return res.sendStatus(404);
+  res.sendFile(path.join(UPLOAD_DIR, rel), { headers: { 'Cache-Control': 'no-cache' } }, (err) => { if (err && !res.headersSent) res.sendStatus(404); });
 });
 
 app.get('/api/time', (req, res) => {

@@ -176,7 +176,7 @@ router.get('/admin/absensi/export', requireAdmin, async (req, res) => {
   await sendWorkbook(res, wb, `${name}.xlsx`);
 });
 
-// ---------- Input / koreksi manual ----------
+// Input / koreksi manual
 router.get('/admin/absensi/input', requireAdmin, (req, res) => {
   const employees = db.prepare("SELECT id, nip, nama FROM employees WHERE status = 'aktif' ORDER BY nama").all();
   const tanggal = T.isValidDate(req.query.tanggal) ? req.query.tanggal : T.fmtDate(new Date());

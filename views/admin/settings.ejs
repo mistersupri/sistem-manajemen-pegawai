@@ -1,67 +1,102 @@
 <%- include('../partials/header') %>
-<div class="row justify-content-center">
+<div class="page-head">
+  <div>
+    <h1>Pengaturan</h1>
+    <div class="sub">Identitas instansi, hari kerja, pengenalan wajah, dan lokasi kantor.</div>
+  </div>
+</div>
+<div class="row g-4">
   <div class="col-lg-8">
-    <h1 class="h4 mb-3"><i class="bi bi-gear"></i> Pengaturan</h1>
-    <form method="post" class="card shadow-sm">
+    <form method="post" class="card" data-loading="Menyimpan...">
       <div class="card-body">
-        <h2 class="h6 text-primary">Umum</h2>
+        <h2 class="h6">Identitas</h2>
         <div class="row g-3 mb-4">
-          <div class="col-md-8"><label class="form-label">Nama Instansi</label><input name="nama_instansi" class="form-control" value="<%= settings.nama_instansi %>"></div>
-          <div class="col-md-4"><label class="form-label">Label Zona Waktu</label><input name="timezone_label" class="form-control" value="<%= settings.timezone_label %>" maxlength="10"><div class="form-text">Ditampilkan di stempel waktu foto.</div></div>
+          <div class="col-md-8"><label class="form-label" for="ni">Nama instansi</label><input id="ni" name="nama_instansi" class="form-control" value="<%= settings.nama_instansi %>"></div>
+          <div class="col-md-4"><label class="form-label" for="tz">Label zona waktu</label><input id="tz" name="timezone_label" class="form-control" value="<%= settings.timezone_label %>" maxlength="10" aria-describedby="tzHelp"><div class="form-text" id="tzHelp">Tampil di stempel waktu foto dinas luar.</div></div>
         </div>
 
-        <h2 class="h6 text-primary">Hari Kerja</h2>
-        <p class="small text-muted mb-2">Shift default pegawai hanya berlaku pada hari yang dicentang dan bukan <a href="/admin/hari-libur">hari libur</a>. Pegawai yang bekerja di luar hari ini (mis. satpam) diatur lewat <a href="/admin/jadwal">Jadwal Shift</a>.</p>
+        <h2 class="h6">Hari kerja</h2>
+        <p class="small text-muted mb-2">Shift default hanya berlaku di hari yang dicentang dan bukan <a href="/admin/hari-libur">hari libur nasional</a>. Pegawai yang bertugas di luar hari ini (misalnya piket) diatur di <a href="/admin/jadwal">Jadwal shift</a>.</p>
         <% const hk = String(settings.hari_kerja || '').split(',').filter(Boolean).map(Number); %>
-        <div class="d-flex flex-wrap gap-3 mb-4">
+        <fieldset class="d-flex flex-wrap gap-3 mb-4">
+          <legend class="visually-hidden">Hari kerja</legend>
           <% T.HARI.forEach((h, i) => { %>
             <div class="form-check"><input class="form-check-input" type="checkbox" name="hari_kerja" value="<%= i %>" id="hk<%= i %>" <%= hk.includes(i) ? 'checked' : '' %>><label class="form-check-label" for="hk<%= i %>"><%= h %></label></div>
           <% }) %>
-        </div>
+        </fieldset>
 
-        <h2 class="h6 text-primary">Pengenalan Wajah</h2>
+        <h2 class="h6">Pengenalan wajah</h2>
         <div class="row g-3 mb-4">
           <div class="col-md-6">
-            <label class="form-label">Ambang Batas Kecocokan: <b id="thVal"><%= settings.face_threshold %></b></label>
-            <input type="range" class="form-range" name="face_threshold" min="0.3" max="0.7" step="0.01" value="<%= settings.face_threshold %>" oninput="thVal.textContent = this.value">
-            <div class="form-text">Semakin kecil semakin ketat. Disarankan 0.45 – 0.55.</div>
+            <label class="form-label" for="th">Ketelitian pencocokan: <b id="thVal" class="num"><%= settings.face_threshold %></b></label>
+            <input type="range" class="form-range" id="th" name="face_threshold" min="0.3" max="0.7" step="0.01" value="<%= settings.face_threshold %>" oninput="thVal.textContent = this.value" aria-describedby="thHelp">
+            <div class="form-text" id="thHelp">Angka lebih kecil berarti lebih ketat. Disarankan 0,45 sampai 0,55.</div>
           </div>
           <div class="col-md-6">
-            <div class="form-check form-switch mt-4">
-              <input class="form-check-input" type="checkbox" name="liveness" id="liveness" value="1" <%= settings.liveness === '1' ? 'checked' : '' %>>
-              <label class="form-check-label" for="liveness">Wajib kedip mata (deteksi keaktifan / anti foto)</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" name="liveness" id="liveness" value="1" <%= settings.liveness === '1' ? 'checked' : '' %>>
+              <label class="form-check-label" for="liveness">Wajib kedip mata sebelum absen (mencegah absen memakai foto)</label>
             </div>
-            <div class="form-check form-switch mt-2">
-              <input class="form-check-input" type="checkbox" name="self_checkin" id="self" value="1" <%= settings.self_checkin === '1' ? 'checked' : '' %>>
-              <label class="form-check-label" for="self">Izinkan pegawai absen wajah dari HP/laptop sendiri</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" name="self_checkin" id="self" value="1" <%= settings.self_checkin === '1' ? 'checked' : '' %>>
+              <label class="form-check-label" for="self">Izinkan pegawai absen wajah dari HP atau laptop sendiri</label>
             </div>
           </div>
         </div>
 
-        <h2 class="h6 text-primary">Lokasi Kantor (Geofence)</h2>
-        <p class="small text-muted">Bila diaktifkan, absen wajah mandiri (bukan dinas luar) hanya diterima di dalam radius kantor. Absen <b>Dinas Luar</b> tidak dibatasi radius tetapi wajib menyertakan foto + GPS.</p>
+        <h2 class="h6">Lokasi kantor</h2>
+        <p class="small text-muted">Bila pembatasan radius aktif, absen wajah dari HP hanya diterima di dalam radius kantor. Absen dinas luar tidak dibatasi radius, tetapi wajib menyertakan foto dan GPS.</p>
         <div class="row g-3">
-          <div class="col-md-4"><label class="form-label">Latitude</label><input name="office_lat" id="lat" class="form-control" value="<%= settings.office_lat %>" placeholder="-6.175392"></div>
-          <div class="col-md-4"><label class="form-label">Longitude</label><input name="office_lng" id="lng" class="form-control" value="<%= settings.office_lng %>" placeholder="106.827153"></div>
-          <div class="col-md-4"><label class="form-label">Radius (meter)</label><input type="number" name="office_radius" class="form-control" value="<%= settings.office_radius %>" min="10"></div>
+          <div class="col-md-4"><label class="form-label" for="lat">Latitude</label><input id="lat" name="office_lat" class="form-control num" value="<%= settings.office_lat %>" placeholder="-6.175392" inputmode="decimal"></div>
+          <div class="col-md-4"><label class="form-label" for="lng">Longitude</label><input id="lng" name="office_lng" class="form-control num" value="<%= settings.office_lng %>" placeholder="106.827153" inputmode="decimal"></div>
+          <div class="col-md-4"><label class="form-label" for="rad">Radius (meter)</label><input type="number" id="rad" name="office_radius" class="form-control" value="<%= settings.office_radius %>" min="10"></div>
           <div class="col-md-6">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="useHere"><i class="bi bi-crosshair"></i> Gunakan lokasi saya saat ini</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="useHere">Pakai lokasi saya sekarang</button>
+            <div id="geoMsg" class="small mt-1" aria-live="polite"></div>
           </div>
           <div class="col-md-6">
-            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="enforce_geofence" id="geo" value="1" <%= settings.enforce_geofence === '1' ? 'checked' : '' %>><label class="form-check-label" for="geo">Aktifkan pembatasan radius</label></div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" name="enforce_geofence" id="geo" value="1" <%= settings.enforce_geofence === '1' ? 'checked' : '' %>><label class="form-check-label" for="geo">Aktifkan pembatasan radius</label></div>
           </div>
         </div>
       </div>
-      <div class="card-footer bg-white"><button class="btn btn-primary"><i class="bi bi-save"></i> Simpan Pengaturan</button></div>
+      <div class="card-footer"><button class="btn btn-primary">Simpan pengaturan</button></div>
     </form>
+  </div>
+
+  <div class="col-lg-4">
+    <section class="card" aria-labelledby="logoTitle">
+      <div class="card-header"><h2 class="h6 mb-0" id="logoTitle">Logo instansi</h2></div>
+      <div class="card-body">
+        <% if (settings.logo) { %>
+          <div class="p-3 mb-3 rounded" style="background: var(--navy)"><img src="/logo?v=<%= encodeURIComponent(settings.logo) %>" alt="Logo saat ini" style="max-height: 64px; max-width: 100%; background: #fff; border-radius: 6px; padding: 4px"></div>
+        <% } else { %>
+          <p class="small text-muted">Belum ada logo. Saat ini hanya nama instansi yang tampil di navigasi dan halaman masuk.</p>
+        <% } %>
+        <form method="post" action="/admin/pengaturan/logo" enctype="multipart/form-data" data-loading="Mengunggah...">
+          <label class="form-label" for="logoFile"><%= settings.logo ? 'Ganti logo' : 'Unggah logo' %></label>
+          <input type="file" id="logoFile" name="logo" class="form-control mb-2" accept="image/png,image/jpeg,image/webp" required aria-describedby="logoHelp">
+          <div class="form-text mb-3" id="logoHelp">PNG, JPG, atau WebP, maksimal 1 MB. Logo berlatar transparan atau putih paling rapi.</div>
+          <button class="btn btn-primary w-100">Simpan logo</button>
+        </form>
+        <% if (settings.logo) { %>
+          <form method="post" action="/admin/pengaturan/logo/hapus" class="mt-2" data-confirm="Hapus logo instansi?" data-loading="Menghapus...">
+            <button class="btn btn-outline-danger w-100">Hapus logo</button>
+          </form>
+        <% } %>
+      </div>
+    </section>
   </div>
 </div>
 <script>
 document.getElementById('useHere').addEventListener('click', () => {
+  const msg = document.getElementById('geoMsg');
+  if (!navigator.geolocation) { msg.textContent = 'Browser ini tidak mendukung lokasi.'; return; }
+  msg.textContent = 'Mengambil lokasi...';
   navigator.geolocation.getCurrentPosition((p) => {
     document.getElementById('lat').value = p.coords.latitude.toFixed(6);
     document.getElementById('lng').value = p.coords.longitude.toFixed(6);
-  }, () => alert('Gagal mendapatkan lokasi.'), { enableHighAccuracy: true });
+    msg.textContent = `Lokasi terisi (akurasi sekitar ${Math.round(p.coords.accuracy)} m). Tekan Simpan pengaturan.`;
+  }, () => { msg.textContent = 'Gagal mengambil lokasi. Izinkan akses lokasi di browser, lalu coba lagi.'; }, { enableHighAccuracy: true });
 });
 </script>
 <%- include('../partials/footer') %>

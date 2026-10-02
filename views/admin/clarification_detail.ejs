@@ -1,26 +1,29 @@
 <%- include('../partials/header') %>
-<div class="d-flex align-items-center justify-content-between mb-3">
-  <h1 class="h4 mb-0">Detail Klarifikasi</h1>
-  <a href="/admin/klarifikasi" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
+<div class="page-head">
+  <div>
+    <h1>Klarifikasi dari <%= c.nama %></h1>
+    <div class="sub"><%= JENIS[c.jenis] %> untuk <%= T.fmtTanggalIndo(c.tanggal) %></div>
+  </div>
+  <div class="actions"><a href="/admin/klarifikasi" class="btn btn-outline-secondary">Kembali ke daftar</a></div>
 </div>
 <div class="row g-4">
   <div class="col-lg-6">
-    <div class="card shadow-sm mb-3">
+    <div class="card mb-3">
       <div class="card-body">
         <div class="d-flex justify-content-between"><h2 class="h5"><%= c.nama %></h2><span class="badge klar-<%= c.status %> align-self-start"><%= STATUS_KLARIFIKASI[c.status] %></span></div>
-        <div class="text-muted small mb-3"><%= c.nip %> · <%= c.jabatan || '' %> · <%= c.unit_kerja || '' %></div>
+        <div class="text-muted small mb-3"><%= [c.nip, c.jabatan, c.unit_kerja].filter(Boolean).join(' · ') %></div>
         <dl class="row mb-0">
           <dt class="col-sm-4">Tanggal absen</dt><dd class="col-sm-8"><%= T.fmtTanggalIndo(c.tanggal) %></dd>
           <dt class="col-sm-4">Jenis</dt><dd class="col-sm-8"><%= JENIS[c.jenis] %></dd>
           <% if (c.jam_masuk_usulan) { %><dt class="col-sm-4">Jam masuk</dt><dd class="col-sm-8"><%= c.jam_masuk_usulan %></dd><% } %>
           <% if (c.jam_pulang_usulan) { %><dt class="col-sm-4">Jam pulang</dt><dd class="col-sm-8"><%= c.jam_pulang_usulan %></dd><% } %>
           <dt class="col-sm-4">Alasan</dt><dd class="col-sm-8" style="white-space: pre-wrap"><%= c.alasan %></dd>
-          <dt class="col-sm-4">Diajukan</dt><dd class="col-sm-8"><%= c.created_at %></dd>
+          <dt class="col-sm-4">Diajukan</dt><dd class="col-sm-8"><%= T.fmtTglPendek(c.created_at.slice(0, 10)) %>, <%= c.created_at.slice(11, 16) %></dd>
           <% if (c.lampiran) { %>
             <dt class="col-sm-4">Lampiran</dt>
             <dd class="col-sm-8">
               <% if (/\.(jpg|png)$/i.test(c.lampiran)) { %><a href="/uploads/<%= c.lampiran %>" target="_blank"><img src="/uploads/<%= c.lampiran %>" class="photo-thumb" alt="Lampiran"></a>
-              <% } else { %><a href="/uploads/<%= c.lampiran %>" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Buka lampiran</a><% } %>
+              <% } else { %><a href="/uploads/<%= c.lampiran %>" target="_blank">Buka lampiran</a><% } %>
             </dd>
           <% } %>
           <% if (c.status !== 'menunggu') { %>
@@ -30,12 +33,12 @@
         </dl>
       </div>
     </div>
-    <div class="card shadow-sm">
-      <div class="card-header bg-white"><b>Data absensi saat ini</b></div>
+    <div class="card">
+      <div class="card-header"><b>Data absensi saat ini</b></div>
       <div class="card-body">
-        <p class="mb-1">Jadwal: <%= libur ? 'Libur' : shift ? `${shift.nama} (${shift.jam_masuk}-${shift.jam_pulang})` : 'Tanpa shift' %></p>
+        <p class="mb-1">Jadwal: <%= libur ? 'Libur' : shift ? `${shift.nama}, ${shift.jam_masuk} sampai ${shift.jam_pulang}` : 'Tanpa shift' %></p>
         <% if (rec) { %>
-          <p class="mb-1">Masuk: <b><%= rec.jam_masuk ? rec.jam_masuk.slice(11, 16) : '-' %></b> · Pulang: <b><%= rec.jam_pulang ? rec.jam_pulang.slice(11, 16) : '-' %></b></p>
+          <p class="mb-1">Masuk: <b class="num"><%= rec.jam_masuk ? rec.jam_masuk.slice(11, 16) : 'belum ada' %></b> · Pulang: <b class="num"><%= rec.jam_pulang ? rec.jam_pulang.slice(11, 16) : 'belum ada' %></b></p>
           <p class="mb-1">Status: <%- include('../partials/status_badge', { status: rec.status }) %> <% if (rec.terlambat_menit) { %>terlambat <%= rec.terlambat_menit %> menit<% } %></p>
           <a href="/admin/absensi/<%= rec.id %>" class="small">Lihat detail absensi</a>
         <% } else { %><p class="text-muted mb-0">Tidak ada catatan absensi pada tanggal ini.</p><% } %>
@@ -44,28 +47,28 @@
   </div>
   <% if (c.status === 'menunggu') { %>
   <div class="col-lg-6">
-    <form method="post" action="/admin/klarifikasi/<%= c.id %>/proses" class="card shadow-sm border-primary">
-      <div class="card-header bg-white"><b>Proses Klarifikasi</b></div>
+    <form method="post" action="/admin/klarifikasi/<%= c.id %>/proses" class="card" style="border-color: var(--biru)" data-loading="Memproses...">
+      <div class="card-header"><h2 class="h6 mb-0">Keputusan</h2></div>
       <div class="card-body">
-        <p class="small text-muted">Bila disetujui, data absensi tanggal <%= c.tanggal %> akan disimpan sesuai isian berikut.</p>
+        <p class="small text-muted">Bila disetujui, absensi tanggal <%= T.fmtTglPendek(c.tanggal) %> disimpan sesuai isian di bawah. Isian sudah diisi dari usulan pegawai.</p>
         <div class="row g-3">
-          <div class="col-6"><label class="form-label">Jam Masuk</label><input type="time" name="jam_masuk" class="form-control" value="<%= proposal.jam_masuk %>"></div>
-          <div class="col-6"><label class="form-label">Jam Pulang</label><input type="time" name="jam_pulang" class="form-control" value="<%= proposal.jam_pulang %>"></div>
-          <div class="col-12"><label class="form-label">Status Absensi</label>
-            <select name="status" class="form-select">
+          <div class="col-6"><label class="form-label" for="kjm">Jam masuk</label><input type="time" id="kjm" name="jam_masuk" class="form-control" value="<%= proposal.jam_masuk %>"></div>
+          <div class="col-6"><label class="form-label" for="kjp">Jam pulang</label><input type="time" id="kjp" name="jam_pulang" class="form-control" value="<%= proposal.jam_pulang %>"></div>
+          <div class="col-12"><label class="form-label" for="kst">Status absensi</label>
+            <select id="kst" name="status" class="form-select">
               <% Object.entries(STATUS_LABEL).forEach(([k, v]) => { %><option value="<%= k %>" <%= proposal.status === k ? 'selected' : '' %>><%= v %></option><% }) %>
             </select>
           </div>
           <div class="col-12 form-check ms-1">
             <input class="form-check-input" type="checkbox" name="dispensasi" value="1" id="disp" <%= proposal.dispensasi ? 'checked' : '' %>>
-            <label class="form-check-label" for="disp">Beri dispensasi (hapus hitungan terlambat / pulang cepat)</label>
+            <label class="form-check-label" for="disp">Beri dispensasi: hapus hitungan terlambat dan pulang cepat</label>
           </div>
-          <div class="col-12"><label class="form-label">Catatan Admin</label><textarea name="catatan_admin" class="form-control" rows="2"></textarea></div>
+          <div class="col-12"><label class="form-label" for="kcat">Catatan untuk pegawai (opsional)</label><textarea id="kcat" name="catatan_admin" class="form-control" rows="2"></textarea></div>
         </div>
       </div>
-      <div class="card-footer bg-white d-flex gap-2">
-        <button class="btn btn-success" name="aksi" value="setujui"><i class="bi bi-check-lg"></i> Setujui</button>
-        <button class="btn btn-outline-danger" name="aksi" value="tolak" formnovalidate><i class="bi bi-x-lg"></i> Tolak</button>
+      <div class="card-footer d-flex gap-2">
+        <button class="btn btn-success" name="aksi" value="setujui">Setujui dan perbarui absensi</button>
+        <button class="btn btn-outline-danger" name="aksi" value="tolak" formnovalidate>Tolak</button>
       </div>
     </form>
   </div>

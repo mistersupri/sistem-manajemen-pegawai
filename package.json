@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/sudinpendidikanjp2-del/sistem-manajemen-pegawai#readme",
   "dependencies": {
+    "@fontsource/plus-jakarta-sans": "^5.3.0",
     "@vladmandic/face-api": "^1.7.15",
     "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.8",

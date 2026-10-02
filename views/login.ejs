@@ -3,35 +3,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login · <%= settings.nama_instansi %></title>
+  <title>Masuk · <%= settings.nama_instansi %></title>
   <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
-<body class="login-bg d-flex align-items-center min-vh-100">
-  <div class="container" style="max-width: 420px">
-    <div class="card shadow border-0">
-      <div class="card-body p-4">
-        <div class="text-center mb-4">
-          <i class="bi bi-person-bounding-box display-4 text-primary"></i>
-          <h1 class="h4 mt-2 mb-0">Sistem Absensi Pegawai</h1>
-          <div class="text-muted"><%= settings.nama_instansi %></div>
-        </div>
-        <% if (error) { %><div class="alert alert-danger py-2"><%= error %></div><% } %>
-        <form method="post" action="/login">
-          <div class="mb-3">
-            <label class="form-label" for="username">Username / NIP</label>
-            <input class="form-control" id="username" name="username" value="<%= username %>" required autofocus autocomplete="username">
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="password">Password</label>
-            <input class="form-control" type="password" id="password" name="password" required autocomplete="current-password">
-          </div>
-          <button class="btn btn-primary w-100"><i class="bi bi-box-arrow-in-right"></i> Masuk</button>
-        </form>
-      </div>
+<body>
+<div class="login-wrap">
+  <aside class="login-side">
+    <div>
+      <% if (settings.logo) { %><img class="login-logo mb-4" src="/logo?v=<%= encodeURIComponent(settings.logo) %>" alt="Logo <%= settings.nama_instansi %>"><% } %>
+      <h1 class="h3 mb-2"><%= settings.nama_instansi %></h1>
+      <p class="tagline mb-0">Absensi pegawai: kiosk wajah, absen dari HP, dinas luar dengan foto GPS, dan data mesin fingerprint dalam satu tempat.</p>
     </div>
-    <p class="text-center text-white-50 small mt-3">Pegawai login menggunakan NIP. Password awal = NIP.</p>
-  </div>
+    <p class="tagline small mb-0">Masalah akun? Hubungi admin tata usaha.</p>
+  </aside>
+  <main class="login-main">
+    <div class="login-card">
+      <div class="d-lg-none mb-4">
+        <% if (settings.logo) { %><img class="login-logo mb-3" src="/logo?v=<%= encodeURIComponent(settings.logo) %>" alt="Logo <%= settings.nama_instansi %>"><% } %>
+        <div class="fw-bold" style="color: var(--navy)"><%= settings.nama_instansi %></div>
+      </div>
+      <h2 class="h4 mb-1">Masuk ke sistem absensi</h2>
+      <p class="text-muted mb-4">Pegawai masuk dengan NIP. Password awal sama dengan NIP.</p>
+      <% if (error) { %><div class="alert alert-danger py-2" role="alert"><%= error %></div><% } %>
+      <form method="post" action="/login" data-loading="Memeriksa...">
+        <div class="mb-3">
+          <label class="form-label" for="username">Username atau NIP</label>
+          <input class="form-control form-control-lg" id="username" name="username" value="<%= username %>" required autofocus autocomplete="username">
+        </div>
+        <div class="mb-4">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-control form-control-lg" type="password" id="password" name="password" required autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-lg w-100">Masuk</button>
+      </form>
+    </div>
+  </main>
+</div>
+<script src="/static/js/app.js"></script>
 </body>
 </html>

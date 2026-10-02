@@ -41,7 +41,14 @@ router.get('/pegawai/riwayat', requirePegawai, (req, res) => {
     FROM attendance a LEFT JOIN shifts s ON s.id = a.shift_id
     WHERE a.employee_id = ? AND a.tanggal BETWEEN ? AND ? ORDER BY a.tanggal DESC`).all(emp.id, `${bulan}-01`, last);
   const summary = rekap({ dari: `${bulan}-01`, sampai: last, unit: '', q: emp.nip }).find((r) => r.nip === emp.nip);
-  res.render('pegawai/riwayat', { title: 'Riwayat Absensi', emp, bulan, records, summary });
+  // Hari kerja tanpa catatan absensi ditampilkan juga agar pegawai bisa langsung mengajukan klarifikasi.
+  const today = T.fmtDate(new Date());
+  const ada = new Set(records.map((r) => r.tanggal));
+  const kosong = T.dateRange(`${bulan}-01`, last < today ? last : T.addDays(today, -1))
+    .filter((d) => !ada.has(d) && !A.getShiftForDate(emp, d).libur && A.getShiftForDate(emp, d).shift)
+    .map((d) => ({ tanggal: d, kosong: true }));
+  const rows = records.concat(kosong).sort((x, y) => (x.tanggal < y.tanggal ? 1 : -1));
+  res.render('pegawai/riwayat', { title: 'Riwayat Absensi', emp, bulan, records: rows, summary });
 });
 
 function hasFace(emp) {
@@ -50,8 +57,13 @@ function hasFace(emp) {
 
 router.get('/pegawai/absen', requirePegawai, (req, res) => {
   const emp = me(req);
+  // Tombol yang ditonjolkan: pulang bila sudah absen masuk (hari ini atau shift malam kemarin)
+  const today = T.fmtDate(new Date());
+  const rec = A.getRecord(emp.id, today);
+  const yRec = A.getRecord(emp.id, T.addDays(today, -1));
+  const nextMode = (rec && rec.jam_masuk && !rec.jam_pulang) || (!rec && yRec && yRec.jam_masuk && !yRec.jam_pulang) ? 'pulang' : 'masuk';
   res.render('pegawai/absen', {
-    title: 'Absen Wajah', emp, hasFace: hasFace(emp), enabled: getSettings().self_checkin === '1',
+    title: 'Absen Wajah', emp, hasFace: hasFace(emp), enabled: getSettings().self_checkin === '1', nextMode, rec,
   });
 });
 

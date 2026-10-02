@@ -1,33 +1,35 @@
 <%- include('../partials/header') %>
-<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+<div class="page-head">
   <div>
-    <h1 class="h4 mb-0"><i class="bi bi-link-45deg"></i> Pemetaan ID Mesin ke Pegawai</h1>
-    <div class="text-muted small">ID pengguna di mesin fingerprint yang belum terhubung dengan data pegawai.</div>
+    <h1>Pemetaan ID mesin ke pegawai</h1>
+    <div class="sub">ID pengguna di mesin fingerprint yang belum terhubung ke data pegawai. Scan mereka belum masuk ke absensi.</div>
   </div>
-  <a href="/admin/mesin" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
+  <div class="actions"><a href="/admin/mesin" class="btn btn-outline-secondary">Kembali ke mesin</a></div>
 </div>
 <% if (!unmatched.length) { %>
-  <div class="alert alert-success"><i class="bi bi-check-circle"></i> Semua ID mesin sudah terhubung dengan pegawai.</div>
+  <div class="card"><%- include('../partials/empty', { judul: 'Semua ID mesin sudah terhubung', alasan: 'Setiap scan dari mesin sudah diproses menjadi absensi pegawai. ID baru akan muncul di sini setelah impor atau tarik data berikutnya.', aksi: [{ href: '/admin/mesin', label: 'Kembali ke mesin' }] }) %></div>
 <% } else { %>
-<form method="post" action="/admin/mesin/pemetaan" id="mapForm"></form>
-<form method="post" action="/admin/mesin/pemetaan/buat" id="createForm" data-confirm="Buat pegawai baru untuk ID mesin yang dicentang?"></form>
-<div class="card shadow-sm">
+<form method="post" action="/admin/mesin/pemetaan" id="mapForm" data-loading="Menyimpan pemetaan..."></form>
+<form method="post" action="/admin/mesin/pemetaan/buat" id="createForm" data-confirm="Buat pegawai baru untuk ID mesin yang dicentang?" data-loading="Membuat pegawai..."></form>
+<div class="alert alert-light border small">Pegawai yang namanya sama persis dengan nama di mesin sudah dipilih otomatis. Periksa dulu sebelum menyimpan. Setelah disimpan, seluruh scan ID tersebut langsung diproses menjadi absensi.</div>
+<div class="card">
   <div class="table-responsive">
-    <table class="table table-hover mb-0 align-middle">
-      <thead><tr><th style="width: 36px"><input type="checkbox" class="form-check-input" id="checkAll" title="Pilih semua"></th><th>ID Mesin</th><th>Nama di Mesin</th><th>Departemen</th><th>Scan</th><th style="min-width: 280px">Hubungkan ke Pegawai</th></tr></thead>
+    <table class="table table-hover table-stack">
+      <thead><tr><th style="width: 44px"><input type="checkbox" class="form-check-input" id="checkAll" aria-label="Centang semua ID untuk dibuat sebagai pegawai baru"></th><th>Nama di mesin</th><th>ID mesin</th><th>Departemen</th><th>Scan</th><th style="min-width: 260px">Hubungkan ke pegawai</th></tr></thead>
       <tbody>
-      <% unmatched.forEach((u) => {
+      <% unmatched.forEach((u, i) => {
            const guess = employees.find((e) => !e.id_mesin && u.nama && e.nama.toLowerCase().replace(/[^a-z]/g, '') === u.nama.toLowerCase().replace(/[^a-z]/g, '')); %>
         <tr>
-          <td><input type="checkbox" class="form-check-input pin-check" name="pins" value="<%= u.pin %>" form="createForm"></td>
-          <td class="font-monospace"><%= u.pin %></td>
-          <td><%= u.nama || '-' %></td>
-          <td class="small"><%= u.departemen || '-' %></td>
-          <td class="small"><%= u.jumlah_log %><% if (u.terakhir) { %><div class="text-muted">terakhir <%= u.terakhir.slice(0, 10) %></div><% } %></td>
-          <td>
+          <td data-label="Buat pegawai baru"><input type="checkbox" class="form-check-input pin-check" name="pins" value="<%= u.pin %>" form="createForm" aria-label="Buat pegawai baru dari ID <%= u.pin %>"></td>
+          <td class="stack-head fw-semibold"><%= u.nama || `Tanpa nama (ID ${u.pin})` %></td>
+          <td data-label="ID mesin" class="num"><%= u.pin %></td>
+          <td data-label="Departemen" class="small"><%= u.departemen || 'Tidak tercatat' %></td>
+          <td data-label="Scan" class="small num"><%= u.jumlah_log %><% if (u.terakhir) { %><span class="cell-sub">terakhir <%= T.fmtTglPendek(u.terakhir.slice(0, 10)) %></span><% } %></td>
+          <td data-label="Pegawai">
             <input type="hidden" name="map_pin" value="<%= u.pin %>" form="mapForm">
-            <select name="map_emp" class="form-select form-select-sm" form="mapForm">
-              <option value="">— belum dipilih —</option>
+            <label class="visually-hidden" for="map<%= i %>">Pegawai untuk ID <%= u.pin %></label>
+            <select id="map<%= i %>" name="map_emp" class="form-select form-select-sm" form="mapForm">
+              <option value="">Belum dipilih</option>
               <% employees.filter((e) => !e.id_mesin).forEach((e) => { %>
                 <option value="<%= e.id %>" <%= guess && guess.id === e.id ? 'selected' : '' %>><%= e.nama %> (<%= e.nip %>)</option>
               <% }) %>
@@ -38,19 +40,20 @@
       </tbody>
     </table>
   </div>
-  <div class="card-footer bg-white d-flex flex-wrap gap-3 justify-content-between align-items-center">
-    <button class="btn btn-primary" form="mapForm"><i class="bi bi-link"></i> Simpan Pemetaan</button>
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-      <span class="small text-muted">Belum ada di data pegawai?</span>
-      <select name="shift_id" class="form-select form-select-sm w-auto" form="createForm">
-        <option value="">Tanpa shift default</option>
-        <% shifts.forEach((s) => { %><option value="<%= s.id %>" <%= s.kode === 'REG' ? 'selected' : '' %>><%= s.kode %> (<%= s.jam_masuk %>-<%= s.jam_pulang %>)</option><% }) %>
-      </select>
-      <button class="btn btn-outline-success btn-sm" form="createForm"><i class="bi bi-person-plus"></i> Buat Pegawai dari yang Dicentang</button>
+  <div class="card-footer d-flex flex-wrap gap-3 justify-content-between align-items-end">
+    <button class="btn btn-primary" form="mapForm">Simpan pemetaan</button>
+    <div class="d-flex flex-wrap gap-2 align-items-end">
+      <div>
+        <label class="form-label small mb-1" for="newShift">Belum ada di data pegawai? Buat dari yang dicentang, dengan shift</label>
+        <select id="newShift" name="shift_id" class="form-select form-select-sm" form="createForm">
+          <option value="">Tanpa shift default</option>
+          <% shifts.forEach((s) => { %><option value="<%= s.id %>" <%= s.kode === 'REG' ? 'selected' : '' %>><%= s.kode %> (<%= s.jam_masuk %> sampai <%= s.jam_pulang %>)</option><% }) %>
+        </select>
+      </div>
+      <button class="btn btn-outline-secondary" form="createForm">Buat pegawai baru</button>
     </div>
   </div>
 </div>
-<p class="small text-muted mt-2">Pegawai yang namanya sama persis dengan nama di mesin sudah dipilih otomatis — periksa sebelum menyimpan. Setelah dipetakan, seluruh scan ID tersebut langsung diproses menjadi data absensi.</p>
 <script>
 document.getElementById('checkAll').addEventListener('change', (e) => {
   document.querySelectorAll('.pin-check').forEach((c) => { c.checked = e.target.checked; });

@@ -56,7 +56,18 @@ function fmtTanggalIndo(dateStr) {
   return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+const HARI_PENDEK = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+const BULAN_PENDEK = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+/** "2026-05-08" -> "Jum, 8 Mei 2026" (format tabel) */
+function fmtTglPendek(dateStr, withYear = true) {
+  const d = parseDateTime(dateStr);
+  if (!d) return dateStr || '';
+  return `${HARI_PENDEK[d.getDay()]}, ${d.getDate()} ${BULAN_PENDEK[d.getMonth()]}${withYear ? ` ${d.getFullYear()}` : ''}`;
+}
+
 module.exports = {
+  fmtTglPendek, HARI_PENDEK, BULAN_PENDEK,
   pad, fmtDate, fmtTime, fmtDateTime, parseDateTime, isValidDate, isValidTime,
   addDays, dateRange, minutesBetween, fmtTanggalIndo, HARI, BULAN,
 };

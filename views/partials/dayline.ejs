@@ -1,0 +1,15 @@
+<%
+  // Garis hari kerja 05.00 sampai 22.00 (lihat DESIGN.md)
+  const toPct = (hhmm) => { if (!hhmm) return null; const [h, m] = hhmm.split(':').map(Number); return Math.max(0, Math.min(100, ((h * 60 + m) - 300) / (17 * 60) * 100)); };
+  const sIn = toPct(shiftMasuk); let sOut = toPct(shiftPulang);
+  if (sIn !== null && sOut !== null && sOut <= sIn) sOut = 100;
+  const pIn = masuk ? toPct(masuk.slice(11, 16)) : null;
+  const pOut = pulang ? toPct(pulang.slice(11, 16)) : null;
+  const label = `Shift ${shiftMasuk || '-'} sampai ${shiftPulang || '-'}, masuk ${masuk ? masuk.slice(11, 16) : 'belum'}, pulang ${pulang ? pulang.slice(11, 16) : 'belum'}`;
+%>
+<div class="dayline" role="img" aria-label="<%= label %>">
+  <div class="track"></div>
+  <% if (sIn !== null && sOut !== null) { %><div class="shift" style="left: <%= sIn %>%; width: <%= sOut - sIn %>%"></div><% } %>
+  <% if (pIn !== null) { %><div class="dot in <%= telat ? 'late' : '' %>" style="left: <%= pIn %>%"></div><% } %>
+  <% if (pOut !== null) { %><div class="dot out" style="left: <%= pOut %>%"></div><% } %>
+</div>

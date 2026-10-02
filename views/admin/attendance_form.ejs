@@ -1,39 +1,44 @@
 <%- include('../partials/header') %>
-<div class="row justify-content-center">
-  <div class="col-lg-7">
-    <h1 class="h4 mb-3"><i class="bi bi-pencil-square"></i> Input / Koreksi Absensi Manual</h1>
-    <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
-    <form method="get" class="card card-body shadow-sm mb-3">
+<div class="page-head">
+  <div>
+    <h1>Input atau koreksi absensi</h1>
+    <div class="sub">Untuk pegawai yang tidak bisa absen lewat kiosk, HP, atau mesin. Setiap perubahan ditandai sebagai input manual.</div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-lg-8">
+    <% if (error) { %><div class="alert alert-danger" role="alert"><%= error %></div><% } %>
+    <form method="get" class="card card-body mb-3" aria-label="Pilih pegawai dan tanggal">
       <div class="row g-2 align-items-end">
-        <div class="col-md-6"><label class="form-label">Pegawai</label>
-          <select name="employee_id" class="form-select" required>
-            <option value="">- pilih -</option>
+        <div class="col-md-6"><label class="form-label" for="emp">Pegawai</label>
+          <select id="emp" name="employee_id" class="form-select" required>
+            <option value="">Pilih pegawai</option>
             <% employees.forEach((e) => { %><option value="<%= e.id %>" <%= empId === e.id ? 'selected' : '' %>><%= e.nama %> (<%= e.nip %>)</option><% }) %>
           </select>
         </div>
-        <div class="col-md-4"><label class="form-label">Tanggal</label><input type="date" name="tanggal" class="form-control" value="<%= tanggal %>" required></div>
-        <div class="col-md-2"><button class="btn btn-secondary w-100">Muat</button></div>
+        <div class="col-md-4"><label class="form-label" for="tgl">Tanggal</label><input type="date" id="tgl" name="tanggal" class="form-control" value="<%= tanggal %>" required></div>
+        <div class="col-md-2"><button class="btn btn-outline-secondary w-100">Tampilkan</button></div>
       </div>
     </form>
     <% if (empId) { %>
-    <form method="post" class="card shadow-sm">
+    <form method="post" class="card" data-loading="Menyimpan...">
+      <div class="card-header"><%= rec ? 'Ubah absensi yang sudah tercatat' : 'Belum ada absensi pada tanggal ini. Data baru akan dibuat.' %></div>
       <div class="card-body">
         <input type="hidden" name="employee_id" value="<%= empId %>">
         <input type="hidden" name="tanggal" value="<%= tanggal %>">
-        <p class="mb-3"><%= rec ? 'Mengubah data absensi yang sudah ada.' : 'Belum ada data absensi pada tanggal ini — data baru akan dibuat.' %></p>
         <div class="row g-3">
-          <div class="col-md-4"><label class="form-label">Jam Masuk</label><input type="time" name="jam_masuk" class="form-control" value="<%= rec && rec.jam_masuk ? rec.jam_masuk.slice(11, 16) : '' %>"></div>
-          <div class="col-md-4"><label class="form-label">Jam Pulang</label><input type="time" name="jam_pulang" class="form-control" value="<%= rec && rec.jam_pulang ? rec.jam_pulang.slice(11, 16) : '' %>"></div>
-          <div class="col-md-4"><label class="form-label">Status</label>
-            <select name="status" class="form-select">
+          <div class="col-md-4"><label class="form-label" for="jm">Jam masuk</label><input type="time" id="jm" name="jam_masuk" class="form-control" value="<%= rec && rec.jam_masuk ? rec.jam_masuk.slice(11, 16) : '' %>"></div>
+          <div class="col-md-4"><label class="form-label" for="jp">Jam pulang</label><input type="time" id="jp" name="jam_pulang" class="form-control" value="<%= rec && rec.jam_pulang ? rec.jam_pulang.slice(11, 16) : '' %>"></div>
+          <div class="col-md-4"><label class="form-label" for="st">Status</label>
+            <select id="st" name="status" class="form-select" aria-describedby="stHelp">
               <% Object.entries(STATUS_LABEL).forEach(([k, v]) => { %><option value="<%= k %>" <%= (rec ? rec.status : 'hadir') === k ? 'selected' : '' %>><%= v %></option><% }) %>
             </select>
-            <div class="form-text">Hadir/Terlambat dihitung otomatis dari jam & shift.</div>
           </div>
-          <div class="col-12"><label class="form-label">Keterangan</label><textarea name="keterangan" class="form-control" rows="2"><%= rec ? rec.keterangan || '' : '' %></textarea></div>
+          <div class="col-12 form-text mt-1" id="stHelp">Hadir dan Terlambat dihitung otomatis dari jam dan shift. Pilih Izin, Sakit, Cuti, Dinas luar, atau Alpa untuk menetapkan status secara manual.</div>
+          <div class="col-12"><label class="form-label" for="ket">Keterangan</label><textarea id="ket" name="keterangan" class="form-control" rows="2"><%= rec ? rec.keterangan || '' : '' %></textarea></div>
         </div>
       </div>
-      <div class="card-footer bg-white"><button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button></div>
+      <div class="card-footer"><button class="btn btn-primary">Simpan absensi</button></div>
     </form>
     <% } %>
   </div>

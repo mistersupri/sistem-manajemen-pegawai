@@ -1,37 +1,48 @@
 <%- include('../partials/header') %>
-<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-  <h1 class="h4 mb-0"><i class="bi bi-calendar-check"></i> Data Absensi</h1>
-  <div class="d-flex gap-2">
-    <a href="/admin/absensi/input" class="btn btn-outline-primary"><i class="bi bi-pencil-square"></i> Input Manual</a>
+<% const filtered = f.unit || f.status || f.q; %>
+<div class="page-head">
+  <div>
+    <h1>Data absensi</h1>
+    <div class="sub"><%= records.length %> catatan · <%= T.fmtTglPendek(f.dari) %> sampai <%= T.fmtTglPendek(f.sampai) %></div>
+  </div>
+  <div class="actions">
+    <a href="/admin/absensi/input" class="btn btn-outline-secondary">Input manual</a>
     <%- include('_export_menu') %>
   </div>
 </div>
 <%- include('_filter', { showStatus: true }) %>
-<div class="card shadow-sm">
+<div class="card">
   <div class="table-responsive">
-    <table class="table table-hover table-sm mb-0">
-      <thead><tr><th>Tanggal</th><th>Pegawai</th><th>Shift</th><th>Masuk</th><th>Pulang</th><th>Status</th><th>Telat / Cepat</th><th>Keterangan</th><th></th></tr></thead>
+    <table class="table table-hover table-stack">
+      <thead><tr><th>Pegawai</th><th>Tanggal</th><th>Masuk</th><th>Pulang</th><th>Status</th><th>Keterangan</th><th class="text-end"><span class="visually-hidden">Aksi</span></th></tr></thead>
       <tbody>
-      <% if (!records.length) { %><tr><td colspan="9" class="text-center text-muted py-4">Tidak ada data.</td></tr><% } %>
+      <% if (!records.length) { %>
+        <tr class="empty-row"><td colspan="7">
+          <% if (filtered) { %>
+            <%- include('../partials/empty', { judul: 'Tidak ada absensi yang cocok dengan filter', alasan: 'Periode sudah benar? Coba hapus filter unit, status, atau nama pegawai.', aksi: [{ href: `/admin/absensi?dari=${f.dari}&sampai=${f.sampai}`, label: 'Hapus filter, tetap di periode ini' }] }) %>
+          <% } else { %>
+            <%- include('../partials/empty', { judul: 'Belum ada absensi pada periode ini', alasan: 'Absensi masuk dari kiosk wajah, HP pegawai, atau mesin fingerprint. Data mesin USB perlu diimpor dulu.', aksi: [{ href: '/admin/mesin', label: 'Impor data mesin', utama: true }, { href: '/admin/absensi/input', label: 'Input manual' }] }) %>
+          <% } %>
+        </td></tr>
+      <% } %>
       <% records.forEach((r) => { %>
         <tr>
-          <td class="text-nowrap"><%= r.tanggal %><div class="small text-muted"><%= T.HARI[T.parseDateTime(r.tanggal).getDay()] %></div></td>
-          <td><div class="fw-semibold"><%= r.nama %></div><div class="small text-muted"><%= r.nip %></div></td>
-          <td><% if (r.shift_kode) { %><span class="shift-chip" style="background: <%= r.shift_warna %>"><%= r.shift_kode %></span><div class="small text-muted"><%= r.shift_masuk %>-<%= r.shift_pulang %></div><% } else { %>-<% } %></td>
-          <td class="text-nowrap"><%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %>
-            <% if (r.metode_masuk === 'dinas_luar') { %><i class="bi bi-geo-alt-fill text-info" title="Foto GPS dinas luar"></i><% } else if (r.metode_masuk === 'fingerprint') { %><i class="bi bi-fingerprint text-primary" title="Mesin fingerprint"></i><% } else if (r.metode_masuk === 'wajah') { %><i class="bi bi-person-bounding-box text-success" title="Pengenalan wajah"></i><% } else if (r.metode_masuk) { %><i class="bi bi-pencil text-muted" title="<%= METODE_LABEL[r.metode_masuk] %>"></i><% } %></td>
-          <td class="text-nowrap"><%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %>
-            <% if (r.metode_pulang === 'dinas_luar') { %><i class="bi bi-geo-alt-fill text-info"></i><% } else if (r.metode_pulang === 'fingerprint') { %><i class="bi bi-fingerprint text-primary" title="Mesin fingerprint"></i><% } else if (r.metode_pulang === 'wajah') { %><i class="bi bi-person-bounding-box text-success"></i><% } else if (r.metode_pulang) { %><i class="bi bi-pencil text-muted"></i><% } %></td>
-          <td><%- include('../partials/status_badge', { status: r.status }) %></td>
-          <td class="small"><%= r.terlambat_menit ? `+${r.terlambat_menit}m` : '' %> <%= r.pulang_cepat_menit ? `-${r.pulang_cepat_menit}m` : '' %></td>
-          <td class="small text-muted" style="max-width: 260px"><%= r.keterangan || '' %></td>
-          <td class="text-nowrap"><a href="/admin/absensi/<%= r.id %>" class="btn btn-sm btn-light"><i class="bi bi-eye"></i></a>
-            <a href="/admin/absensi/input?employee_id=<%= r.employee_id %>&tanggal=<%= r.tanggal %>" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a></td>
+          <td class="stack-head"><div class="fw-semibold"><%= r.nama %></div><span class="cell-sub"><%= r.unit_kerja || r.nip %></span></td>
+          <td data-label="Tanggal" class="text-nowrap"><%= T.fmtTglPendek(r.tanggal) %><% if (r.shift_kode) { %><span class="cell-sub num"><%= r.shift_kode %> <%= r.shift_masuk %> sampai <%= r.shift_pulang %></span><% } %></td>
+          <td data-label="Masuk" class="jam"><%= r.jam_masuk ? r.jam_masuk.slice(11, 16) : '-' %><%- include('../partials/metode', { m: r.metode_masuk }) %></td>
+          <td data-label="Pulang" class="jam"><%= r.jam_pulang ? r.jam_pulang.slice(11, 16) : '-' %><%- include('../partials/metode', { m: r.metode_pulang }) %></td>
+          <td data-label="Status"><%- include('../partials/status_badge', { status: r.status }) %>
+            <% if (r.terlambat_menit) { %><span class="cell-sub num">telat <%= r.terlambat_menit %> mnt</span><% } %>
+            <% if (r.pulang_cepat_menit) { %><span class="cell-sub num">pulang cepat <%= r.pulang_cepat_menit %> mnt</span><% } %></td>
+          <td data-label="Keterangan" class="small text-muted" style="max-width: 260px"><%= r.keterangan || '' %></td>
+          <td><div class="row-actions">
+            <a href="/admin/absensi/<%= r.id %>" class="btn btn-sm btn-outline-secondary">Detail</a>
+            <a href="/admin/absensi/input?employee_id=<%= r.employee_id %>&tanggal=<%= r.tanggal %>" class="btn btn-sm btn-outline-secondary">Koreksi</a>
+          </div></td>
         </tr>
       <% }) %>
       </tbody>
     </table>
   </div>
-  <div class="card-footer bg-white small text-muted"><%= records.length %> data</div>
 </div>
 <%- include('../partials/footer') %>

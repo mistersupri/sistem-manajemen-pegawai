@@ -270,3 +270,23 @@ test('akses tanpa login dialihkan', async () => {
   assert.equal((await anon.post('/api/kiosk/absen', { json: {} })).status, 401);
   assert.equal((await anon.get('/models/tiny_face_detector_model-weights_manifest.json')).status, 200);
 });
+
+test('unggah, tampilkan, dan hapus logo instansi', async () => {
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+  const fd = new FormData();
+  fd.set('logo', new Blob([PNG], { type: 'image/png' }), 'logo.png');
+  let res = await admin.post('/admin/pengaturan/logo', { body: fd });
+  assert.equal(res.status, 302);
+  const anon = new Client();
+  res = await anon.get('/logo');
+  assert.equal(res.status, 200, 'logo bisa diakses dari halaman login');
+  assert.match(await (await anon.get('/login')).text(), /src="\/logo\?v=/);
+
+  const bad = new FormData();
+  bad.set('logo', new Blob(['<svg onload="alert(1)"></svg>'], { type: 'image/svg+xml' }), 'logo.svg');
+  await admin.post('/admin/pengaturan/logo', { body: bad });
+  assert.equal((await anon.get('/logo')).status, 200, 'file non-gambar ditolak, logo lama tetap');
+
+  await admin.post('/admin/pengaturan/logo/hapus');
+  assert.equal((await anon.get('/logo')).status, 404);
+});

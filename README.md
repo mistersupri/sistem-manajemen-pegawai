@@ -54,6 +54,11 @@ Dibangun dengan Node.js + Express + SQLite bawaan Node (`node:sqlite`), jadi tid
 - **Rekap** per pegawai: hari kerja, tepat waktu, terlambat, dinas luar, izin, sakit, cuti, alpa, tanpa keterangan, total menit terlambat, dan % kehadiran.
 - **Ekspor Excel** (sheet Rekap + Detail) serta **CSV** (detail atau rekap).
 
+### Tampilan
+- Arah desain tertulis di `DESIGN.md`: palet navy dan biru instansi di atas latar kertas hangat, huruf Plus Jakarta Sans (disajikan lokal), dan motif garis hari kerja yang menunjukkan jam masuk/pulang terhadap shift.
+- Logo instansi diunggah di **Pengaturan** (PNG/JPG/WebP, maksimal 1 MB). Tanpa logo, yang tampil hanya nama instansi.
+- Di HP: tabel berubah menjadi kartu, pegawai memakai navigasi bawah, dan filter bisa dilipat. Semua halaman lolos pemeriksaan WCAG 2 AA (axe-core) dan bisa dipakai dengan keyboard.
+
 ## Menjalankan
 
 Kebutuhan: **Node.js 22.13 atau lebih baru** (disarankan Node 24 LTS). Tidak perlu Visual Studio, Python, atau build tools.

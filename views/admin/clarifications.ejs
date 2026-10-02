@@ -1,27 +1,37 @@
 <%- include('../partials/header') %>
-<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
-  <h1 class="h4 mb-0"><i class="bi bi-chat-square-text"></i> Klarifikasi Absen</h1>
-  <ul class="nav nav-pills">
-    <% [['menunggu', 'Menunggu'], ['disetujui', 'Disetujui'], ['ditolak', 'Ditolak'], ['semua', 'Semua']].forEach(([k, v]) => { %>
-      <li class="nav-item"><a class="nav-link <%= (status || 'semua') === k ? 'active' : '' %>" href="?status=<%= k %>"><%= v %></a></li>
+<div class="page-head">
+  <div>
+    <h1>Klarifikasi absen</h1>
+    <div class="sub">Pengajuan pegawai untuk lupa absen, terlambat, izin, sakit, cuti, atau dinas luar.</div>
+  </div>
+  <ul class="nav nav-pills" aria-label="Filter status">
+    <% [['menunggu', 'Menunggu'], ['disetujui', 'Disetujui'], ['ditolak', 'Ditolak'], ['semua', 'Semua']].forEach(([k, v]) => { const act = (status || 'semua') === k; %>
+      <li class="nav-item"><a class="nav-link <%= act ? 'active' : '' %>" <%- act ? 'aria-current="page"' : '' %> href="?status=<%= k %>"><%= v %><% if (k === 'menunggu' && pendingKlarifikasi) { %><span class="nav-count"><%= pendingKlarifikasi %></span><% } %></a></li>
     <% }) %>
   </ul>
 </div>
-<div class="card shadow-sm">
+<div class="card">
   <div class="table-responsive">
-    <table class="table table-hover mb-0">
-      <thead><tr><th>Diajukan</th><th>Pegawai</th><th>Tanggal Absen</th><th>Jenis</th><th>Alasan</th><th>Status</th><th></th></tr></thead>
+    <table class="table table-hover table-stack">
+      <thead><tr><th>Pegawai</th><th>Untuk tanggal</th><th>Jenis</th><th>Alasan</th><th>Status</th><th class="text-end"><span class="visually-hidden">Aksi</span></th></tr></thead>
       <tbody>
-      <% if (!list.length) { %><tr><td colspan="7" class="text-center text-muted py-4">Tidak ada klarifikasi.</td></tr><% } %>
+      <% if (!list.length) { %>
+        <tr class="empty-row"><td colspan="6">
+          <% if (status === 'menunggu') { %>
+            <%- include('../partials/empty', { judul: 'Tidak ada klarifikasi yang menunggu', alasan: 'Semua pengajuan sudah diproses. Pengajuan baru dari pegawai akan muncul di sini dan di dashboard.', aksi: [{ href: '?status=semua', label: 'Lihat riwayat semua klarifikasi' }] }) %>
+          <% } else { %>
+            <%- include('../partials/empty', { judul: 'Belum ada klarifikasi dengan status ini', alasan: 'Pegawai mengajukan klarifikasi dari menu Klarifikasi di aplikasi mereka.' }) %>
+          <% } %>
+        </td></tr>
+      <% } %>
       <% list.forEach((c) => { %>
         <tr>
-          <td class="small text-nowrap"><%= c.created_at.slice(0, 16) %></td>
-          <td><div class="fw-semibold"><%= c.nama %></div><div class="small text-muted"><%= c.nip %></div></td>
-          <td class="text-nowrap"><%= c.tanggal %></td>
-          <td><%= JENIS[c.jenis] %><% if (c.lampiran) { %> <i class="bi bi-paperclip" title="Ada lampiran"></i><% } %></td>
-          <td class="small" style="max-width: 320px"><%= c.alasan.length > 120 ? c.alasan.slice(0, 120) + '…' : c.alasan %></td>
-          <td><span class="badge klar-<%= c.status %>"><%= STATUS_KLARIFIKASI[c.status] %></span></td>
-          <td><a href="/admin/klarifikasi/<%= c.id %>" class="btn btn-sm <%= c.status === 'menunggu' ? 'btn-primary' : 'btn-light' %>"><%= c.status === 'menunggu' ? 'Tinjau' : 'Lihat' %></a></td>
+          <td class="stack-head"><div class="fw-semibold"><%= c.nama %></div><span class="cell-sub">diajukan <%= T.fmtTglPendek(c.created_at.slice(0, 10), false) %>, <%= c.created_at.slice(11, 16) %></span></td>
+          <td data-label="Untuk tanggal" class="text-nowrap"><%= T.fmtTglPendek(c.tanggal) %></td>
+          <td data-label="Jenis"><%= JENIS[c.jenis] %><% if (c.lampiran) { %><span class="cell-sub">ada lampiran</span><% } %></td>
+          <td data-label="Alasan" class="small" style="max-width: 320px"><%= c.alasan.length > 120 ? c.alasan.slice(0, 120) + '...' : c.alasan %></td>
+          <td data-label="Status"><span class="badge klar-<%= c.status %>"><%= STATUS_KLARIFIKASI[c.status] %></span></td>
+          <td class="text-end"><a href="/admin/klarifikasi/<%= c.id %>" class="btn btn-sm <%= c.status === 'menunggu' ? 'btn-primary' : 'btn-outline-secondary' %>"><%= c.status === 'menunggu' ? 'Tinjau' : 'Lihat' %></a></td>
         </tr>
       <% }) %>
       </tbody>

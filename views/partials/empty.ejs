@@ -1,0 +1,7 @@
+<div class="empty-state">
+  <h3><%= judul %></h3>
+  <p><%= alasan %></p>
+  <% if (typeof aksi !== 'undefined' && aksi) { %>
+    <div class="d-flex flex-wrap gap-2"><% aksi.forEach((a) => { %><a class="btn btn-sm <%= a.utama ? 'btn-primary' : 'btn-outline-secondary' %>" href="<%= a.href %>"><%= a.label %></a><% }) %></div>
+  <% } %>
+</div>

@@ -1,10 +1,10 @@
 <%- include('partials/header') %>
-<div class="d-flex align-items-center justify-content-between mb-3">
+<div class="page-head">
   <div>
-    <h1 class="h4 mb-0"><i class="bi bi-person-bounding-box"></i> Daftarkan Wajah</h1>
-    <div class="text-muted"><%= emp.nama %> · NIP <%= emp.nip %></div>
+    <h1>Daftarkan wajah</h1>
+    <div class="sub"><%= emp.nama %> · NIP <span class="num"><%= emp.nip %></span></div>
   </div>
-  <a href="<%= backUrl %>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
+  <div class="actions"><a href="<%= backUrl %>" class="btn btn-outline-secondary">Kembali</a></div>
 </div>
 
 <div class="row g-4">
@@ -13,27 +13,28 @@
       <video id="video" autoplay muted playsinline></video>
       <canvas class="overlay" id="overlay"></canvas>
       <div class="face-guide"></div>
-      <div class="camera-status" id="status">Memuat model pengenal wajah...</div>
+      <div class="camera-status" id="status" aria-live="polite">Memuat model pengenal wajah...</div>
     </div>
-    <div class="progress mt-3" style="height: 22px">
-      <div class="progress-bar progress-bar-striped" id="progress" style="width: 0%">0 / 5</div>
+    <div class="d-flex justify-content-between small mt-3 mb-1"><span>Sampel terekam</span><span id="progressText" class="num">0 dari 5</span></div>
+    <div class="progress" role="progressbar" aria-labelledby="progressText" aria-valuemin="0" aria-valuemax="5">
+      <div class="progress-bar" id="progress" style="width: 0%"></div>
     </div>
   </div>
   <div class="col-lg-5">
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="card-body">
         <p class="mb-2">Status: <% if (samples) { %>
-          <span class="badge bg-success"><%= samples %> sampel wajah terdaftar</span>
+          <span class="badge ok"><%= samples %> sampel wajah terdaftar</span>
         <% } else { %>
-          <span class="badge bg-secondary">Belum terdaftar</span>
+          <span class="badge netral">Belum terdaftar</span>
         <% } %></p>
         <% if (!canReset && samples) { %>
           <div class="alert alert-info">Wajah Anda sudah terdaftar. Hubungi admin bila perlu mendaftarkan ulang.</div>
         <% } else { %>
         <ol class="small text-muted ps-3">
-          <li>Pastikan pencahayaan cukup dan wajah terlihat jelas (tanpa masker/kacamata gelap).</li>
+          <li>Pastikan pencahayaan cukup dan wajah terlihat jelas, tanpa masker atau kacamata gelap.</li>
           <li>Posisikan wajah di dalam bingkai oval.</li>
-          <li>Klik <b>Mulai Rekam</b>, lalu gerakkan kepala sedikit (kiri, kanan, atas) agar sampel bervariasi.</li>
+          <li>Tekan <b>Mulai rekam</b>, lalu gerakkan kepala sedikit ke kiri, kanan, dan atas agar sampel bervariasi.</li>
         </ol>
         <% if (canReset && samples) { %>
           <div class="form-check mb-2">
@@ -41,19 +42,17 @@
             <label class="form-check-label" for="replace">Ganti semua sampel lama</label>
           </div>
         <% } %>
-        <button class="btn btn-primary w-100 mb-2" id="btnStart" disabled><i class="bi bi-record-circle"></i> Mulai Rekam</button>
+        <button class="btn btn-primary w-100 mb-2" id="btnStart" disabled>Mulai rekam</button>
         <% if (canReset) { %>
-          <label class="btn btn-outline-primary w-100 mb-2">
-            <i class="bi bi-image"></i> Daftarkan dari File Foto
-            <input type="file" accept="image/*" id="fileInput" hidden>
-          </label>
+          <button type="button" class="btn btn-outline-primary w-100 mb-2" id="btnFile">Daftarkan dari file foto</button>
+          <input type="file" accept="image/*" id="fileInput" hidden>
         <% } %>
-        <div id="msg"></div>
+        <div id="msg" aria-live="polite"></div>
         <% } %>
         <% if (canReset && samples) { %>
           <hr>
           <form method="post" action="/admin/pegawai/<%= emp.id %>/wajah/hapus" data-confirm="Hapus semua data wajah pegawai ini?">
-            <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Hapus Data Wajah</button>
+            <button class="btn btn-outline-danger btn-sm">Hapus data wajah</button>
           </form>
         <% } %>
         <% if (emp.face_photo) { %>
@@ -87,7 +86,7 @@
   const show = (type, text) => { if (msg) msg.innerHTML = `<div class="alert alert-${type} py-2 mb-0">${FaceKit.esc(text)}</div>`; };
   const setProgress = () => {
     progress.style.width = `${(samples.length / TARGET) * 100}%`;
-    progress.textContent = `${samples.length} / ${TARGET}`;
+    document.getElementById('progressText').textContent = `${samples.length} dari ${TARGET}`;
   };
 
   async function save(descriptors, photoData) {
@@ -112,6 +111,8 @@
   }
   if (!btn) { status.textContent = 'Wajah sudah terdaftar.'; return; }
 
+  const btnFile = document.getElementById('btnFile');
+  if (btnFile) btnFile.addEventListener('click', () => fileInput.click());
   if (fileInput) {
     fileInput.addEventListener('change', async () => {
       const f = fileInput.files[0];

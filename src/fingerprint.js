@@ -47,9 +47,7 @@ function validStamp(s) {
   return !!s && T.isValidDate(s.slice(0, 10)) && T.isValidTime(s.slice(11, 16));
 }
 
-// ---------------------------------------------------------------------------
 // Parser file ekspor
-// ---------------------------------------------------------------------------
 
 /**
  * Laporan standar Solution (mis. P280 "StandardReport.xls"), sheet "Lap. Log Absen":
@@ -248,9 +246,7 @@ async function parseExportFile(buffer, filename) {
   return parsed;
 }
 
-// ---------------------------------------------------------------------------
 // Penyimpanan & pemrosesan log
-// ---------------------------------------------------------------------------
 
 function employeeByPin(pin) {
   return db.prepare("SELECT * FROM employees WHERE id_mesin = ? AND status = 'aktif'").get(pin);

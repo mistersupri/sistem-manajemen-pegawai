@@ -10,43 +10,57 @@
 </head>
 <body class="kiosk-body">
 <div class="container-xl py-3">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <div>
-      <div class="h4 mb-0"><i class="bi bi-person-bounding-box"></i> Absensi Wajah</div>
-      <div class="text-white-50"><%= settings.nama_instansi %> · <%= totalWajah %> wajah terdaftar</div>
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <% if (settings.logo) { %><img src="/logo?v=<%= encodeURIComponent(settings.logo) %>" alt="Logo <%= settings.nama_instansi %>" style="height: 48px; background: #fff; border-radius: 8px; padding: 3px"><% } %>
+      <div>
+        <h1 class="h4 mb-0">Absensi wajah</h1>
+        <div class="kiosk-muted"><%= settings.nama_instansi %></div>
+      </div>
     </div>
     <div class="text-end">
-      <div class="kiosk-clock" id="clock">--:--:--</div>
-      <div class="text-white-50" id="date"></div>
+      <div class="kiosk-clock" id="clock" aria-live="off">--:--:--</div>
+      <div class="kiosk-muted" id="date"></div>
     </div>
   </div>
   <div class="row g-4">
     <div class="col-lg-7">
-      <div class="btn-group w-100 mb-3" role="group">
-        <input type="radio" class="btn-check" name="mode" id="mMasuk" value="masuk" checked>
-        <label class="btn btn-lg btn-outline-success" for="mMasuk"><i class="bi bi-box-arrow-in-right"></i> ABSEN MASUK</label>
-        <input type="radio" class="btn-check" name="mode" id="mPulang" value="pulang">
-        <label class="btn btn-lg btn-outline-warning" for="mPulang"><i class="bi bi-box-arrow-right"></i> ABSEN PULANG</label>
-      </div>
+      <fieldset class="mb-3">
+        <legend class="visually-hidden">Jenis absen</legend>
+        <div class="btn-group w-100" role="group">
+          <input type="radio" class="btn-check" name="mode" id="mMasuk" value="masuk" checked>
+          <label class="btn btn-lg btn-outline-light" for="mMasuk">Absen masuk</label>
+          <input type="radio" class="btn-check" name="mode" id="mPulang" value="pulang">
+          <label class="btn btn-lg btn-outline-light" for="mPulang">Absen pulang</label>
+        </div>
+      </fieldset>
       <div class="camera-wrap mirror">
         <video id="video" autoplay muted playsinline></video>
         <canvas class="overlay" id="overlay"></canvas>
         <div class="face-guide"></div>
-        <div class="camera-status" id="status">Memuat model pengenal wajah...</div>
+        <div class="camera-status" id="status" aria-live="polite">Memuat model pengenal wajah...</div>
       </div>
-      <div class="d-flex justify-content-between mt-2 small text-white-50">
-        <span><% if (settings.liveness === '1') { %><i class="bi bi-eye"></i> Kedipkan mata untuk verifikasi<% } else { %>Hadapkan wajah ke kamera<% } %></span>
-        <span><a href="#" id="fs" class="text-white-50"><i class="bi bi-arrows-fullscreen"></i> Layar penuh</a> · <a href="/admin" class="text-white-50">Keluar kiosk</a></span>
+      <div class="d-flex flex-wrap justify-content-between gap-2 mt-2 small kiosk-muted">
+        <span><%= settings.liveness === '1' ? 'Hadapkan wajah ke kamera, lalu kedipkan mata.' : 'Hadapkan wajah ke kamera, satu orang setiap kali.' %></span>
+        <span><button type="button" id="fs" class="btn btn-sm btn-outline-light">Layar penuh</button> <a href="/admin" class="btn btn-sm btn-outline-light">Keluar kiosk</a></span>
       </div>
     </div>
     <div class="col-lg-5">
-      <div class="kiosk-result mb-3" id="result">
-        <div class="card"><div class="card-body text-center text-white-50 py-5">Hasil absensi akan tampil di sini.</div></div>
+      <div class="kiosk-result mb-3" id="result" aria-live="assertive">
+        <% if (!totalWajah) { %>
+          <div class="card"><div class="card-body">
+            <h2 class="h5">Belum ada wajah terdaftar</h2>
+            <p class="kiosk-muted mb-3">Kiosk hanya mengenali pegawai yang wajahnya sudah didaftarkan. Daftarkan wajah pegawai dari menu Pegawai, lalu muat ulang halaman ini.</p>
+            <a href="/admin/pegawai?wajah=belum" class="btn btn-light">Daftarkan wajah pegawai</a>
+          </div></div>
+        <% } else { %>
+          <div class="card"><div class="card-body kiosk-muted py-5 text-center"><%= totalWajah %> pegawai siap dikenali. Hasil absen akan tampil di sini.</div></div>
+        <% } %>
       </div>
-      <div class="card" style="background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1)">
-        <div class="card-header text-white-50 small">Riwayat di perangkat ini</div>
-        <ul class="list-group list-group-flush kiosk-log" id="log"></ul>
-      </div>
+      <section class="card kiosk-panel" aria-labelledby="logTitle">
+        <div class="card-header kiosk-panel small" id="logTitle">Riwayat di perangkat ini</div>
+        <ul class="list-group list-group-flush kiosk-log" id="log"><li class="list-group-item bg-transparent kiosk-muted small" id="logEmpty">Belum ada absen dari perangkat ini sejak halaman dibuka.</li></ul>
+      </section>
     </div>
   </div>
 </div>
@@ -76,8 +90,7 @@
   if (now().getUTCHours() >= 12) document.getElementById('mPulang').checked = true;
   const mode = () => document.querySelector('input[name=mode]:checked').value;
 
-  document.getElementById('fs').addEventListener('click', (e) => {
-    e.preventDefault();
+  document.getElementById('fs').addEventListener('click', () => {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen();
     else document.exitFullscreen();
   });
@@ -88,7 +101,8 @@
   function addLog(text, ok) {
     const li = document.createElement('li');
     li.className = 'list-group-item bg-transparent text-white small d-flex justify-content-between';
-    li.innerHTML = `<span>${ok ? '✅' : '⚠️'} ${esc(text)}</span><span class="text-white-50">${FaceKit.fmtClock(now()).slice(0, 5)}</span>`;
+    li.innerHTML = `<span><span class="badge ${ok ? 'ok' : 'gagal'} me-1">${ok ? 'Berhasil' : 'Gagal'}</span>${esc(text)}</span><span class="kiosk-muted num">${FaceKit.fmtClock(now()).slice(0, 5)}</span>`;
+    document.getElementById('logEmpty')?.remove();
     log.prepend(li);
     while (log.children.length > 30) log.lastChild.remove();
   }
@@ -114,23 +128,23 @@
       const r = await FaceKit.postJson('/api/kiosk/absen', { descriptor: FaceKit.toArray(det.descriptor), mode: mode(), photo });
       const masuk = r.mode === 'masuk';
       const info = masuk
-        ? (r.terlambat_menit ? `<span class="badge bg-warning text-dark">Terlambat ${r.terlambat_menit} menit</span>` : '<span class="badge bg-success">Tepat waktu</span>')
-        : (r.pulang_cepat_menit ? `<span class="badge bg-warning text-dark">Pulang cepat ${r.pulang_cepat_menit} menit</span>` : '<span class="badge bg-success">Sesuai jadwal</span>');
+        ? (r.terlambat_menit ? `<span class="badge status-terlambat">Terlambat ${r.terlambat_menit} menit</span>` : '<span class="badge status-hadir">Tepat waktu</span>')
+        : (r.pulang_cepat_menit ? `<span class="badge status-terlambat">Pulang cepat ${r.pulang_cepat_menit} menit</span>` : '<span class="badge status-hadir">Sesuai jadwal</span>');
       showResult(true, `
         <div class="d-flex align-items-center gap-3">
-          <i class="bi bi-check-circle-fill text-success display-4"></i>
+          <i class="bi bi-check-circle-fill display-4" style="color: #7ee2a8" aria-hidden="true"></i>
           <div>
             <div class="h4 mb-0">${esc(r.nama)}</div>
-            <div class="text-white-50">${esc(r.nip)}${r.jabatan ? ' · ' + esc(r.jabatan) : ''}</div>
+            <div class="kiosk-muted">${esc(r.nip)}${r.jabatan ? ' · ' + esc(r.jabatan) : ''}</div>
             <div class="mt-2">Absen <b>${masuk ? 'MASUK' : 'PULANG'}</b> pukul <b>${esc(r.jam)}</b> ${info}</div>
-            ${r.shift ? `<div class="small text-white-50 mt-1">${esc(r.shift)} · kemiripan ${r.similarity}%</div>` : ''}
+            ${r.shift ? `<div class="small kiosk-muted mt-1">${esc(r.shift)} · kemiripan ${r.similarity}%</div>` : ''}
           </div>
         </div>`);
-      addLog(`${r.nama} — ${masuk ? 'masuk' : 'pulang'} ${r.jam}`, true);
+      addLog(`${r.nama}, ${masuk ? 'masuk' : 'pulang'} ${r.jam}`, true);
       status.textContent = `Terima kasih, ${r.nama}!`;
       pauseUntil = Date.now() + 4000;
     } catch (e) {
-      showResult(false, `<div class="d-flex align-items-center gap-3"><i class="bi bi-x-circle-fill text-danger display-4"></i><div class="h5 mb-0">${esc(e.message)}</div></div>`);
+      showResult(false, `<div class="d-flex align-items-center gap-3"><i class="bi bi-x-circle-fill display-4" style="color: #ff9b94" aria-hidden="true"></i><div class="h5 mb-0">${esc(e.message)}</div></div>`);
       addLog(e.message, false);
       status.textContent = e.message;
       pauseUntil = Date.now() + 3500;
@@ -153,7 +167,7 @@
       } else {
         const blinked = LIVENESS ? blink.update(detection) : true;
         stable = detection.detection.score > 0.5 ? stable + 1 : 0;
-        if (!blinked) status.textContent = 'Wajah terdeteksi — silakan kedipkan mata.';
+        if (!blinked) status.textContent = 'Wajah terdeteksi. Silakan kedipkan mata.';
         else if (stable >= 3) await submit(detection);
         else status.textContent = 'Tahan posisi...';
       }

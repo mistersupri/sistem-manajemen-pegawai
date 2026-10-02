@@ -1,17 +1,20 @@
 const express = require('express');
-const { db, setSetting } = require('../db');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const { db, setSetting, getSettings } = require('../db');
 const { requireAdmin } = require('../auth');
 const T = require('../time');
 const face = require('../face');
 const { recordAttendance, getShiftForDate, AttendanceError, parseCoord } = require('../attendance');
-const { saveDataUrl, removeFile } = require('../uploads');
+const { saveDataUrl, removeFile, UPLOAD_DIR } = require('../uploads');
 
 const router = express.Router();
 
 router.get('/admin', requireAdmin, (req, res) => {
   const today = T.fmtDate(new Date());
   const employees = db.prepare("SELECT * FROM employees WHERE status = 'aktif' ORDER BY nama").all();
-  const records = db.prepare(`SELECT a.*, e.nama, e.nip, e.unit_kerja, s.kode AS shift_kode, s.warna AS shift_warna
+  const records = db.prepare(`SELECT a.*, e.nama, e.nip, e.unit_kerja, s.kode AS shift_kode, s.warna AS shift_warna, s.jam_masuk AS shift_masuk, s.jam_pulang AS shift_pulang
     FROM attendance a JOIN employees e ON e.id = a.employee_id LEFT JOIN shifts s ON s.id = a.shift_id
     WHERE a.tanggal = ? ORDER BY COALESCE(a.jam_masuk, a.jam_pulang) DESC`).all(today);
   const byEmp = new Set(records.map((r) => r.employee_id));
@@ -30,8 +33,14 @@ router.get('/admin', requireAdmin, (req, res) => {
   const pending = db.prepare("SELECT COUNT(*) AS n FROM clarifications WHERE status = 'menunggu'").get().n;
   const tanpaWajah = db.prepare("SELECT COUNT(*) AS n FROM employees WHERE status = 'aktif' AND face_descriptors IS NULL").get().n;
 
+  const klarifikasi = db.prepare(`SELECT c.id, c.tanggal, c.jenis, c.created_at, e.nama FROM clarifications c
+    JOIN employees e ON e.id = c.employee_id WHERE c.status = 'menunggu' ORDER BY c.created_at LIMIT 5`).all();
+  const mesinGagal = db.prepare('SELECT id, nama, last_sync_at, last_sync_status FROM devices WHERE last_sync_ok = 0').all();
+  const terjadwal = employees.length - libur;
+  const hadirCount = records.filter((r) => ['hadir', 'terlambat', 'dinas_luar'].includes(r.status)).length;
   res.render('admin/dashboard', {
     title: 'Dashboard', today, totalAktif: employees.length, counts, records, belumAbsen, libur, pending, tanpaWajah,
+    klarifikasi, mesinGagal, terjadwal, hadirCount, terlambat: records.filter((r) => r.status === 'terlambat'),
   });
 });
 
@@ -60,7 +69,50 @@ router.post('/admin/pengaturan', requireAdmin, (req, res) => {
   res.redirect('/admin/pengaturan');
 });
 
-// ---- Mode Kiosk: perangkat absensi bersama dengan pengenalan wajah otomatis ----
+// Logo instansi: PNG/JPG/WebP maks 1 MB, disimpan di uploads/branding/
+const logoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 } });
+
+function imageExt(buf) {
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return '.png';
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return '.jpg';
+  if (buf.subarray(0, 4).toString() === 'RIFF' && buf.subarray(8, 12).toString() === 'WEBP') return '.webp';
+  return null;
+}
+
+router.post('/admin/pengaturan/logo', requireAdmin, (req, res, next) => {
+  logoUpload.single('logo')(req, res, (err) => {
+    if (err) {
+      res.flash('danger', err.code === 'LIMIT_FILE_SIZE' ? 'Ukuran logo maksimal 1 MB.' : 'Gagal mengunggah logo.');
+      return res.redirect('/admin/pengaturan');
+    }
+    next();
+  });
+}, (req, res) => {
+  const ext = req.file && imageExt(req.file.buffer);
+  if (!ext) {
+    res.flash('danger', 'Logo harus berupa gambar PNG, JPG, atau WebP.');
+    return res.redirect('/admin/pengaturan');
+  }
+  const dir = path.join(UPLOAD_DIR, 'branding');
+  fs.mkdirSync(dir, { recursive: true });
+  const rel = `branding/logo-${Date.now()}${ext}`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, rel), req.file.buffer);
+  const old = getSettings().logo;
+  setSetting('logo', rel);
+  if (old) removeFile(old);
+  res.flash('success', 'Logo instansi diperbarui.');
+  res.redirect('/admin/pengaturan');
+});
+
+router.post('/admin/pengaturan/logo/hapus', requireAdmin, (req, res) => {
+  const old = getSettings().logo;
+  setSetting('logo', '');
+  if (old) removeFile(old);
+  res.flash('success', 'Logo dihapus. Nama instansi akan tampil sebagai teks.');
+  res.redirect('/admin/pengaturan');
+});
+
+// Mode Kiosk: perangkat absensi bersama dengan pengenalan wajah otomatis
 router.get('/kiosk', requireAdmin, (req, res) => {
   const total = db.prepare("SELECT COUNT(*) AS n FROM employees WHERE status = 'aktif' AND face_descriptors IS NOT NULL").get().n;
   res.render('kiosk', { title: 'Kiosk Absensi', totalWajah: total });
@@ -95,7 +147,7 @@ router.post('/api/kiosk/absen', requireAdmin, (req, res) => {
       status: rec.status,
       terlambat_menit: rec.terlambat_menit,
       pulang_cepat_menit: rec.pulang_cepat_menit,
-      shift: rec.shift ? `${rec.shift.nama} (${rec.shift.jam_masuk}-${rec.shift.jam_pulang})` : null,
+      shift: rec.shift ? `${rec.shift.nama}, ${rec.shift.jam_masuk} sampai ${rec.shift.jam_pulang}` : null,
       similarity: face.similarity(distance),
     });
   } catch (err) {
