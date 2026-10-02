@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
@@ -17,7 +17,7 @@ import { listAssignments, listHolidays, listSchedules, scheduleGrid, scheduleRev
 import { unitOptions } from '@/lib/services/units';
 import { plansFor } from '@/lib/attendance/plan';
 import { BULAN, HARI, HARI_PENDEK, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, monthBounds, todayIn } from '@/lib/time';
-import { AssignmentForm, EndAssignment, HolidayForm, HolidayImport, HolidaySync, HolidayToggle, ScheduleForm, ScheduleGrid } from './forms';
+import { AssignmentForm, BulkDaysDialog, EndAssignment, HolidayForm, HolidayImport, HolidaySync, HolidayToggle, ScheduleForm, ScheduleGrid } from './forms';
 import { HOLIDAY_KIND_LABEL, HOLIDAY_SOURCE_LABEL } from '@/lib/services/holidays';
 import { Badge } from '@/components/ui/badge';
 import { getSettings } from '@/lib/settings';
@@ -54,7 +54,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
       <PageHeader
         title="Jadwal Kerja"
         description="Jenis jadwal, penugasan ke pegawai atau unit, perubahan harian, dan hari libur. Setiap perubahan aturan tersimpan sebagai versi baru."
-        actions={manage ? <Button asChild variant="highlight"><Link href="/jadwal/atur"><Users />Atur banyak pegawai</Link></Button> : undefined}
+        actions={manage ? <BulkDays actor={actor} month={month} /> : undefined}
       />
       <PageBody className="grid gap-4">
         <Segmented items={tabs} current={tab} label="Bagian jadwal" className="w-fit" />
@@ -64,6 +64,21 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
         {tab === 'libur' && <HolidaysTab actor={actor} manage={manage} year={Number(sp.tahun) || Number(today.slice(0, 4))} />}
       </PageBody>
     </>
+  );
+}
+
+async function BulkDays({ actor, month }: { actor: Actor; month: string }) {
+  const [employees, schedules] = await Promise.all([
+    prisma.employee.findMany({ where: { isActive: true, deletedAt: null, ...employeeScopeWhere(actor, 'schedule.manage') }, select: { id: true, fullName: true, unit: { select: { name: true } } }, orderBy: { fullName: 'asc' } }),
+    listSchedules(),
+  ]);
+  const { from, to } = monthBounds(month);
+  return (
+    <BulkDaysDialog
+      from={from} to={to}
+      employees={employees.map((e) => ({ id: e.id, name: e.fullName, unit: e.unit?.name ?? null }))}
+      schedules={schedules.map((s) => ({ id: s.id, name: s.name, code: s.code, checkIn: s.checkIn, checkOut: s.checkOut }))}
+    />
   );
 }
 

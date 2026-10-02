@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CloudDownload, Pencil, Plus, Upload } from 'lucide-react';
+import { CloudDownload, Pencil, Plus, Upload, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -196,6 +196,80 @@ export function HolidayForm({ units, canAllUnits }: { units: Opt[]; canAllUnits:
             </NativeSelect>
           </Field>
           <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button><Button type="submit" disabled={pending}>{pending ? 'Menyimpan...' : 'Simpan'}</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const HARI_PANJANG = [[0, 'Minggu'], [1, 'Senin'], [2, 'Selasa'], [3, 'Rabu'], [4, 'Kamis'], [5, 'Jumat'], [6, 'Sabtu']] as const;
+
+/** Ubah harian massal: satu shift, libur, atau kembali ke shift default untuk beberapa pegawai pada rentang tanggal. */
+export function BulkDaysDialog({ employees, schedules, from, to }: { employees: (Opt & { unit: string | null })[]; schedules: (Opt & { code: string; checkIn: string; checkOut: string })[]; from: string; to: string }) {
+  const [open, setOpen] = useState(false);
+  const [sel, setSel] = useState<string[]>([]);
+  const [days, setDays] = useState<number[]>([]);
+  const { pending, fields, run } = useAction();
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button variant="highlight"><Users />Atur banyak pegawai</Button></DialogTrigger>
+      <DialogContent className="sm:max-w-2xl">
+        <form className="grid gap-5" onSubmit={async (e) => {
+          e.preventDefault();
+          const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+          const r = await run(() => api<{ employees: number; days: number }>('POST', '/api/v1/schedules/days', { employeeIds: sel, from: d.from, to: d.to, weekdays: days, value: d.value }), {
+            success: (x) => `Jadwal diterapkan: ${x.employees} pegawai, ${x.days} hari. Rekap yang terdampak dihitung ulang.`,
+          });
+          if (r) { setOpen(false); setSel([]); }
+        }}>
+          <DialogHeader>
+            <DialogTitle>Atur jadwal banyak pegawai</DialogTitle>
+            <DialogDescription>Terapkan satu shift, libur, atau shift default untuk beberapa pegawai pada rentang tanggal.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid content-start gap-2">
+              <label htmlFor="bulkEmployees" className="text-sm font-medium">Pegawai {sel.length > 0 && <span className="font-normal text-muted-foreground">({sel.length} dipilih)</span>}</label>
+              <select id="bulkEmployees" multiple size={9} value={sel} aria-invalid={!!fields.employeeIds || undefined} aria-describedby="bulkEmployeesHint"
+                onChange={(e) => setSel(Array.from(e.currentTarget.selectedOptions, (o) => o.value))}
+                className="w-full rounded-md border border-input bg-card px-1 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive [&>option]:rounded-sm [&>option]:px-2 [&>option]:py-1">
+                {employees.map((e) => <option key={e.id} value={e.id}>{e.unit ? `${e.name} · ${e.unit}` : e.name}</option>)}
+              </select>
+              <p id="bulkEmployeesHint" className="text-sm text-muted-foreground">Tahan Ctrl (atau Cmd) untuk memilih lebih dari satu.</p>
+              {fields.employeeIds && <p className="text-sm font-medium text-destructive">{fields.employeeIds}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setSel(employees.map((e) => e.id))}>Pilih semua pegawai</Button>
+                {sel.length > 0 && <Button type="button" variant="ghost" size="sm" onClick={() => setSel([])}>Kosongkan</Button>}
+              </div>
+            </div>
+            <div className="grid content-start gap-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Field id="from" label="Dari" error={fields.from} required><Input {...fieldProps('from', fields.from)} type="date" defaultValue={from} required /></Field>
+                <Field id="to" label="Sampai" error={fields.to} required><Input {...fieldProps('to', fields.to)} type="date" defaultValue={to} required /></Field>
+              </div>
+              <fieldset className="grid gap-2">
+                <legend className="mb-2 text-sm font-medium">Hanya hari <span className="font-normal text-muted-foreground">(kosongkan untuk semua hari)</span></legend>
+                <div className="flex flex-wrap gap-x-4 gap-y-2.5">
+                  {HARI_PANJANG.map(([d, label]) => (
+                    <label key={d} className="flex min-h-6 items-center gap-2 text-sm">
+                      <Checkbox checked={days.includes(d)} onCheckedChange={(v) => setDays((x) => (v ? [...x, d] : x.filter((y) => y !== d)))} />{label}
+                    </label>
+                  ))}
+                </div>
+                {fields.weekdays && <p className="text-sm font-medium text-destructive">{fields.weekdays}</p>}
+              </fieldset>
+              <Field id="value" label="Jadwal" error={fields.value} required>
+                <NativeSelect {...fieldProps('value', fields.value)} defaultValue={schedules[0]?.id ?? 'LIBUR'} required>
+                  {schedules.map((s) => <NativeSelectOption key={s.id} value={s.id}>{`${s.code} · ${s.name} (${s.checkIn} sampai ${s.checkOut})`}</NativeSelectOption>)}
+                  <NativeSelectOption value="LIBUR">Libur</NativeSelectOption>
+                  <NativeSelectOption value="BAWAAN">Shift default (ikuti jadwal tetap)</NativeSelectOption>
+                </NativeSelect>
+              </Field>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button>
+            <Button type="submit" disabled={pending || sel.length === 0}>{pending ? 'Menerapkan...' : 'Terapkan jadwal'}</Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

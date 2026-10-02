@@ -5,7 +5,7 @@ import { enrollFace } from '@/lib/services/biometrics';
 import { createStation, rotateStationToken, stationAttendance, updateStation } from '@/lib/services/stations';
 import { applyHolidays, setHolidayDisabled } from '@/lib/services/holidays';
 import { calendarRecap } from '@/lib/services/reports';
-import { createAssignmentsBulk, createSchedule } from '@/lib/services/schedules';
+import { createSchedule, setDaysBulk } from '@/lib/services/schedules';
 import { loadPlanContext } from '@/lib/attendance/plan';
 import { systemActor } from '@/lib/auth/system';
 import { toDbDate } from '@/lib/time';
@@ -130,29 +130,40 @@ describe('rekap kalender', () => {
 });
 
 describe('atur jadwal banyak pegawai', () => {
-  it('menerapkan jadwal tetap ke beberapa pegawai sekaligus', async () => {
-    const sys = systemActor('uji');
-    const pagi = await createSchedule(sys, { code: 'PG', name: 'Pagi uji', kind: 'SHIFT', checkIn: '06:00', checkOut: '14:00', lateToleranceMin: 0, earlyLeaveToleranceMin: 0, workdays: [1, 2, 3, 4, 5, 6], color: '#2a78d6' });
-    const r = await createAssignmentsBulk(await actorOf(f.users.admin.id), { employeeIds: [f.stafA.id, f.stafB.id], scheduleId: pagi.id, kind: 'TETAP', startDate: '2032-01-05' });
-    expect(r).toEqual({ employees: 2, assignments: 2 });
-    const ctx = await loadPlanContext([f.stafA.id, f.stafB.id], '2032-01-05', '2032-01-05');
-    expect(ctx.planFor(f.stafA.id, '2032-01-05').schedule?.code).toBe('PG');
-    expect(ctx.planFor(f.stafB.id, '2032-01-05').schedule?.code).toBe('PG');
+  const D = (d: string) => `2032-01-${d}`;
+  let pagi: { id: string };
+
+  beforeAll(async () => {
+    pagi = await createSchedule(systemActor('uji'), { code: 'PG', name: 'Pagi uji', kind: 'SHIFT', checkIn: '06:00', checkOut: '14:00', lateToleranceMin: 0, earlyLeaveToleranceMin: 0, workdays: [1, 2, 3, 4, 5, 6], color: '#2a78d6' });
   });
 
-  it('hari tertentu membuat penugasan sementara per tanggal yang cocok', async () => {
-    const sys = systemActor('uji');
-    const piket = await prisma.workSchedule.findFirstOrThrow({ where: { code: 'PG' } });
-    // Januari 2032: Sabtu jatuh pada 3, 10, 17, 24, 31.
-    const r = await createAssignmentsBulk(sys, { employeeIds: [f.stafA.id], scheduleId: piket.id, kind: 'SEMENTARA', startDate: '2032-01-01', endDate: '2032-01-31', weekdays: [6] });
-    expect(r.assignments).toBe(5);
+  it('menerapkan shift ke beberapa pegawai, hanya pada hari yang dipilih', async () => {
+    const admin = await actorOf(f.users.admin.id);
+    // Januari 2032: Senin jatuh pada 5, 12, 19, 26.
+    const r = await setDaysBulk(admin, { employeeIds: [f.stafA.id, f.stafB.id], from: D('01'), to: D('31'), weekdays: [1], value: pagi.id });
+    expect(r).toMatchObject({ employees: 2, days: 4 });
+    const ctx = await loadPlanContext([f.stafA.id, f.stafB.id], D('05'), D('06'));
+    expect(ctx.planFor(f.stafA.id, D('05')).schedule?.code).toBe('PG');
+    expect(ctx.planFor(f.stafB.id, D('05')).schedule?.code).toBe('PG');
+    expect(ctx.planFor(f.stafA.id, D('06')).schedule?.code).toBe('REG');
+  });
+
+  it('libur lalu shift default mengganti perubahan harian sebelumnya, tanpa menumpuk', async () => {
+    const admin = await actorOf(f.users.admin.id);
+    const libur = await setDaysBulk(admin, { employeeIds: [f.stafA.id], from: D('05'), to: D('05'), value: 'LIBUR' });
+    expect(libur.replaced).toBe(1);
+    let p = (await loadPlanContext([f.stafA.id], D('05'), D('05'))).planFor(f.stafA.id, D('05'));
+    expect(p.isOffDay).toBe(true);
+    await setDaysBulk(admin, { employeeIds: [f.stafA.id], from: D('05'), to: D('05'), value: 'BAWAAN' });
+    p = (await loadPlanContext([f.stafA.id], D('05'), D('05'))).planFor(f.stafA.id, D('05'));
+    expect(p.schedule?.code).toBe('REG');
+    expect(await prisma.employeeScheduleAssignment.count({ where: { employeeId: f.stafA.id, startDate: toDbDate(D('05')), deletedAt: null } })).toBe(0);
   });
 
   it('pegawai di luar kewenangan menggagalkan seluruh proses', async () => {
     const op = await actorOf(f.users.operatorB.id);
-    const reg = await prisma.workSchedule.findFirstOrThrow({ where: { code: 'REG' } });
     const before = await prisma.employeeScheduleAssignment.count();
-    await expect(createAssignmentsBulk(op, { employeeIds: [f.stafA.id, f.stafB.id], scheduleId: reg.id, kind: 'TETAP', startDate: '2032-02-01' })).rejects.toThrow(/kewenangan/);
+    await expect(setDaysBulk(op, { employeeIds: [f.stafA.id, f.stafB.id], from: D('10'), to: D('11'), value: 'LIBUR' })).rejects.toThrow(/kewenangan/);
     expect(await prisma.employeeScheduleAssignment.count()).toBe(before);
   });
 });

@@ -119,7 +119,7 @@ Tabel ini dibuat dari berkas `src/app/api/**/route.ts`.
 | POST | `/api/v1/schedules` | schedule.manage |
 | GET | `/api/v1/schedules/assignments` | schedule.read |
 | POST | `/api/v1/schedules/assignments` | schedule.manage |
-| POST | `/api/v1/schedules/assignments/bulk` | schedule.manage |
+| POST | `/api/v1/schedules/days` | schedule.manage (ubah harian massal: `employeeIds`, `from`, `to`, `weekdays`, `value` = id jadwal, `LIBUR`, atau `BAWAAN`) |
 | PATCH | `/api/v1/schedules/assignments/{id}` | schedule.manage |
 | GET | `/api/v1/schedules/grid` | schedule.read |
 | PUT | `/api/v1/schedules/grid` | schedule.manage |
