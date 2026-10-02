@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, fieldProps } from '@/components/app/field';
 import { api, ApiError } from '@/components/app/api-client';
 
-export function LoginForm({ initialError, initialStep }: { initialError: string | null; initialStep: 'password' | 'mfa' }) {
+export function LoginForm({ initialError, initialStep, next = '/dashboard' }: { initialError: string | null; initialStep: 'password' | 'mfa'; next?: string }) {
   const router = useRouter();
   const [step, setStep] = useState<'password' | 'mfa'>(initialStep);
   const [error, setError] = useState<string | null>(initialError);
@@ -28,7 +28,7 @@ export function LoginForm({ initialError, initialStep }: { initialError: string 
       } else {
         await api('POST', '/api/v1/auth/mfa', { code: fd.get('code') });
       }
-      router.replace('/dashboard');
+      router.replace(next);
       router.refresh();
     } catch (err) {
       const x = err as ApiError;

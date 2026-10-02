@@ -27,6 +27,7 @@ export const NAV: NavItem[] = [
       { href: '/perangkat', label: 'Daftar Perangkat', icon: 'hard-drive', perms: ['device.read'] },
       { href: '/perangkat/sinkronisasi', label: 'Status Sinkronisasi', icon: 'refresh-cw', perms: ['device.read'] },
       { href: '/perangkat/log', label: 'Log Perangkat', icon: 'list', perms: ['device.read'] },
+      { href: '/perangkat/titik-absen', label: 'Titik Absen Wajah', icon: 'scan-face', perms: ['device.read'] },
     ],
   },
   { href: '/jadwal', label: 'Jadwal Kerja', icon: 'calendar-days', perms: ['schedule.read', 'attendance.self'] },

@@ -73,7 +73,7 @@ export default async function TracePage({ params }: { params: Promise<{ employee
                 <TableRow key={e.id} className={r?.checkInSourceId === e.id || r?.checkOutSourceId === e.id ? 'bg-accent/40' : undefined}>
                   <TableCell className="stack-head pl-6 tabular">{fmtWaktu(e.occurredAt, tz)}{(r?.checkInSourceId === e.id || r?.checkOutSourceId === e.id) && <span className="block text-xs font-medium text-primary">dipakai di rekap</span>}</TableCell>
                   <TableCell data-label="Jenis">{e.direction === 'IN' ? 'Masuk' : 'Pulang'}</TableCell>
-                  <TableCell data-label="Metode">{METHOD_LABEL[e.method] ?? e.method}</TableCell>
+                  <TableCell data-label="Metode">{METHOD_LABEL[e.method] ?? e.method}{e.station && <span className="block text-xs text-muted-foreground">Titik absen: {e.station.name}</span>}</TableCell>
                   <TableCell data-label="Hasil"><StatusBadge status={e.verification?.outcome === 'SUCCESS' ? 'SUCCESS' : 'FAILED'} label={e.verification?.outcome === 'SUCCESS' ? 'Berhasil' : (OUTCOME_MESSAGE[e.verification?.outcome as Outcome] ?? e.verification?.outcome ?? '-').split('.')[0]} /></TableCell>
                   <TableCell data-label="Detail" className="pr-6 whitespace-normal text-sm text-muted-foreground">
                     {[e.verification?.distance != null && `jarak wajah ${e.verification.distance.toFixed(3)} (ambang ${e.verification.threshold})`, e.verification?.distanceToOfficeM != null && `${e.verification.distanceToOfficeM} m dari kantor`, e.latitude != null && `GPS ${e.latitude.toFixed(5)}, ${e.longitude?.toFixed(5)}`, e.note, e.verification?.message !== OUTCOME_MESSAGE.SUCCESS && e.verification?.message].filter(Boolean).join(', ')}

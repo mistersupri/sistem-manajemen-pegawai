@@ -141,7 +141,7 @@ export async function traceRecord(actor: Actor, employeeId: string, date: string
   const wd = toDbDate(date);
   const [record, events, raws, corrections, leave, plan] = await Promise.all([
     prisma.attendanceRecord.findUnique({ where: { employeeId_workDate: { employeeId, workDate: wd } }, include: { schedule: true, scheduleRevision: true } }),
-    prisma.attendanceEvent.findMany({ where: { employeeId, OR: [{ workDate: wd }, { occurredAt: { gte: zonedToUtc(date, '00:00', tz), lte: zonedToUtc(addDays(date, 1), '12:00', tz) } }] }, include: { verification: true }, orderBy: { occurredAt: 'asc' } }),
+    prisma.attendanceEvent.findMany({ where: { employeeId, OR: [{ workDate: wd }, { occurredAt: { gte: zonedToUtc(date, '00:00', tz), lte: zonedToUtc(addDays(date, 1), '12:00', tz) } }] }, include: { verification: true, station: { select: { name: true } } }, orderBy: { occurredAt: 'asc' } }),
     prisma.deviceRawEvent.findMany({ where: { OR: [{ employeeId, workDate: wd }, ...(emp.machinePin ? [{ devicePin: emp.machinePin, deviceTime: { gte: zonedToUtc(date, '00:00', tz), lte: zonedToUtc(addDays(date, 1), '12:00', tz) } }] : [])] }, include: { device: { select: { name: true } } }, orderBy: { deviceTime: 'asc' } }),
     prisma.attendanceCorrection.findMany({ where: { employeeId, workDate: wd }, orderBy: { createdAt: 'desc' } }),
     prisma.leaveRequest.findMany({ where: { employeeId, startDate: { lte: wd }, endDate: { gte: wd } }, include: { leaveType: true } }),

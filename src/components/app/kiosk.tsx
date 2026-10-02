@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { CircleCheck, CircleX, Maximize } from 'lucide-react';
+import { Briefcase, CircleCheck, CircleX, MapPin, Maximize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { api, newKey } from './api-client';
@@ -10,7 +10,16 @@ import { blinkDetector, detect, draw, fmtClock, fmtDateLong, loadFaceApi, qualit
 
 interface Res { outcome: string; message: string; time?: string; status?: string; lateMinutes?: number; similarity?: number | null; schedule?: string | null; employee?: { name: string; employeeNumber: string | null; position: string | null } }
 
-export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: string; logo: string | null; enabled: boolean; requireLiveness: boolean; enrolled: number }) {
+interface KioskProps {
+  org: string; logo: string | null; enabled: boolean; requireLiveness: boolean; enrolled: number;
+  /** Titik absen publik: endpoint bertoken, tanpa tombol keluar, nama titik di judul. */
+  endpoint?: string; title?: string; exitHref?: string | null; requireLocation?: boolean; fieldDutyHref?: string | null;
+}
+
+export function Kiosk({ org, logo, enabled, requireLiveness, enrolled, endpoint = '/api/v1/attendance/kiosk', title = 'Absensi wajah', exitHref = '/dashboard', requireLocation = false, fieldDutyHref = null }: KioskProps) {
+  const gps = useRef<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [gpsState, setGpsState] = useState<'off' | 'wait' | 'ok' | 'denied'>(requireLocation ? 'wait' : 'off');
+  const [gpsAcc, setGpsAcc] = useState<number | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   const overlay = useRef<HTMLCanvasElement>(null);
   const modeRef = useRef<'IN' | 'OUT'>('IN');
@@ -22,6 +31,16 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: 
   const [log, setLog] = useState<{ t: string; text: string; ok: boolean }[]>([]);
 
   const pick = (m: 'IN' | 'OUT') => { modeRef.current = m; setMode(m); };
+
+  useEffect(() => {
+    if (!enabled || !requireLocation || !('geolocation' in navigator)) return;
+    const id = navigator.geolocation.watchPosition(
+      (p) => { gps.current = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: Math.round(p.coords.accuracy) }; setGpsAcc(Math.round(p.coords.accuracy)); setGpsState('ok'); },
+      () => setGpsState('denied'),
+      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 20_000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, [enabled, requireLocation]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -57,7 +76,9 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: 
                 setStatus('Mencocokkan wajah...');
                 const d = detection as Detection;
                 try {
-                  const r = await api<Res>('POST', '/api/v1/attendance/kiosk', {
+                  const g = gps.current;
+                  const r = await api<Res>('POST', endpoint, {
+                    ...(g ? { latitude: g.lat, longitude: g.lng, accuracyM: g.accuracy } : {}),
                     direction: modeRef.current, descriptor: toArray(d.descriptor), quality: qualityOf(video.current, d),
                     liveness: requireLiveness ? { method: 'kedip', passed: true } : undefined, idempotencyKey: newKey(), clientTime: new Date().toISOString(),
                   });
@@ -86,7 +107,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: 
       }
     })();
     return () => { stop = true; clearInterval(timer); stopCamera(el); };
-  }, [enabled, requireLiveness]);
+  }, [enabled, requireLiveness, endpoint]);
 
   const ok = result?.outcome === 'SUCCESS';
   return (
@@ -94,7 +115,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {logo && <img src={logo} alt="" className="h-12 rounded-lg bg-white p-1" />}
-          <div><h1 className="text-xl font-bold">Absensi wajah</h1><p className="text-sm text-muted-foreground">{org}</p></div>
+          <div><h1 className="text-xl font-bold">{title}</h1><p className="text-sm text-muted-foreground">{org}</p></div>
         </div>
         <div className="text-right"><div className="text-3xl font-bold tabular md:text-4xl" aria-live="off">{clock}</div><div className="text-sm text-muted-foreground">{date}</div></div>
       </div>
@@ -120,11 +141,18 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled }: { org: 
               <div className="face-guide" aria-hidden />
               <div className="camera-status" aria-live="polite">{status}</div>
             </div>
+            {requireLocation && (
+              <p className={`mt-3 flex items-center gap-2 text-sm ${gpsState === 'denied' ? 'font-medium text-[#ff9b94]' : 'text-muted-foreground'}`} aria-live="polite">
+                <MapPin className="size-4 shrink-0" aria-hidden />
+                {gpsState === 'ok' ? `Lokasi aktif (akurasi sekitar ${gpsAcc ?? '?'} m).` : gpsState === 'denied' ? 'Izin lokasi ditolak. Absen dari tautan ini wajib di area kantor; aktifkan lokasi lalu muat ulang.' : 'Mengambil lokasi...'}
+              </p>
+            )}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
               <span>{requireLiveness ? 'Hadapkan wajah, lalu kedipkan mata.' : 'Hadapkan wajah ke kamera, satu orang setiap kali.'}</span>
               <span className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())}><Maximize />Layar penuh</Button>
-                <Button asChild size="sm" variant="outline"><Link href="/dashboard">Keluar kiosk</Link></Button>
+                {fieldDutyHref && <Button asChild size="sm" variant="outline"><Link href={fieldDutyHref}><Briefcase />Dinas luar</Link></Button>}
+                {exitHref && <Button asChild size="sm" variant="outline"><Link href={exitHref}>Keluar kiosk</Link></Button>}
               </span>
             </div>
           </div>

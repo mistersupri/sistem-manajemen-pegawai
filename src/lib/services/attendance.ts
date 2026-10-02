@@ -91,10 +91,20 @@ export interface AttendanceResult {
  * (FIELD_DUTY, verifikasi 1:1 + foto GPS). Setiap percobaan, berhasil atau gagal, disimpan
  * sebagai transaksi mentah dengan hasil verifikasi terpisah.
  */
-export async function faceAttendance(actor: Actor, method: Method, raw: unknown, userAgent: string | null): Promise<AttendanceResult> {
-  if (method === 'FACE_KIOSK' && !can(actor, 'kiosk.operate')) throw forbidden();
-  if (method !== 'FACE_KIOSK' && (!can(actor, 'attendance.self') || !actor.employeeId)) throw forbidden('Akun ini tidak terhubung dengan data pegawai.');
-  rateLimit(`face:${actor.userId}`, method === 'FACE_KIOSK' ? 60 : 12, 60_000);
+/** Titik absen publik: wajah dikenali 1:N di antara pegawai unit titik (null = semua unit). */
+export interface StationContext { id: string; unitIds: string[] | null; requireLocation: boolean }
+
+export async function faceAttendance(actor: Actor, method: Method, raw: unknown, userAgent: string | null, opts: { station?: StationContext } = {}): Promise<AttendanceResult> {
+  const station = opts.station;
+  if (station) {
+    if (method === 'FACE_SELF') throw forbidden();
+  } else {
+    if (method === 'FACE_KIOSK' && !can(actor, 'kiosk.operate')) throw forbidden();
+    if (method !== 'FACE_KIOSK' && (!can(actor, 'attendance.self') || !actor.employeeId)) throw forbidden('Akun ini tidak terhubung dengan data pegawai.');
+    rateLimit(`face:${actor.userId}`, method === 'FACE_KIOSK' ? 60 : 12, 60_000);
+  }
+  // Dari titik absen, dinas luar juga dikenali 1:N karena tidak ada akun yang login.
+  const identify = method === 'FACE_KIOSK' || !!station;
   const input = faceAttendanceInput.parse(raw);
   const s = await getSettings();
   const tz = s['org.timezone'];
@@ -103,7 +113,7 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
   // Idempotensi: kirim ulang dengan kunci yang sama mengembalikan hasil sebelumnya.
   const prior = await prisma.attendanceEvent.findUnique({ where: { idempotencyKey: input.idempotencyKey }, include: { verification: true, employee: true } });
   if (prior) {
-    if (prior.actorUserId !== realUserId(actor)) throw conflict('Kunci transaksi sudah dipakai. Muat ulang halaman lalu coba lagi.');
+    if (prior.actorUserId !== realUserId(actor) || prior.stationId !== (station?.id ?? null)) throw conflict('Kunci transaksi sudah dipakai. Muat ulang halaman lalu coba lagi.');
     const o = (prior.verification?.outcome ?? 'SERVICE_UNAVAILABLE') as Outcome;
     return { outcome: o, message: prior.verification?.message ?? OUTCOME_MESSAGE[o], eventId: prior.id, time: fmtJam(prior.occurredAt, tz) ?? undefined };
   }
@@ -111,7 +121,7 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
   const m = activeMatcher();
   const threshold = Number(s['face.matchThreshold']);
   const probe = parseDescriptor(input.descriptor, m);
-  let employeeId: string | null = method === 'FACE_KIOSK' ? null : actor.employeeId;
+  let employeeId: string | null = identify ? null : actor.employeeId;
   let distance: number | null = null;
   let outcome: Outcome = 'SUCCESS';
   let detail: string | null = null;
@@ -129,10 +139,10 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
 
   if (outcome === 'SUCCESS') {
     try {
-      if (method === 'FACE_KIOSK') {
-        const kioskScope = scopeOf(actor, 'kiosk.operate')!;
+      if (identify) {
+        const unitIds = station ? station.unitIds : (() => { const k = scopeOf(actor, 'kiosk.operate')!; return k.all ? null : k.unitIds; })();
         const candidates = await activeTemplates();
-        const allowed = kioskScope.all ? null : new Set((await prisma.employee.findMany({ where: { unitId: { in: kioskScope.unitIds } }, select: { id: true } })).map((e) => e.id));
+        const allowed = unitIds ? new Set((await prisma.employee.findMany({ where: { unitId: { in: unitIds } }, select: { id: true } })).map((e) => e.id)) : null;
         let best: { id: string; d: number } | null = null;
         for (const t of candidates) {
           if (allowed && !allowed.has(t.employeeId)) continue;
@@ -163,8 +173,9 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
   if (hasGps && s['geo.officeLat'] != null && s['geo.officeLng'] != null) {
     distanceToOffice = Math.round(haversineM(input.latitude!, input.longitude!, Number(s['geo.officeLat']), Number(s['geo.officeLng'])));
   }
-  if (outcome === 'SUCCESS' && method === 'FACE_SELF' && s['geo.enforce']) {
-    if (!hasGps) fail('LOCATION_MISMATCH', 'Lokasi GPS wajib diaktifkan untuk absen dari perangkat pribadi.');
+  const geofence = method === 'FIELD_DUTY' ? false : method === 'FACE_SELF' ? !!s['geo.enforce'] : !!station?.requireLocation;
+  if (outcome === 'SUCCESS' && geofence) {
+    if (!hasGps) fail('LOCATION_MISMATCH', station ? 'Lokasi GPS wajib diaktifkan untuk absen dari tautan ini.' : 'Lokasi GPS wajib diaktifkan untuk absen dari perangkat pribadi.');
     else if (distanceToOffice == null) fail('SERVICE_UNAVAILABLE', 'Lokasi kantor belum diatur administrator.');
     else if (distanceToOffice > Number(s['geo.radiusM'])) fail('LOCATION_MISMATCH', `Anda berjarak sekitar ${distanceToOffice} m dari kantor (batas ${s['geo.radiusM']} m).`);
   }
@@ -204,7 +215,7 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
       employeeId, direction: input.direction, workDate: workDate ? toDbDate(workDate) : null, method, occurredAt: now,
       clientTime: input.clientTime ? new Date(input.clientTime) : null, idempotencyKey: input.idempotencyKey,
       latitude: input.latitude ?? null, longitude: input.longitude ?? null, accuracyM: input.accuracyM ?? null,
-      address: input.address ?? null, photoPath, note: input.note ?? null, actorUserId: realUserId(actor), userAgent: userAgent?.slice(0, 300) ?? null,
+      address: input.address ?? null, photoPath, note: input.note ?? null, actorUserId: realUserId(actor), stationId: station?.id ?? null, userAgent: userAgent?.slice(0, 300) ?? null,
       verification: {
         create: {
           outcome, matcher: m.model, distance, threshold, quality: input.quality, livenessPassed: input.liveness?.passed ?? null,
@@ -217,7 +228,7 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
   const base: AttendanceResult = { outcome, message, eventId: event.id, similarity: similarity(distance), time: fmtJam(now, tz) ?? undefined, workDate: workDate ?? undefined };
   if (employee) base.employee = { id: employee.id, name: employee.fullName, employeeNumber: employee.employeeNumber, position: employee.position };
   if (outcome !== 'SUCCESS') {
-    if (employeeId && method !== 'FACE_KIOSK') {
+    if (employeeId && !identify) {
       await notifyEmployee(employeeId, { type: 'attendance_failed', title: 'Absensi gagal', body: message, link: '/absensi/saya' });
     }
     return base;

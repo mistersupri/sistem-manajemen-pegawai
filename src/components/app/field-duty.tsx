@@ -23,8 +23,12 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number) {
   return out;
 }
 
-/** Absen dinas luar: selfie berstempel jam server + GPS, diverifikasi 1:1 terhadap wajah pemilik akun. */
-export function FieldDuty({ employee, org, storePhoto, geocode }: { employee: { name: string; nip: string | null }; org: string; storePhoto: boolean; geocode: boolean }) {
+/**
+ * Absen dinas luar: selfie berstempel jam server + GPS. Dari akun sendiri wajah dicocokkan 1:1 dengan pemilik akun;
+ * dari titik absen (`employee` kosong) wajah dikenali di antara pegawai unit titik itu.
+ */
+export function FieldDuty({ employee = null, org, storePhoto, geocode, endpoint = '/api/v1/attendance/field-duty' }: { employee?: { name: string; nip: string | null } | null; org: string; storePhoto: boolean; geocode: boolean; endpoint?: string }) {
+  const shared = !employee;
   const router = useRouter();
   const video = useRef<HTMLVideoElement>(null);
   const clock = useRef<Awaited<ReturnType<typeof serverClock>> | null>(null);
@@ -88,7 +92,7 @@ export function FieldDuty({ employee, org, storePhoto, geocode }: { employee: { 
     const fs = Math.max(13, Math.round(W / 40));
     ctx.font = `${fs}px sans-serif`;
     const lines: { text: string; bold?: boolean; small?: boolean }[] = [
-      { text: `Dinas luar: ${employee.name}${employee.nip ? ` (${employee.nip})` : ''}`, bold: true },
+      { text: employee ? `Dinas luar: ${employee.name}${employee.nip ? ` (${employee.nip})` : ''}` : 'Dinas luar', bold: true },
       { text: `Waktu: ${fmtDateLong(now, c.tz)} ${fmtClock(now, c.tz)} ${c.label}` },
       { text: `Lokasi: ${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)} (±${gps.accuracy} m)` },
     ];
@@ -119,14 +123,14 @@ export function FieldDuty({ employee, org, storePhoto, geocode }: { employee: { 
     if (!pending || !gps) return;
     setBusy(true);
     try {
-      const r = await api<{ outcome: string; message: string; time?: string }>('POST', '/api/v1/attendance/field-duty', {
+      const r = await api<{ outcome: string; message: string; time?: string; employee?: { name: string } }>('POST', endpoint, {
         direction, descriptor: pending.descriptor, quality: pending.quality, photo: storePhoto ? pending.photo : null,
         latitude: gps.lat, longitude: gps.lng, accuracyM: gps.accuracy, address: address || null, note: note.trim(),
         idempotencyKey: newKey(), clientTime: new Date().toISOString(),
       });
       const ok = r.outcome === 'SUCCESS';
-      setResult({ ok, title: ok ? `Absen ${direction === 'IN' ? 'masuk' : 'pulang'} dinas luar tercatat pukul ${r.time}` : 'Belum tercatat', message: ok ? 'Status hari ini: dinas luar.' : r.message });
-      if (ok) { stopCamera(video.current); router.refresh(); }
+      setResult({ ok, title: ok ? `${shared && r.employee ? `${r.employee.name}: a` : 'A'}bsen ${direction === 'IN' ? 'masuk' : 'pulang'} dinas luar tercatat pukul ${r.time}` : 'Belum tercatat', message: ok ? 'Status hari ini: dinas luar.' : r.message });
+      if (ok && !shared) { stopCamera(video.current); router.refresh(); }
     } catch (e) {
       const err = e as { message: string; fields?: Record<string, string> };
       setFields(err.fields || {});
@@ -173,7 +177,9 @@ export function FieldDuty({ employee, org, storePhoto, geocode }: { employee: { 
           ) : (
             <div className="grid gap-2">
               <Button size="lg" className="h-12 text-base" disabled={busy || result?.ok} onClick={send}>{busy ? 'Mengirim...' : 'Kirim absensi'}</Button>
-              <Button variant="outline" disabled={busy || result?.ok} onClick={() => { setPending(null); setResult(null); setStatus('Hadapkan wajah ke kamera, lalu ambil foto.'); }}><RotateCcw />Ulangi foto</Button>
+              {shared && result?.ok
+                ? <Button variant="outline" onClick={() => { setPending(null); setResult(null); setNote(''); setStatus('Hadapkan wajah ke kamera, lalu ambil foto.'); }}><RotateCcw />Absen pegawai berikutnya</Button>
+                : <Button variant="outline" disabled={busy || result?.ok} onClick={() => { setPending(null); setResult(null); setStatus('Hadapkan wajah ke kamera, lalu ambil foto.'); }}><RotateCcw />Ulangi foto</Button>}
             </div>
           )}
           {!storePhoto && <p className="text-xs text-muted-foreground">Pengaturan privasi instansi: foto tidak disimpan di server, hanya hasil verifikasi dan lokasi.</p>}

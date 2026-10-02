@@ -6,9 +6,11 @@ import { LiveClock } from '@/components/app/live-clock';
 
 export const metadata = { title: 'Masuk' };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ galat?: string; mfa?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ galat?: string; mfa?: string; next?: string }> }) {
   const sp = await searchParams;
-  if (await getActor()) redirect('/dashboard');
+  // Hanya jalur internal, mis. /dinas-luar; bukan //domain-lain atau URL lengkap.
+  const next = sp.next && /^\/(?![/\\])[\w\-/?=&.%]*$/.test(sp.next) ? sp.next : '/dashboard';
+  if (await getActor()) redirect(next);
   const s = await getSettings();
   return (
     <div className="grid min-h-dvh lg:grid-cols-[6fr_5fr]">
@@ -29,7 +31,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             {s['org.logo'] && <img className="max-h-12 max-w-28 object-contain" src={`/api/v1/logo?v=${encodeURIComponent(s['org.logo'])}`} alt={`Logo ${s['org.name']}`} />}
             <div><p className="font-bold">{s['org.name']}</p><p className="text-sm text-muted-foreground">Sistem informasi manajemen pegawai</p></div>
           </div>
-          <LoginForm initialError={sp.galat ? sp.galat.slice(0, 200) : null} initialStep={sp.mfa ? 'mfa' : 'password'} />
+          <LoginForm initialError={sp.galat ? sp.galat.slice(0, 200) : null} initialStep={sp.mfa ? 'mfa' : 'password'} next={next} />
         </div>
       </main>
     </div>

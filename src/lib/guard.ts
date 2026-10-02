@@ -6,9 +6,9 @@ import { getSettings } from './settings';
 import { ADMIN_ROLE_CODES } from './auth/catalog';
 
 /** Untuk halaman server: wajib login; opsional wajib salah satu izin (selain itu 404). */
-export async function requirePage(perms?: Permission[]): Promise<Actor> {
+export async function requirePage(perms?: Permission[], next?: string): Promise<Actor> {
   const actor = await getActor();
-  if (!actor) redirect('/login');
+  if (!actor) redirect(next ? `/login?next=${encodeURIComponent(next)}` : '/login');
   if (perms && perms.length && !canAny(actor, perms)) notFound();
   return actor;
 }

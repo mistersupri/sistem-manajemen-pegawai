@@ -46,7 +46,7 @@ export default async function MyAttendance({ searchParams }: { searchParams: Pro
         description={todayRec?.checkInAt ? `Hari ini masuk ${fmtJam(todayRec.checkInAt, tz)}${todayRec.checkOutAt ? `, pulang ${fmtJam(todayRec.checkOutAt, tz)}` : ''}.` : 'Belum ada absen hari ini.'}
         actions={
           <>
-            {s['methods.fieldDuty'] && <Button asChild variant="outline"><Link href="/absensi/saya/dinas-luar"><MapPin />Absen dinas luar</Link></Button>}
+            {s['methods.fieldDuty'] && <Button asChild variant="outline"><Link href="/dinas-luar"><MapPin />Absen dinas luar</Link></Button>}
             <Button asChild variant="outline"><Link href="/absensi/koreksi/baru">Ajukan koreksi</Link></Button>
           </>
         }

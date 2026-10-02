@@ -321,7 +321,7 @@ async function EmployeeDashboard() {
             </div>
             <nav aria-label="Aksi lain" className="grid border-t sm:grid-cols-3">
               {[
-                { href: '/absensi/saya/dinas-luar', label: 'Absen dinas luar', icon: MapPin },
+                { href: '/dinas-luar', label: 'Absen dinas luar', icon: MapPin },
                 { href: '/absensi/koreksi/baru', label: 'Ajukan koreksi', icon: FilePen },
                 { href: '/cuti/baru', label: 'Ajukan cuti atau izin', icon: Plane },
               ].map((a) => (
