@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+storage
+backups
+.env
+.env.*
+!.env.example
+tests/e2e/.auth
+test-results
+playwright-report
+anti-slop
+*.db
+*.xls
+!tests/fixtures/*.xls

@@ -1,0 +1,268 @@
+/* Token tema shadcn/ui diisi palet SIMPEG (lihat DESIGN.md). */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant pointer-coarse (@media (pointer: coarse));
+
+/* Kurva gerak: ease-out kuat untuk masuk/keluar, laci untuk Sheet. Menimpa token bawaan Tailwind yang terlalu lemah. */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@theme inline {
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-navy: var(--navy);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-count: var(--count);
+  --color-count-foreground: var(--count-foreground);
+  --color-off: var(--off);
+  --color-off-foreground: var(--off-foreground);
+  --color-status-hadir: var(--status-hadir);
+  --color-status-hadir-foreground: var(--status-hadir-foreground);
+  --color-status-telat: var(--status-telat);
+  --color-status-telat-foreground: var(--status-telat-foreground);
+  --color-status-alpa: var(--status-alpa);
+  --color-status-alpa-foreground: var(--status-alpa-foreground);
+  --color-status-dinas: var(--status-dinas);
+  --color-status-dinas-foreground: var(--status-dinas-foreground);
+  --color-status-izin: var(--status-izin);
+  --color-status-izin-foreground: var(--status-izin-foreground);
+}
+
+:root {
+  --radius: 0.75rem;
+  /* Gaya e-TPP: latar abu sangat muda, kartu putih bergaris tipis, biru sebagai warna aksi dan menu aktif. */
+  --background: #f5f7fa;
+  --foreground: #1e2939;
+  --card: #ffffff;
+  --card-foreground: #1e2939;
+  --popover: #ffffff;
+  --popover-foreground: #1e2939;
+  --primary: #0a6cc2;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f4f8;
+  --secondary-foreground: #1e2939;
+  --muted: #f1f4f8;
+  --muted-foreground: #5b6576;
+  --accent: #e8f4fd;
+  --accent-foreground: #0a6cc2;
+  --destructive: #b42318;
+  --border: #e6eaf0;
+  --input: #d5dce6;
+  --ring: #0a6cc2;
+  --navy: #1e2939;
+  /* Kuning hanya untuk penanda "sekarang" di garis waktu. */
+  --highlight: #f59e0b;
+  --highlight-foreground: #1e2939;
+  /* Jumlah yang menunggu (lonceng, menu): merah muda seperti e-TPP. */
+  --count: #d61f69;
+  --count-foreground: #ffffff;
+  /* Hari libur di tabel: merah muda. */
+  --off: #fdf2f8;
+  --off-foreground: #9d174d;
+  --chart-1: #0a6cc2;
+  --chart-2: #e0a21a;
+  --chart-3: #2f855a;
+  --chart-4: #c53030;
+  --chart-5: #8a94a8;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #3a4456;
+  --sidebar-primary: #0a6cc2;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8f4fd;
+  --sidebar-accent-foreground: #0a6cc2;
+  --sidebar-border: #eef1f5;
+  --sidebar-ring: #0a6cc2;
+  --status-hadir: #dcfce7;
+  --status-hadir-foreground: #14532d;
+  --status-telat: #fdf1d8;
+  --status-telat-foreground: #6e4400;
+  --status-alpa: #fde2e2;
+  --status-alpa-foreground: #991b1b;
+  --status-dinas: #e3edf9;
+  --status-dinas-foreground: #1e4a80;
+  --status-izin: #eceff4;
+  --status-izin-foreground: #3d475c;
+}
+
+/* Kiosk: tema gelap tetap (layar bersama sepanjang hari). */
+.dark {
+  --background: #0b1726;
+  --foreground: #ffffff;
+  --card: #13233a;
+  --card-foreground: #ffffff;
+  --popover: #13233a;
+  --popover-foreground: #ffffff;
+  --primary: #4fb0f5;
+  --primary-foreground: #0b1726;
+  --secondary: #1b2f4b;
+  --secondary-foreground: #ffffff;
+  --muted: #1b2f4b;
+  --muted-foreground: #b9c6d8;
+  --accent: #1b2f4b;
+  --accent-foreground: #ffffff;
+  --border: #29405f;
+  --input: #3a5578;
+  --ring: #4fb0f5;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  /* Ponsel: tanpa kilatan abu saat ketuk, tanpa pembesaran teks di lanskap, ketuk tanpa jeda dobel-ketuk. */
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+  button, a, [role="button"], summary, label { touch-action: manipulation; }
+  button, [role="button"] { -webkit-user-select: none; user-select: none; }
+  /* Semua yang bisa diklik memakai kursor tangan; yang nonaktif memakai kursor larangan (Tailwind v4 tidak memberi default). */
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"],
+  [role="option"], [role="switch"], [role="checkbox"], [role="radio"], [role="combobox"], summary, select:not(:disabled), label[for],
+  input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled), input[type="file"]:not(:disabled), input[type="month"], input[type="date"] { cursor: pointer; }
+  button:disabled, select:disabled, input:disabled, [aria-disabled="true"], [data-disabled] { cursor: not-allowed; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+  /* Judul seimbang agar tidak ada satu kata menggantung; paragraf rapi. */
+  h1, h2, h3, h4, [data-slot$="-title"] { text-wrap: balance; }
+  p, [data-slot$="-description"] { text-wrap: pretty; }
+  :focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline-offset: 0; }
+  .tabular, td { font-variant-numeric: tabular-nums; }
+  /* Jam adalah isi utama aplikasi ini: angka tabular, tebal, rapat. */
+  .clock { font-variant-numeric: tabular-nums; font-weight: 750; line-height: 1; }
+  /* Gerak dikurangi: perpindahan dan skala dihapus, pudar (opacity) tetap agar perubahan keadaan masih terbaca. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      --tw-enter-scale: 1 !important; --tw-exit-scale: 1 !important;
+      --tw-enter-translate-x: 0 !important; --tw-enter-translate-y: 0 !important;
+      --tw-exit-translate-x: 0 !important; --tw-exit-translate-y: 0 !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  [hidden] { display: none !important; }
+  /* Isi halaman berbentuk grid: satu kolom yang boleh menyempit, agar tabel lebar menggulir di kartunya sendiri. */
+  [data-slot="page-body"].grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@layer components {
+  /* Garis hari kerja 05.00 sampai 22.00 */
+  .dayline { position: relative; height: 18px; min-width: 140px; }
+  .dayline .track { position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: var(--border); }
+  .dayline .shift { position: absolute; top: 5px; height: 8px; border-radius: 4px; background: #d5def0; }
+  .dayline .now { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: var(--highlight); }
+  .dayline .dot { position: absolute; top: 3px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; border: 2px solid var(--card); }
+  .dayline .dot.in { background: var(--primary); }
+  .dayline .dot.in.late { background: #c2410c; }
+  .dayline .dot.out { background: var(--navy); }
+
+  /* Papan hari ini: satu baris per pegawai pada sumbu 05.00 sampai 22.00 */
+  .board-axis, .board-track { position: relative; }
+  .board-track { height: 28px; }
+  .board-track .shift { position: absolute; top: 9px; height: 10px; border-radius: 3px; background: #d5def0; }
+  .board-track .shift.off { background: transparent; box-shadow: inset 0 0 0 1px #d5def0; }
+  .board-track .tick { position: absolute; top: 4px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: #2a78d6; }
+  .board-track .tick.late { background: #eb6834; }
+  .board-track .tick.out { background: var(--navy); }
+  .board-now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--highlight); z-index: 1; pointer-events: none; }
+  .board-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border); }
+
+  /* Kamera */
+  .camera-wrap { position: relative; width: 100%; max-width: 640px; margin: 0 auto; background: #0a1640; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; }
+  .camera-wrap video, .camera-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .camera-wrap.mirror video, .camera-wrap.mirror canvas { transform: scaleX(-1); }
+  .camera-status { position: absolute; left: 0; right: 0; bottom: 0; padding: .6rem .85rem; background: rgb(10 22 64 / .85); color: #fff; font-size: .9rem; }
+  .face-guide { position: absolute; left: 50%; top: 48%; width: 46%; aspect-ratio: 3 / 4; transform: translate(-50%, -50%); border: 3px dashed rgb(255 255 255 / .7); border-radius: 50%; pointer-events: none; }
+
+  /* Tabel menjadi kartu berlabel di HP */
+  @media (max-width: 767.98px) {
+    .table-stack thead { display: none; }
+    .table-stack, .table-stack tbody, .table-stack tr, .table-stack td { display: block; width: 100%; }
+    .table-stack tr { padding: .8rem 1rem; }
+    .table-stack td { padding: .2rem 0 !important; white-space: normal !important; }
+    .table-stack td[data-label] { position: relative; padding-left: 42% !important; overflow-wrap: anywhere; min-height: 1.6em; }
+    .table-stack td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: .2rem; width: 40%; color: var(--muted-foreground); font-size: .8rem; }
+    .table-stack td[data-label]:empty { display: none; }
+    .table-stack td.stack-head { font-size: 1rem; padding-bottom: .35rem !important; }
+    /* Varian grid: label di atas nilai, tiga kolom per baris (untuk tabel banyak angka). */
+    .table-stack.stack-grid tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem .75rem; }
+    .table-stack.stack-grid td.stack-head, .table-stack.stack-grid td.span-all { grid-column: 1 / -1; }
+    .table-stack.stack-grid td[data-label] { padding-left: 0 !important; padding-top: 1.05rem !important; }
+    .table-stack.stack-grid td[data-label]::before { top: 0; width: 100%; font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Rincian harian presensi: hari libur cukup tanggal dan keterangan; durasi nol tidak ditulis. */
+    .presence-table tr.is-off td[data-label]:not([data-label="Keterangan"]), .presence-table td.zero { display: none; }
+  }
+
+  /* Rekap kalender: pegawai x tanggal, kepala tabel dan kolom nama tetap saat digulir. */
+  .cal-wrap { max-height: calc(100dvh - 15rem); min-height: 20rem; overflow: auto; }
+  .cal-table { border-collapse: separate; border-spacing: 0; font-size: .8125rem; }
+  .cal-table th, .cal-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .cal-table thead th { position: sticky; top: 0; z-index: 2; background: var(--card); height: 3rem; min-width: 4.25rem; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+  .cal-table thead th.weekend { background: var(--off); color: var(--off-foreground); }
+  .cal-table thead th.holiday { background: #be185d; color: #fff; }
+  .cal-table thead th.today { box-shadow: inset 0 -3px 0 var(--highlight); }
+  .cal-table .name { position: sticky; left: 0; z-index: 1; background: var(--card); min-width: 10rem; max-width: 10rem; text-align: left; padding: .5rem .75rem; }
+  @media (min-width: 768px) { .cal-table .name { min-width: 15rem; max-width: 15rem; } }
+  .cal-table thead th.name { z-index: 3; }
+  .cal-table td.cell { padding: 0; text-align: center; vertical-align: top; }
+  .cal-table td.cell.off { background: var(--off); }
+  .cal-table td.cell > a, .cal-table td.cell > span { display: grid; justify-items: center; gap: 1px; padding: .45rem .25rem; min-height: 4.25rem; }
+  @media (hover: hover) and (pointer: fine) { .cal-table td.cell > a:hover { background: var(--accent); } }
+  .cal-code { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.25rem; padding: 0 .3rem; border-radius: .375rem; font-size: .7rem; font-weight: 800; color: #fff; }
+  .cal-code.c-H { background: #15803d; } .cal-code.c-T { background: #c2410c; } .cal-code.c-DL { background: #1d4ed8; }
+  .cal-code.c-I, .cal-code.c-S, .cal-code.c-C { background: #0f766e; } .cal-code.c-A { background: #991b1b; }
+  .cal-code.c-L { background: #e3e7ee; color: #4b5567; } .cal-code.c-x { background: transparent; color: #4b5567; box-shadow: inset 0 0 0 1px #c3cad6; }
+  .cal-time { font-size: .72rem; line-height: 1.15; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cal-time.in { color: #15803d; } .cal-time.out { color: #b4501f; } .cal-time.none { color: var(--muted-foreground); font-weight: 500; }
+  .cal-time.warn { color: #b91c1c; }
+  /* Pindah halaman: isi baru memudar dan naik 4 px. Singkat karena terjadi puluhan kali sehari. */
+  .page-enter { animation: page-enter 180ms var(--ease-out) both; }
+  @keyframes page-enter { from { opacity: 0; transform: translateY(4px); } }
+  @media (prefers-reduced-motion: reduce) { @keyframes page-enter { from { opacity: 0; } } }
+  /* Hasil absen (kiosk, absen wajah): muncul naik sedikit sambil memudar, agar hasil baru tidak meloncat. */
+  .enter-rise { transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); }
+  @starting-style { .enter-rise { opacity: 0; transform: translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) { .enter-rise { transform: none; } @starting-style { .enter-rise { transform: none; } } }
+  .cal-head-swatch { display: inline-block; width: .9rem; height: .9rem; border-radius: .2rem; }
+  .cal-head-swatch.weekend { background: var(--off); box-shadow: inset 0 0 0 1px #f5c2dc; } .cal-head-swatch.holiday { background: #be185d; }
+  .cal-fix { margin-top: 2px; font-size: .62rem; font-weight: 700; color: #0f5c8c; background: #e3f1fb; border-radius: .25rem; padding: 0 .25rem; white-space: nowrap; }
+
+  .schedule-grid th, .schedule-grid td { min-width: 44px; text-align: center; }
+  .schedule-grid .name { position: sticky; left: 0; z-index: 1; min-width: 128px; max-width: 128px; text-align: left; background: var(--card); }
+  @media (min-width: 768px) { .schedule-grid .name { min-width: 180px; max-width: 220px; } }
+  .schedule-grid .off { background: var(--off); }
+}

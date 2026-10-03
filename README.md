@@ -1,118 +1,100 @@
-# Sistem Absensi & Manajemen Pegawai
+# SIMPEG: Sistem Manajemen Pegawai dan Absensi
 
-Aplikasi web absensi pegawai dengan **pengenalan wajah**, **shift kerja**, **klarifikasi absen**, dan **absen dinas luar dengan foto berstempel waktu + GPS**. Data pegawai, jadwal shift, dan absensi dapat diekspor/diimpor dalam format Excel (.xlsx) dan CSV.
+Aplikasi web untuk data pegawai, absensi (wajah, kiosk, dinas luar, mesin absensi, input petugas), jadwal kerja, koreksi, cuti/izin, dan laporan. Dibangun sesuai PRD SIMPEG.
 
-Dibangun dengan Node.js + Express + SQLite bawaan Node (`node:sqlite`), jadi tidak perlu server database terpisah dan tidak ada modul native yang harus dikompilasi. Pengenalan wajah memakai [face-api.js](https://github.com/vladmandic/face-api) dan berjalan di browser; modelnya disajikan dari server sendiri, jadi tidak perlu internet.
+- Next.js 16 (App Router) + TypeScript, Tailwind CSS v4 + shadcn/ui
+- PostgreSQL 16 + Prisma 7
+- Docker Compose untuk produksi; Vitest dan Playwright untuk pengujian
 
-## Fitur
+Tidak ada modul dokumen pegawai. Tidak memakai Firebase/Supabase atau API berbayar.
 
-### Manajemen pegawai (admin)
-- Tambah, ubah, hapus, dan cari pegawai (NIP, nama, jabatan, unit kerja, kontak, status aktif/nonaktif, shift default).
-- Akun login pegawai dibuat otomatis (username = NIP, password awal = NIP), dan password bisa direset.
-- **Ekspor** data pegawai ke Excel/CSV.
-- **Impor** dari Excel/CSV (sudah ada template): NIP baru ditambahkan, NIP yang sudah ada diperbarui, dan baris yang gagal dilaporkan per nomor baris.
+## Modul
 
-### Pengenalan wajah
-- **Pendaftaran wajah**: lewat kamera (5 sampel otomatis) atau dari file foto. Pegawai juga bisa mendaftarkan wajahnya sendiri satu kali.
-- Sistem menolak wajah yang sudah terdaftar atas nama pegawai lain.
-- **Kiosk wajah** (`/kiosk`): perangkat absensi bersama di kantor. Wajah dideteksi dan dikenali otomatis, dengan mode Absen Masuk / Absen Pulang.
-- **Absen mandiri** dari HP/laptop pegawai, berupa verifikasi 1:1 terhadap wajah pemilik akun dan dapat dibatasi radius kantor (geofence).
-- Pencocokan wajah dilakukan **di server**, sehingga data biometrik pegawai tidak pernah dikirim ke browser.
-- Opsional: wajib **kedip mata** (deteksi keaktifan sederhana) untuk mengurangi kecurangan memakai foto.
-- Ambang batas kecocokan dapat diatur di menu Pengaturan.
+| Modul | Isi |
+|---|---|
+| Dashboard | Ringkasan per peran: admin (hari ini, tren 7 sampai 92 hari dengan filter unit dan status kepegawaian, pengajuan menunggu, status perangkat), pegawai (jadwal dan absensi hari ini, saldo cuti). |
+| Data Pegawai | CRUD, tab profil/penempatan/absensi/jadwal/riwayat, riwayat jabatan dan unit, pendaftaran wajah, nonaktif dengan tanggal efektif (soft delete), impor Excel/CSV dengan pratinjau, ekspor Excel/CSV (NIK hanya untuk izin data sensitif, tercatat di audit). |
+| Absensi | Absen wajah mandiri, kiosk wajah, titik absen wajah tanpa login (tautan/QR untuk tablet atau ponsel), dinas luar (foto, waktu server, GPS) di halaman tersendiri `/dinas-luar`, input manual petugas, monitoring harian, rekapitulasi per pegawai, kalender bulanan (pegawai x tanggal) dan detail harian dengan telusur ke transaksi sumber, ekspor Excel (termasuk kalender)/CSV/PDF. |
+| Koreksi | Pengajuan pegawai, koreksi oleh petugas, persetujuan; nilai awal dan nilai hasil tersimpan. |
+| Perangkat | Adapter per merek (mock, Solution X302 via SOAP, impor berkas USB P280), sinkronisasi terjadwal/manual dengan retry, rekonsiliasi, log raw event immutable, pemetaan ID mesin. |
+| Jadwal Kerja | Jenis jadwal berversi, penugasan tetap/sementara ke pegawai atau unit, atur banyak pegawai sekaligus (satu shift, libur, atau kembali ke shift default pada rentang tanggal, bisa hanya hari tertentu), kalender bulanan dengan ubah harian, hari libur nasional dan cuti bersama yang diperbarui otomatis tiap hari (atau impor .ics/.csv bila server tanpa internet). |
+| Cuti & Izin | Jenis cuti dapat diatur, saldo tahunan, persetujuan 1 atau 2 tahap (atasan, admin kepegawaian), kalender, pembatalan. |
+| Notifikasi | Notifikasi dalam aplikasi; saluran WhatsApp/email bisa ditambahkan sebagai konfigurasi opsional (`registerChannel`). |
+| Pengaturan | Unit kerja (pohon), pengguna dan peran dengan cakupan unit, izin per peran, aturan absensi, metode absensi dan ambang wajah, retensi dan privasi, logo, audit log. |
 
-### Shift kerja
-- Master shift: kode, jam masuk/pulang, toleransi keterlambatan, dan warna. Shift malam lintas hari didukung (mis. 22:00–06:00).
-- Shift default per pegawai, plus **jadwal per tanggal** (grid bulanan, klik sel untuk mengubah, termasuk hari libur).
-- Atur jadwal **massal** (banyak pegawai, rentang tanggal, pilihan hari).
-- Ekspor/impor jadwal shift (Excel).
-- Keterlambatan dan pulang cepat dihitung otomatis sesuai shift.
+Peran bawaan: Super Admin, Admin Kepegawaian, Admin IT/Perangkat, Pimpinan/Approver, Operator Unit, Pegawai, Auditor. Izin tiap peran bisa diubah; cakupan unit diberikan per penugasan peran.
 
-### Absen dinas luar (foto + timestamp + GPS)
-- Pegawai mengambil selfie di lokasi tugas. Foto otomatis diberi stempel berisi nama/NIP, **waktu server**, **koordinat GPS dan akurasinya**, **alamat** (dari OpenStreetMap), dan keterangan tugas.
-- Wajah pada foto diverifikasi terhadap data wajah pegawai.
-- Status absensi menjadi *Dinas Luar*. Admin dapat melihat foto beserta peta lokasinya.
+Semua daftar besar (pegawai, rekap, monitoring, koreksi, cuti, saldo, pengguna, audit, log perangkat, sinkronisasi, penugasan) punya filter, urutan naik/turun per kolom, dan paginasi 5/10/20/50/100/200/500 baris (bawaan 20) yang tersimpan di URL. Arah desain dan aturan antarmuka ada di [DESIGN.md](DESIGN.md).
 
-### Integrasi mesin fingerprint (Solution X302 & P280)
-- **X302 lewat LAN**: server menarik data langsung dari mesin melalui Web Service mesin (port 80, Comm Key). Bisa manual (tombol *Tarik*) atau otomatis setiap 5/15/30/60 menit. Server aplikasi harus berada di jaringan yang sama dengan mesin.
-- **P280 lewat USB**: unggah file hasil unduhan flashdisk di menu *Mesin → Impor Data dari Flashdisk*. Format yang dibaca: laporan standar `.xls` (mis. `StandardReport.xls`, sheet "Lap. Log Absen"), attlog `.dat/.txt` (mis. `1_attlog.dat`), serta CSV/Excel berkolom ID & Waktu.
-- Scan yang pernah diimpor dilewati otomatis, jadi file dengan periode tumpang tindih aman diimpor ulang.
-- **Pemetaan ID mesin**: setiap pegawai punya kolom *ID Mesin*. ID yang belum terhubung tampil di menu *Pemetaan ID Mesin*. Di sana admin bisa menghubungkannya ke pegawai (nama yang sama dipilih otomatis) atau langsung membuat pegawai baru dari data mesin.
-- Scan diolah menjadi absensi harian: scan pertama = masuk, scan terakhir = pulang, dan scan tunggal ditentukan dari posisinya terhadap jam kerja. Shift malam lintas hari didukung, dan hasilnya digabung dengan absen wajah/dinas luar.
-- *Log Scan* menampilkan seluruh scan mentah per mesin dan bisa diekspor ke CSV. *Proses Ulang* menghitung ulang absensi setelah shift atau hari libur diubah.
+## Menjalankan dengan Docker
 
-### Hari kerja & hari libur
-- Hari kerja umum (default Senin–Jumat) diatur di *Pengaturan*. Tanggal merah dan cuti bersama diatur di *Shift → Hari Libur Nasional*.
-- Shift default hanya berlaku di hari kerja. Pegawai piket atau satpam diatur lewat *Jadwal Shift*.
+```bash
+cp .env.example .env
+# isi POSTGRES_PASSWORD, APP_SECRET (openssl rand -base64 48),
+# BIOMETRIC_ENCRYPTION_KEY (openssl rand -base64 32), ADMIN_PASSWORD
+docker compose up -d --build
+```
 
-### Klarifikasi absen
-- Pegawai mengajukan klarifikasi untuk maksimal 31 hari ke belakang: lupa absen masuk/pulang, terlambat, pulang cepat, izin, sakit, cuti, dinas luar, atau lainnya. Lampiran bukti (JPG/PNG/PDF) bisa disertakan.
-- Admin menyetujui atau menolak. Saat menyetujui, admin menentukan jam masuk/pulang, status, dan dispensasi keterlambatan, lalu data absensi diperbarui otomatis.
+Layanan `migrate` menjalankan migrasi skema dan membuat peran serta akun Super Admin pertama, lalu `app` berjalan di port `APP_PORT` (bawaan 3000). Health check: `GET /api/health`.
 
-### Laporan & ekspor absensi
-- Data absensi dapat difilter per tanggal, unit, status, dan pegawai, serta dikoreksi atau diinput manual oleh admin.
-- **Rekap** per pegawai: hari kerja, tepat waktu, terlambat, dinas luar, izin, sakit, cuti, alpa, tanpa keterangan, total menit terlambat, dan % kehadiran.
-- **Ekspor Excel** (sheet Rekap + Detail) serta **CSV** (detail atau rekap).
+Lupa password admin atau akun terkunci: isi `ADMIN_USERNAME`/`ADMIN_PASSWORD` di `.env`, lalu `docker compose run --rm migrate npx tsx scripts/reset-admin.ts`.
 
-## Menjalankan
+Pasang aplikasi di belakang reverse proxy HTTPS (kamera dan GPS di browser hanya bekerja lewat HTTPS atau localhost) dan biarkan `COOKIE_SECURE=1`.
 
-Kebutuhan: **Node.js 22.13 atau lebih baru** (disarankan Node 24 LTS). Tidak perlu Visual Studio, Python, atau build tools.
+**Simpan `BIOMETRIC_ENCRYPTION_KEY` terpisah dari backup.** Tanpa kunci ini template wajah, NIK, secret perangkat, dan secret MFA tidak bisa dibuka.
+
+## Pengembangan lokal
+
+Butuh Node.js 22.13+. PostgreSQL tidak perlu diinstal.
 
 ```bash
 npm install
-npm start
+npm run dev:local
 ```
 
-Bila sebelumnya `npm install` gagal karena `better-sqlite3` / `node-gyp` (versi lama aplikasi ini), hapus folder `node_modules` (dan `yarn.lock` bila ada), tarik versi terbaru, lalu jalankan `npm install` lagi.
+`dev:local` menjalankan PostgreSQL 16 lokal dari paket npm `embedded-postgres` (Windows, macOS, Linux) di port 54329, data di folder `.local-db/`. Saat pertama kali, perintah ini:
 
-Buka `http://localhost:3000` dan login sebagai admin: **admin / admin123** (segera ganti lewat menu *Ubah Password*).
+1. membuat `.env` bila belum ada (atau melengkapi isian yang kosong) dengan `DATABASE_URL` lokal dan rahasia acak;
+2. menyiapkan database dan menerapkan migrasi;
+3. mengisi data demo bertanda "(demo)".
 
-> **Penting:** browser hanya mengizinkan akses kamera dan GPS pada **HTTPS** atau `localhost`. Untuk dipakai dari HP atau komputer lain, pasang aplikasi di belakang reverse proxy HTTPS (mis. Nginx/Caddy), lalu set `COOKIE_SECURE=1` dan `TRUST_PROXY=1`.
+Setelah itu buka http://localhost:3000. Akun untuk masuk ditampilkan di terminal: `superadmin` / `Demo#2026` (akun demo), dan akun `ADMIN_USERNAME`/`ADMIN_PASSWORD` bila diisi di `.env`. Akun dari `.env` dibuat setiap kali aplikasi dijalankan bila username itu belum ada; mengganti password akun yang sudah ada dilakukan dengan `npm run admin:reset`. Ctrl+C menghentikan aplikasi dan database sekaligus; data tetap tersimpan untuk dijalankan lagi.
 
-### Variabel lingkungan
+| Perintah | Fungsi |
+|---|---|
+| `npm run dev:local -- --tanpa-demo` | Tanpa data demo; password sementara Super Admin ditampilkan sekali |
+| `npm run db:local` | Database lokal saja, mis. untuk `npm run dev` di terminal lain atau Prisma Studio |
+| `npm run db:local -- --reset` | Hapus database lokal lalu buat ulang |
+| `npm run admin:reset` | Terapkan `ADMIN_USERNAME`/`ADMIN_PASSWORD` dari `.env`: buat akun bila belum ada, atau ganti password, buka kunci, dan pastikan berperan Super Admin. `-- --hapus-mfa` juga melepas MFA. |
 
-| Variabel | Default | Keterangan |
-|---|---|---|
-| `PORT` | `3000` | Port HTTP |
-| `TZ` | `Asia/Jakarta` | Zona waktu untuk perhitungan absensi |
-| `DB_PATH` | `data/absensi.db` | Lokasi file database SQLite |
-| `UPLOAD_DIR` | `uploads/` | Lokasi foto absensi & lampiran |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | `admin` / `admin123` | Akun admin awal (hanya saat database pertama kali dibuat) |
-| `COOKIE_SECURE` | – | `1` bila memakai HTTPS |
-| `TRUST_PROXY` | – | `1` bila di belakang reverse proxy |
+Database lokal hanya untuk pengembangan dan uji coba. Untuk produksi pakai Docker Compose atau PostgreSQL sendiri: isi `DATABASE_URL` di `.env`, lalu `npm run db:deploy` dan `npm run db:seed`.
 
-### Pengujian
+Akun demo (password `Demo#2026`): `superadmin`, `kepegawaian`, `admin.it`, `pimpinan`, `kabid.a`, `operator.b`, `pegawai`, `auditor`. Data demo fiktif dan tidak boleh dipakai di produksi; tanpa `SEED_DEMO=1` seed hanya membuat peran dan akun Super Admin dari `ADMIN_USERNAME`/`ADMIN_PASSWORD`.
 
-```bash
-npm test
-```
+| Perintah | Fungsi |
+|---|---|
+| `npm run dev` / `build` / `start` | Server pengembangan, build produksi, jalankan build |
+| `npm run lint` / `typecheck` | ESLint, TypeScript |
+| `npm run db:migrate` | Buat migrasi baru dari perubahan skema (pengembangan) |
+| `npm run db:deploy` / `db:seed` | Terapkan migrasi / seed |
+| `npm run migrate:sqlite -- --sqlite data/absensi.db` | Pindahkan data aplikasi absensi lama, lihat [docs/MIGRASI.md](docs/MIGRASI.md) |
+| `npm run perangkat:cek -- --ip 192.168.1.201 --key 0` | Diagnosa koneksi mesin X302 (tanpa database), lihat [docs/PANDUAN-X302.md](docs/PANDUAN-X302.md) |
+| `npm test` | Unit + integration test (butuh database uji, lihat di bawah) |
+| `npm run test:e2e` | Playwright terhadap aplikasi yang berjalan dengan data demo |
 
-## Alur penggunaan singkat
+## Pengujian
 
-1. **Admin** mengatur nama instansi, lokasi kantor, dan ambang wajah di *Pengaturan*.
-2. Admin menyesuaikan *Master Shift*, lalu menambahkan atau mengimpor pegawai beserta shift default-nya.
-3. Wajah setiap pegawai didaftarkan, oleh admin atau oleh pegawai sendiri.
-4. Bila ada pola bergilir, atur *Jadwal Shift*.
-5. Pegawai absen melalui **Kiosk Wajah** di kantor, menu **Absen Wajah** di HP, atau **Dinas Luar** saat bertugas di luar.
-6. Bila ada kendala absen, pegawai mengajukan **Klarifikasi**, lalu admin meninjaunya.
-7. Admin memantau dashboard, rekap, dan mengekspor laporan ke Excel/CSV.
+- **Unit** (`tests/unit`, `npm run test:unit`, tanpa database): mesin perhitungan absensi (jadwal, shift malam, keterlambatan, tanggal kerja) dan adapter X302 terhadap simulator respons mesin.
+- **Integration** (`tests/integration`): RBAC dan kebocoran data antar unit, login dan penguncian akun, impor valid/duplikat/salah, sinkronisasi ulang tanpa duplikat, perangkat offline, secret perangkat tidak terkirim, koreksi dengan nilai awal dan audit, cuti berjenjang, idempotensi absensi wajah, imutabilitas audit log dan raw event. Memakai database terpisah `TEST_DATABASE_URL` (bawaan `postgresql://postgres@127.0.0.1:5433/simpeg_test`) yang dikosongkan setiap file tes.
+- **E2E** (`tests/e2e`): login, tambah/ubah/nonaktifkan pegawai, input manual, koreksi, persetujuan cuti, ekspor rekap. Jalankan terhadap aplikasi berdata demo: `BASE_URL=http://127.0.0.1:3000 npm run test:e2e`.
 
-## Struktur proyek
+## Dokumentasi
 
-```
-server.js               Entry point Express
-src/db.js               Skema & koneksi SQLite
-src/attendance.js       Logika absensi, shift, keterlambatan, shift malam
-src/face.js             Pencocokan descriptor wajah (server)
-src/excel.js            Baca/tulis Excel & CSV
-src/routes/             Route admin, pegawai, shift, absensi, klarifikasi
-views/                  Template EJS
-public/js/face.js       Utilitas kamera, deteksi wajah, GPS
-test/                   Pengujian otomatis (node:test)
-```
-
-## Catatan keamanan
-
-- Foto absensi dan lampiran hanya dapat diakses admin dan pegawai pemiliknya.
-- Deteksi kedip mata adalah pencegahan dasar, bukan anti-spoofing tingkat tinggi. Untuk keamanan lebih, gunakan kiosk di area yang diawasi.
-- Stempel waktu foto dinas luar memakai jam server, bukan jam perangkat. Koordinat GPS berasal dari perangkat pegawai.
+- [docs/ARSITEKTUR.md](docs/ARSITEKTUR.md): struktur kode, alur data absensi, keputusan teknis
+- [docs/API.md](docs/API.md): REST API `/api/v1`
+- [docs/PANDUAN-X302.md](docs/PANDUAN-X302.md): langkah integrasi mesin Solution X302 lewat LAN
+- [docs/PERANGKAT.md](docs/PERANGKAT.md): adapter mesin absensi, jaringan, menambah merek baru
+- [docs/BIOMETRIK.md](docs/BIOMETRIK.md): pengenalan wajah, kalibrasi ambang, batasan
+- [docs/KEAMANAN.md](docs/KEAMANAN.md): keamanan, privasi, backup dan pemulihan
+- [docs/MIGRASI.md](docs/MIGRASI.md): migrasi dari aplikasi absensi lama (SQLite)
+- [DESIGN.md](DESIGN.md): arah desain antarmuka

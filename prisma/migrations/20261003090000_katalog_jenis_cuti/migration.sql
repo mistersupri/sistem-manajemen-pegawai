@@ -1,0 +1,31 @@
+-- Katalog jenis cuti, izin, dan dinas luar sesuai rekap presensi e-TPP.
+-- Kode yang sudah ada (mis. CT, IZ, SK, DL dari data contoh) dibiarkan apa adanya.
+INSERT INTO "leave_types" ("id", "code", "name", "attendance_status", "uses_balance", "default_annual_quota", "eligible_employment_statuses", "max_days_per_request", "min_notice_days", "approval_levels", "count_workdays_only", "allow_attachment", "is_active", "created_at", "updated_at") VALUES
+  (gen_random_uuid(), 'ISOMAN', 'ISOMAN lebih dari 3 (tiga) hari kerja', 'SAKIT', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'IZ', 'Ijin', 'IZIN', false, NULL, ARRAY[]::text[], 3, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'IZ_SH_AKHIR', 'Izin Setengah Hari Akhir', 'IZIN', false, NULL, ARRAY[]::text[], 1, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'IZ_SH_AWAL', 'Izin Setengah Hari Awal', 'IZIN', false, NULL, ARRAY[]::text[], 1, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'RI_COVID', 'Rawat Inap COVID-19', 'SAKIT', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'SK', 'Sakit', 'SAKIT', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'SK_DOKTER', 'Sakit Dengan Surat Dokter', 'SAKIT', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'DIKLAT', 'Diklat', 'DINAS_LUAR', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'DL_AKHIR', 'Dinas Luar Akhir', 'DINAS_LUAR', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'DL_AWAL', 'Dinas Luar Awal', 'DINAS_LUAR', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'DL', 'Dinas Luar Penuh', 'DINAS_LUAR', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'DIPERBANTUKAN', 'Diperbantukan', 'DINAS_LUAR', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'TITIPAN', 'Pegawai Titipan', 'DINAS_LUAR', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'PD', 'Perjalanan Dinas', 'DINAS_LUAR', false, NULL, ARRAY[]::text[], NULL, 0, 1, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CAP_1_5', 'Cuti Alasan Penting 1-5 hari', 'CUTI', false, NULL, ARRAY[]::text[], 5, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CAP_5', 'Cuti Alasan Penting lebih dari 5 Hari', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CB', 'Cuti Bersalin', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CB_3', 'Cuti Bersalin Anak Ke-3', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CBS', 'Cuti Besar', 'CUTI', false, NULL, ARRAY['PNS']::text[], NULL, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CLTN', 'Cuti Diluar Tanggungan Negara', 'CUTI', false, NULL, ARRAY['PNS']::text[], NULL, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CPCB', 'Cuti Pengganti Cuti Bersama', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, false, true, now(), now()),
+  (gen_random_uuid(), 'CS', 'Cuti Sakit', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CS_KK', 'Cuti Sakit Kecelakaan Kerja', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CS_RI', 'Cuti Sakit Rawat Inap RS', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, true, true, now(), now()),
+  (gen_random_uuid(), 'CT', 'Cuti Tahunan', 'CUTI', true, 12, ARRAY['PNS','PPPK']::text[], 12, 0, 2, true, false, true, now(), now()),
+  (gen_random_uuid(), 'CTD', 'Cuti Tunda', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, false, true, now(), now()),
+  (gen_random_uuid(), 'CAP_ISTRI', 'Cuti alasan penting mendampingi isteri melahirkan/caesar sejak hari ke-6', 'CUTI', false, NULL, ARRAY[]::text[], NULL, 0, 2, true, true, true, now(), now())
+ON CONFLICT ("code") DO NOTHING;

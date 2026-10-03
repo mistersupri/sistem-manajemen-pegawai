@@ -1,9 +1,0 @@
-<% if (lat != null && lng != null) { const d = 0.004; %>
-  <iframe class="map-frame mt-2" loading="lazy" title="Peta lokasi"
-    src="https://www.openstreetmap.org/export/embed.html?bbox=<%= lng - d %>,<%= lat - d %>,<%= lng + d %>,<%= lat + d %>&layer=mapnik&marker=<%= lat %>,<%= lng %>"></iframe>
-  <div class="small mt-1">
-    <i class="bi bi-geo-alt"></i> <%= lat.toFixed(6) %>, <%= lng.toFixed(6) %> ·
-    <a href="https://www.google.com/maps?q=<%= lat %>,<%= lng %>" target="_blank" rel="noopener">Google Maps</a>
-  </div>
-  <% if (alamat) { %><div class="small text-muted"><%= alamat %></div><% } %>
-<% } %>

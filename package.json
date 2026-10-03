@@ -1,37 +1,74 @@
 {
-  "name": "sistem-manajemen-pegawai",
-  "version": "1.0.0",
-  "description": "Sistem absensi pegawai dengan pengenalan wajah, shift kerja, klarifikasi absen, dan absen dinas luar berbasis foto GPS",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "test": "node --test test/*.test.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/sudinpendidikanjp2-del/sistem-manajemen-pegawai.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/sudinpendidikanjp2-del/sistem-manajemen-pegawai/issues"
-  },
-  "homepage": "https://github.com/sudinpendidikanjp2-del/sistem-manajemen-pegawai#readme",
-  "dependencies": {
-    "@vladmandic/face-api": "^1.7.15",
-    "bcryptjs": "^3.0.3",
-    "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.13.1",
-    "cfb": "^1.2.2",
-    "cookie-parser": "^1.4.7",
-    "ejs": "^6.0.1",
-    "exceljs": "^4.4.0",
-    "express": "^5.2.1",
-    "multer": "^2.4.0"
-  },
+  "name": "simpeg",
+  "version": "2.0.0",
+  "private": true,
+  "description": "SIMPEG: Sistem Informasi Manajemen Pegawai (absensi wajah, mesin absensi, jadwal, cuti, rekap)",
   "engines": {
     "node": ">=22.13"
   },
-  "private": true
+  "scripts": {
+    "dev": "next dev",
+    "dev:local": "tsx scripts/local-db.ts dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "admin:reset": "tsx scripts/reset-admin.ts",
+    "db:reset": "prisma migrate reset --force",
+    "db:local": "tsx scripts/local-db.ts",
+    "migrate:sqlite": "tsx scripts/migrate-sqlite.ts",
+    "perangkat:cek": "tsx scripts/cek-perangkat.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@fontsource/poppins": "^5.3.0",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "@vladmandic/face-api": "^1.7.15",
+    "bcryptjs": "^3.0.3",
+    "cfb": "^1.2.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^1.49.0",
+    "next": "^16.3.8",
+    "otplib": "^12.0.1",
+    "pdfkit": "^0.20.2",
+    "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
+    "radix-ui": "^1.6.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "recharts": "^3.10.1",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.7.0",
+    "tw-animate-css": "^1.4.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.4",
+    "@types/pdfkit": "^0.17.6",
+    "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "dotenv": "^18.0.5",
+    "embedded-postgres": "16.14.0-beta.17",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.8",
+    "prisma": "^7.10.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  }
 }
