@@ -10,7 +10,7 @@ import { ensureSuperAdmin } from '../src/lib/auth/admin-account';
 import { addDays, todayIn, toDbDate } from '../src/lib/time';
 import { createSchedule, createAssignment, createHoliday } from '../src/lib/services/schedules';
 import { createEmployee } from '../src/lib/services/employees';
-import { saveLeaveType, generateBalances } from '../src/lib/services/leave';
+import { generateBalances } from '../src/lib/services/leave';
 import { runSync } from '../src/lib/services/devices';
 import { rebuildRange } from '../src/lib/attendance/record';
 
@@ -116,11 +116,7 @@ async function demo() {
   await account('pegawai', '900000000000000005', [['PEGAWAI', null]]);
   await account('auditor', null, [['AUDITOR', null]]);
 
-  // Jenis cuti/izin (contoh; aturan dan kuota harus ditetapkan instansi)
-  await saveLeaveType(actor, null, { code: 'CT', name: 'Cuti tahunan (contoh)', attendanceStatus: 'CUTI', usesBalance: true, defaultAnnualQuota: 12, eligibleEmploymentStatuses: ['PNS', 'PPPK'], maxDaysPerRequest: 12, minNoticeDays: 0, approvalLevels: 2, countWorkdaysOnly: true, allowAttachment: false });
-  await saveLeaveType(actor, null, { code: 'IZ', name: 'Izin (contoh)', attendanceStatus: 'IZIN', usesBalance: false, eligibleEmploymentStatuses: [], maxDaysPerRequest: 3, minNoticeDays: 0, approvalLevels: 1, countWorkdaysOnly: true, allowAttachment: true });
-  await saveLeaveType(actor, null, { code: 'SK', name: 'Sakit (contoh)', attendanceStatus: 'SAKIT', usesBalance: false, eligibleEmploymentStatuses: [], minNoticeDays: 0, approvalLevels: 1, countWorkdaysOnly: true, allowAttachment: true });
-  await saveLeaveType(actor, null, { code: 'DL', name: 'Dinas luar (contoh)', attendanceStatus: 'DINAS_LUAR', usesBalance: false, eligibleEmploymentStatuses: [], minNoticeDays: 0, approvalLevels: 1, countWorkdaysOnly: true, allowAttachment: true });
+  // Jenis cuti, izin, dan dinas luar sudah dibuat migrasi katalog; aturan dan kuotanya tetap ditinjau instansi.
   await generateBalances(actor, Number(today.slice(0, 4)));
 
   // Mesin simulasi + transaksi contoh

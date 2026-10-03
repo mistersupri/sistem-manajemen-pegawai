@@ -76,7 +76,7 @@ export async function enrollFace(actor: Actor, employeeId: string, raw: unknown)
   await notifyEmployee(employeeId, {
     type: 'biometric', title: status === 'ACTIVE' ? 'Wajah terdaftar' : 'Pendaftaran wajah menunggu verifikasi petugas',
     body: status === 'ACTIVE' ? 'Template wajah Anda aktif dan bisa dipakai untuk absensi.' : 'Petugas kepegawaian akan memverifikasi pendaftaran wajah Anda.',
-    link: '/absensi/saya',
+    link: '/absensi/saya/absen',
   });
   return { id: created.id, status, samples: descriptors.length };
 }

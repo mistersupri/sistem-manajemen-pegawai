@@ -4,13 +4,17 @@ import { z } from 'zod';
  * Parameter daftar standar di URL: page, per (baris per halaman), sort, dir.
  * Semua daftar besar memakai bentuk yang sama agar tautan bisa dibagikan dan tombol Kembali bekerja.
  */
-export const PAGE_SIZES = [25, 50, 100] as const;
+export const PAGE_SIZES = [5, 10, 20, 50, 100, 200, 500] as const;
+export const DEFAULT_PER = 20;
+
+/** Ukuran halaman dari URL; nilai di luar daftar jatuh ke bawaan. */
+export const pickPer = (n: unknown) => ((PAGE_SIZES as readonly number[]).includes(Number(n)) ? Number(n) : DEFAULT_PER);
 export type SortDir = 'asc' | 'desc';
 
-export function listSchema<S extends string>(sorts: readonly [S, ...S[]], defaults: { sort: S; dir?: SortDir; per?: number }) {
+export function listSchema<S extends string>(sorts: readonly [S, ...S[]], defaults: { sort: S; dir?: SortDir }) {
   return z.object({
     page: z.coerce.number().int().min(1).max(100000).catch(1).default(1),
-    per: z.coerce.number().int().catch(defaults.per ?? 25).default(defaults.per ?? 25).transform((n) => ((PAGE_SIZES as readonly number[]).includes(n) ? n : defaults.per ?? 25)),
+    per: z.coerce.number().int().catch(DEFAULT_PER).default(DEFAULT_PER).transform(pickPer),
     sort: z.enum(sorts).catch(defaults.sort).default(defaults.sort),
     dir: z.enum(['asc', 'desc']).catch(defaults.dir ?? 'asc').default(defaults.dir ?? 'asc'),
   });

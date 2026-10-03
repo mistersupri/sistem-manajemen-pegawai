@@ -15,9 +15,9 @@ export function CollapsibleFilters({ active, children }: { active: number; child
     <div className="grid gap-2">
       <Button type="button" variant="outline" className="justify-between md:hidden" aria-expanded={open} aria-controls="filter-panel" onClick={() => setOpen((v) => !v)}>
         <span className="inline-flex items-center gap-2"><SlidersHorizontal />Filter{active ? ` (${active} aktif)` : ''}</span>
-        <ChevronDown className={cn('transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('transition-transform duration-200 ease-out', open && 'rotate-180')} />
       </Button>
-      <div id="filter-panel" className={cn(open ? 'block' : 'hidden', 'md:block')}>{children}</div>
+      <div id="filter-panel" className={cn(open ? 'block enter-rise' : 'hidden', 'md:block')}>{children}</div>
     </div>
   );
 }

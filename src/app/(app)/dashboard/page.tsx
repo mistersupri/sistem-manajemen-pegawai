@@ -127,7 +127,7 @@ async function AdminDashboard({ sp }: { actorId: string; sp: Record<string, stri
                 <div className="flex gap-2"><Button type="submit">Terapkan</Button>{(filtered || !isToday) && <Button asChild variant="outline"><Link href="/dashboard">Kembali ke hari ini</Link></Button>}</div>
               </form>
             </FilterPopover>
-            {actor.employeeId && <Button asChild><Link href="/absensi/saya"><ScanFace />Absensi saya</Link></Button>}
+            {actor.employeeId && <Button asChild><Link href="/absensi/saya/absen"><ScanFace />Absen sekarang</Link></Button>}
           </>
         }
       />
@@ -315,7 +315,7 @@ async function EmployeeDashboard() {
               )}
               {rec && <p className="flex items-center gap-2 text-sm">Status <StatusBadge status={rec.status} />{p.schedule && <span className="text-muted-foreground">toleransi terlambat {p.schedule.lateToleranceMin} menit</span>}</p>}
               {next ? (
-                <Button asChild size="lg" variant="highlight" className="h-14 w-full text-base font-semibold"><Link href="/absensi/saya"><ScanFace className="size-5" />{next}</Link></Button>
+                <Button asChild size="lg" variant="highlight" className="h-14 w-full text-base font-semibold"><Link href="/absensi/saya/absen"><ScanFace className="size-5" />{next}</Link></Button>
               ) : (
                 <p className="rounded-lg bg-muted px-4 py-3 text-sm">{p.isOffDay ? 'Hari ini libur. Tidak perlu absen.' : rec?.checkOutAt ? 'Absen masuk dan pulang hari ini sudah tercatat.' : 'Tidak ada jadwal kerja hari ini. Hubungi admin bila seharusnya ada.'}</p>
               )}

@@ -9,7 +9,7 @@ import { SettingsCard, type SettingField } from '../settings-form';
 export const metadata = { title: 'Metode Absensi' };
 
 const METHODS: SettingField[] = [
-  { key: 'methods.faceSelf', label: 'Absen wajah mandiri', type: 'bool', hint: 'Pegawai absen dari perangkatnya sendiri lewat menu Absensi Saya.' },
+  { key: 'methods.faceSelf', label: 'Absen wajah mandiri', type: 'bool', hint: 'Pegawai absen dari perangkatnya sendiri lewat menu Absen Sekarang.' },
   { key: 'methods.faceKiosk', label: 'Kiosk wajah', type: 'bool', hint: 'Satu perangkat bersama di kantor, dibuka petugas lewat halaman /kiosk.' },
   { key: 'methods.fieldDuty', label: 'Dinas luar (foto, waktu, dan GPS)', type: 'bool' },
   { key: 'methods.manual', label: 'Input manual oleh petugas', type: 'bool', hint: 'Untuk gangguan alat. Wajib alasan dan tercatat di audit log.' },

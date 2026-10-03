@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TableHead } from '@/components/ui/table';
-import { PAGE_SIZES, qs, type SortDir } from '@/lib/list';
+import { DEFAULT_PER, PAGE_SIZES, qs, type SortDir } from '@/lib/list';
+import { PageSizeSelect } from './page-size';
 import { cn } from '@/lib/utils';
 import { SortMenu } from './sort-menu';
 
@@ -24,22 +25,14 @@ function pageList(page: number, pages: number): (number | '…')[] {
 /** Pagination berbasis URL (tetap berfungsi tanpa JavaScript), dengan pilihan jumlah baris. */
 export function Pager({ total, page, pageSize, params, sizes = true }: { total: number; page: number; pageSize: number; params: Params; sizes?: boolean }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  const href = (p: number, per = pageSize) => qs({ ...params, page: p > 1 ? p : undefined, per: per !== 25 ? per : undefined });
+  const href = (p: number, per = pageSize) => qs({ ...params, page: p > 1 ? p : undefined, per: per !== DEFAULT_PER ? per : undefined });
   const from = total ? (page - 1) * pageSize + 1 : 0;
   const to = Math.min(total, page * pageSize);
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t px-4 py-3 text-sm text-muted-foreground lg:px-6">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <span className="tabular-nums">{total ? `${from.toLocaleString('id-ID')}–${to.toLocaleString('id-ID')} dari ${total.toLocaleString('id-ID')}` : 'Tidak ada data'}</span>
-        {sizes && total > PAGE_SIZES[0] && (
-          <span className="flex items-center gap-1" aria-label="Baris per halaman">
-            <span className="max-sm:hidden">Baris:</span>
-            {PAGE_SIZES.map((n) => (
-              <Link key={n} href={href(1, n)} aria-current={n === pageSize ? 'true' : undefined}
-                className={cn('inline-flex min-h-8 min-w-8 items-center justify-center rounded-md px-1.5 tabular-nums hover:bg-accent hover:text-foreground max-md:min-h-10 max-md:min-w-10', n === pageSize && 'bg-accent font-semibold text-foreground')}>{n}</Link>
-            ))}
-          </span>
-        )}
+        {sizes && total > PAGE_SIZES[0] && <PageSizeSelect value={pageSize} options={PAGE_SIZES.map((n) => ({ size: n, href: href(1, n) }))} />}
       </div>
       {pages > 1 && (
         <nav className="flex items-center gap-1" aria-label="Halaman">

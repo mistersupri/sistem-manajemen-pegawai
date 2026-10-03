@@ -18,8 +18,8 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        // app: aksen kuning untuk aksi di atas navy dan hal yang menunggu tindakan
-        highlight: "bg-highlight text-highlight-foreground hover:bg-highlight/85",
+        // app: aksi utama halaman (gaya e-TPP: biru penuh)
+        highlight: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
         // app: hapus berbingkai untuk aksi berbahaya yang bukan aksi utama
         "outline-destructive":
           "border border-destructive/40 bg-background text-destructive shadow-xs hover:bg-destructive/10",

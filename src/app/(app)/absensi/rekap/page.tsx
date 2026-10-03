@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { CollapsibleFilters } from '@/components/app/collapsible-filters';
-import { ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,8 +11,9 @@ import { PageBody, PageHeader } from '@/components/app/page-header';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
 import { Segmented } from '@/components/app/segmented';
+import { MonthStepper } from '@/components/app/month-stepper';
 import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
-import { clampPage, listSchema, qs, sortRows } from '@/lib/list';
+import { clampPage, listSchema, pickPer, qs, sortRows } from '@/lib/list';
 import { requirePage } from '@/lib/guard';
 import { can } from '@/lib/auth/actor';
 import { CALENDAR_LEGEND, calendarRecap, dailyRecords, recap, type RecapRow } from '@/lib/services/reports';
@@ -37,7 +38,6 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
   const to = isValidDate(sp.sampai) ? sp.sampai : today;
   const view = sp.tampilan === 'harian' || sp.tampilan === 'kalender' ? sp.tampilan : 'rekap';
   const bulan = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.bulan ?? '') ? sp.bulan! : today.slice(0, 7);
-  const shiftMonth = (ym: string, n: number) => { const d = new Date(Date.UTC(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + n, 1)); return d.toISOString().slice(0, 7); };
   const monthLabel = (ym: string) => `${BULAN[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
   const f = { from, to, unitId: sp.unit ?? '', status: sp.status ?? '', method: sp.metode ?? '', deviceId: sp.mesin ?? '', q: sp.q ?? '' };
   const params = view === 'kalender'
@@ -57,7 +57,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader
         title="Rekapitulasi absensi"
-        description={view === 'kalender' ? monthLabel(bulan) : `${fmtTglPendek(from)} sampai ${fmtTglPendek(to)}`}
+        description={view === 'kalender' ? `Kehadiran setiap pegawai per tanggal, ${monthLabel(bulan)}.` : `${fmtTglPendek(from)} sampai ${fmtTglPendek(to)}`}
         actions={
           <>
             {can(actor, 'attendance.export') && (
@@ -80,14 +80,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
         {view === 'kalender' ? (
           <form method="get" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4" aria-label="Filter kalender">
             <input type="hidden" name="tampilan" value="kalender" />
-            <div className="grid gap-2">
-              <Label htmlFor="bulan">Bulan</Label>
-              <div className="flex items-center gap-1">
-                <Button asChild variant="outline" size="icon" aria-label={`Bulan sebelumnya, ${monthLabel(shiftMonth(bulan, -1))}`}><Link href={qs({ bulan: shiftMonth(bulan, -1), page: undefined })}><ChevronLeft /></Link></Button>
-                <Input id="bulan" name="bulan" type="month" defaultValue={bulan} className="w-44" />
-                <Button asChild variant="outline" size="icon" aria-label={`Bulan berikutnya, ${monthLabel(shiftMonth(bulan, 1))}`}><Link href={qs({ bulan: shiftMonth(bulan, 1), page: undefined })}><ChevronRight /></Link></Button>
-              </div>
-            </div>
+            <input type="hidden" name="bulan" value={bulan} />
             <div className="grid min-w-48 flex-1 grid-cols-1 gap-2 sm:max-w-80 sm:flex-none"><Label htmlFor="unit">Unit kerja</Label><NativeSelect id="unit" name="unit" defaultValue={f.unitId}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></div>
             <div className="grid min-w-48 flex-1 gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={f.q} placeholder="Nama atau NIP" className="pl-9" /></div></div>
             <Button type="submit">Terapkan</Button>
@@ -114,17 +107,21 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
         </CollapsibleFilters>
         )}
 
-        <Segmented label="Tampilan" current={view} className="w-fit"
-          items={[['rekap', 'Rekap per pegawai'], ['kalender', 'Kalender'], ['harian', 'Detail harian']].map(([k, label]) => ({
-            key: k, label, href: qs({ tampilan: k, unit: sp.unit, q: sp.q, ...(k === 'kalender' ? { bulan } : { dari: from, sampai: to }) }),
-          }))} />
+        {/* Tab tampilan di kiri; bulan yang ditampilkan kalender di kanan, tepat di atas tabelnya. */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Segmented label="Tampilan" current={view} className="w-fit"
+            items={[['rekap', 'Rekap per pegawai'], ['kalender', 'Kalender'], ['harian', 'Detail harian']].map(([k, label]) => ({
+              key: k, label, href: qs({ tampilan: k, unit: sp.unit, q: sp.q, ...(k === 'kalender' ? { bulan } : { dari: from, sampai: to }) }),
+            }))} />
+          {view === 'kalender' && <MonthStepper value={bulan} href={qs({ bulan: '__bulan__', page: undefined })} />}
+        </div>
 
         {view === 'rekap' && <RecapTable data={await recap(actor, f)} sp={sp} params={params} />}
         {view === 'harian' && (() => {
           const l = dailySchema.parse(sp);
           return dailyRecords(actor, f, { page: l.page, pageSize: l.per, sort: l.sort, dir: sp.dir ? l.dir : undefined }).then((data) => <DailyTable data={data} tz={tz} params={params} />);
         })()}
-        {view === 'kalender' && <CalendarView data={await calendarRecap(actor, { month: bulan, unitId: f.unitId, q: f.q, page: Number(sp.page) || 1, pageSize: [25, 50, 100].includes(Number(sp.per)) ? Number(sp.per) : 50 })} params={params} />}
+        {view === 'kalender' && <CalendarView data={await calendarRecap(actor, { month: bulan, unitId: f.unitId, q: f.q, page: Number(sp.page) || 1, pageSize: pickPer(sp.per) })} params={params} />}
         <p className="text-sm text-muted-foreground">&quot;Tanpa transaksi&quot; = hari kerja terjadwal yang sudah lewat tanpa catatan apa pun. Bukan otomatis tidak hadir; status tidak hadir hanya ditetapkan petugas setelah pemeriksaan.</p>
       </PageBody>
     </>
@@ -160,8 +157,8 @@ function CalendarView({ data, params }: { data: Awaited<ReturnType<typeof calend
 }
 
 const RECAP_SORTS = ['nama', 'unit', 'hari', 'hadir', 'terlambat', 'pulangawal', 'dinas', 'izin', 'absen', 'tanpa', 'persen'] as const;
-const recapSchema = listSchema(RECAP_SORTS, { sort: 'nama', per: 50 });
-const dailySchema = listSchema(['tanggal', 'nama', 'masuk', 'pulang', 'status', 'terlambat'] as const, { sort: 'tanggal', dir: 'desc', per: 50 });
+const recapSchema = listSchema(RECAP_SORTS, { sort: 'nama' });
+const dailySchema = listSchema(['tanggal', 'nama', 'masuk', 'pulang', 'status', 'terlambat'] as const, { sort: 'tanggal', dir: 'desc' });
 
 function RecapTable({ data, sp, params }: { data: Awaited<ReturnType<typeof recap>>; sp: Record<string, string | undefined>; params: Record<string, string | undefined> }) {
   const { rows: all, filter } = data;

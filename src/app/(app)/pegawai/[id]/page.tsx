@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageBody, PageHeader } from '@/components/app/page-header';
+import { Segmented } from '@/components/app/segmented';
+import { MonthStepper } from '@/components/app/month-stepper';
+import { PresenceRecap } from '@/components/app/presence-recap';
+import { presenceMonth } from '@/lib/services/presence';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
 import { requirePage } from '@/lib/guard';
@@ -13,10 +17,8 @@ import { getEmployee } from '@/lib/services/employees';
 import { listAssignments } from '@/lib/services/schedules';
 import { plansFor } from '@/lib/attendance/plan';
 import { getSettings } from '@/lib/settings';
-import { METHOD_LABEL } from '@/lib/attendance/engine';
-import { addDays, fmtJam, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, todayIn, toDbDate } from '@/lib/time';
+import { addDays, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, todayIn } from '@/lib/time';
 import { EmployeeActions } from './actions';
-import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Detail pegawai' };
 
@@ -28,10 +30,11 @@ const TABS = [
   ['riwayat', 'Riwayat perubahan'],
 ] as const;
 
-export default async function EmployeeDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function EmployeeDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; bulan?: string }> }) {
   const actor = await requirePage(['employee.read']);
   const { id } = await params;
-  const tab = (await searchParams).tab ?? 'profil';
+  const sp = await searchParams;
+  const tab = sp.tab ?? 'profil';
   const e = await getEmployee(actor, id);
   const s = await getSettings();
   const tz = s['org.timezone'];
@@ -53,12 +56,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
           </>
         }
       >
-        <nav className="mt-5 flex gap-1 overflow-x-auto" aria-label="Bagian detail pegawai">
-          {TABS.map(([k, label]) => (
-            <Link key={k} href={`?tab=${k}`} aria-current={tab === k ? 'page' : undefined}
-              className={cn('inline-flex min-h-10 shrink-0 items-center rounded-md px-3 text-sm font-medium max-md:min-h-11', tab === k ? 'bg-highlight text-highlight-foreground' : 'text-white/80 hover:bg-white/10 hover:text-white')}>{label}</Link>
-          ))}
-        </nav>
+        <Segmented label="Bagian detail pegawai" current={tab} className="mt-5 w-fit" items={TABS.map(([k, label]) => ({ key: k, label, href: `?tab=${k}` }))} />
       </PageHeader>
       <PageBody className="grid gap-6">
         {!e.isActive && <p className="rounded-lg border bg-muted p-3 text-sm">Pegawai nonaktif sejak {d(e.activeEffectiveDate)}. Data dan riwayat absensinya tetap tersimpan.</p>}
@@ -113,7 +111,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
             </Card>
           </div>
         )}
-        {tab === 'absensi' && <AttendanceTab id={id} tz={tz} />}
+        {tab === 'absensi' && <AttendanceTab id={id} tz={tz} bulan={sp.bulan} />}
         {tab === 'jadwal' && <ScheduleTab id={id} tz={tz} />}
         {tab === 'riwayat' && <HistoryTab id={id} tz={tz} allowed={can(actor, 'audit.read') || can(actor, 'employee.write')} />}
       </PageBody>
@@ -121,25 +119,15 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
   );
 }
 
-async function AttendanceTab({ id, tz }: { id: string; tz: string }) {
+async function AttendanceTab({ id, tz, bulan }: { id: string; tz: string; bulan?: string }) {
   const today = todayIn(tz);
-  const rows = await prisma.attendanceRecord.findMany({ where: { employeeId: id, workDate: { gte: toDbDate(addDays(today, -31)), lte: toDbDate(today) } }, orderBy: { workDate: 'desc' } });
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(bulan ?? '') && bulan! <= today.slice(0, 7) ? bulan! : today.slice(0, 7);
+  const data = await presenceMonth(id, month, today);
   return (
-    <Card className="gap-0 py-0">
-      <CardHeader className="border-b py-4"><CardTitle>Absensi 31 hari terakhir</CardTitle></CardHeader>
-      {rows.length ? (
-        <Table className="table-stack"><TableHeader><TableRow><TableHead className="pl-6">Tanggal</TableHead><TableHead>Masuk</TableHead><TableHead>Pulang</TableHead><TableHead>Status</TableHead><TableHead className="pr-6">Keterangan</TableHead></TableRow></TableHeader>
-          <TableBody>{rows.map((r) => (
-            <TableRow key={r.id}>
-              <TableCell className="stack-head pl-6"><Link className="font-medium text-primary hover:underline" href={`/absensi/rekap/${id}/${fromDbDate(r.workDate)}`}>{fmtTglPendek(fromDbDate(r.workDate))}</Link></TableCell>
-              <TableCell data-label="Masuk" className="tabular">{fmtJam(r.checkInAt, tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r.checkInMethod ?? ''] ?? ''}</span></TableCell>
-              <TableCell data-label="Pulang" className="tabular">{fmtJam(r.checkOutAt, tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r.checkOutMethod ?? ''] ?? ''}</span></TableCell>
-              <TableCell data-label="Status"><StatusBadge status={r.status} />{r.lateMinutes > 0 && <span className="block text-xs text-muted-foreground">{r.lateMinutes} mnt</span>}</TableCell>
-              <TableCell data-label="Keterangan" className="pr-6 whitespace-normal text-muted-foreground">{[r.reviewReason, r.note].filter(Boolean).join('; ')}</TableCell>
-            </TableRow>
-          ))}</TableBody></Table>
-      ) : <EmptyState title="Belum ada absensi 31 hari terakhir" description="Catatan muncul setelah pegawai absen lewat wajah, mesin, atau input petugas." />}
-    </Card>
+    <div className="grid gap-4">
+      <div className="flex justify-end"><MonthStepper value={month} href="?tab=absensi&bulan=__bulan__" max={today.slice(0, 7)} /></div>
+      <PresenceRecap data={data} tz={tz} detailHref={(d) => `/absensi/rekap/${id}/${d}`} />
+    </div>
   );
 }
 

@@ -30,7 +30,7 @@ export default async function TracePage({ params }: { params: Promise<{ employee
       <PageHeader
         title={t.employee.fullName}
         description={`${fmtTanggal(date)}${t.employee.employeeNumber ? `, NIP ${t.employee.employeeNumber}` : ''}`}
-        crumbs={isSelf && !can(actor, 'attendance.report') ? [{ href: '/absensi/saya', label: 'Absensi Saya' }, { label: 'Rincian' }] : [{ href: '/absensi/rekap', label: 'Rekapitulasi' }, { label: 'Rincian' }]}
+        crumbs={isSelf && !can(actor, 'attendance.report') ? [{ href: '/absensi/saya', label: 'Rekap Presensi Saya' }, { label: 'Rincian' }] : [{ href: '/absensi/rekap', label: 'Rekapitulasi' }, { label: 'Rincian' }]}
         actions={
           <>
             {!isSelf && can(actor, 'correction.review') && <AdminCorrection employeeId={employeeId} date={date} current={{ checkIn: fmtJam(r?.checkInAt, tz), checkOut: fmtJam(r?.checkOutAt, tz), status: r?.status ?? null }} />}

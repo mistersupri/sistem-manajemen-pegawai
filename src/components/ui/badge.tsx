@@ -23,7 +23,7 @@ const badgeVariants = cva(
         alpa: "bg-status-alpa text-status-alpa-foreground",
         dinas: "bg-status-dinas text-status-dinas-foreground",
         netral: "bg-status-izin text-status-izin-foreground",
-        highlight: "bg-highlight text-highlight-foreground",
+        highlight: "bg-count text-count-foreground",
       },
     },
     defaultVariants: {

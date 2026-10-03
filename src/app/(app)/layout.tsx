@@ -11,6 +11,9 @@ import { ROLES } from '@/lib/auth/catalog';
 import { navBadges } from '@/lib/services/badges';
 import { TabBar } from '@/components/app/tab-bar';
 import { can } from '@/lib/auth/actor';
+import { HeaderCrumbs } from '@/components/app/header-crumbs';
+import { HeaderAvatar } from '@/components/app/user-menu';
+import { fmtTanggal, todayIn } from '@/lib/time';
 
 function visible(items: NavItem[], actor: Actor, badges: Record<string, number>): SidebarItem[] {
   return items
@@ -31,12 +34,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [settings, badges] = await Promise.all([getSettings(), navBadges(actor)]);
   const items = visible(NAV, actor, badges);
   const roles = actor.roleCodes.map((c) => ROLES[c]?.name ?? c).join(', ');
+  const user = { name: actor.displayName, username: actor.username, roles };
   // Pegawai tanpa peran pengelola memakai navigasi bawah di ponsel.
   const selfService = !can(actor, 'dashboard.view') && can(actor, 'attendance.self');
   const tabs = selfService ? [
     { href: '/dashboard', label: 'Beranda', icon: 'home', show: true },
-    { href: '/absensi/saya', label: 'Absen', icon: 'absen', show: true },
-    { href: '/jadwal', label: 'Jadwal', icon: 'jadwal', show: true },
+    { href: '/absensi/saya/absen', label: 'Absen', icon: 'absen', show: true },
+    { href: '/absensi/saya', label: 'Rekap', icon: 'rekap', show: true },
     { href: '/absensi/koreksi', label: 'Koreksi', icon: 'koreksi', show: can(actor, 'correction.request') },
     { href: '/cuti', label: 'Cuti', icon: 'cuti', show: can(actor, 'leave.request') && !!settings['modules.leave'] },
   ].filter((t) => t.show) : null;
@@ -46,16 +50,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         items={items}
         orgName={settings['org.name']}
         logoUrl={settings['org.logo'] ? `/api/v1/logo?v=${encodeURIComponent(settings['org.logo'])}` : null}
-        user={{ name: actor.displayName, username: actor.username, roles }}
+        user={user}
       />
       <SidebarInset className="min-w-0">
-        <header className="flex h-14 items-center gap-2 border-b border-white/10 bg-navy px-3 text-white lg:px-6">
-          <SidebarTrigger className="size-11 text-white hover:bg-white/10 hover:text-white md:size-9" aria-label="Buka atau tutup menu" />
-          <span className="truncate text-sm font-medium text-white/80">{settings['org.name']}</span>
-          <Link href="/notifikasi" className="relative ml-auto inline-flex size-11 items-center justify-center rounded-md hover:bg-white/10 md:size-9" aria-label={badges['/notifikasi'] ? `Notifikasi, ${badges['/notifikasi']} belum dibaca` : 'Notifikasi'}>
-            <Bell className="size-5" />
-            {badges['/notifikasi'] ? <span className="absolute top-1 right-1 min-w-4 rounded-full bg-highlight px-1 text-center text-[0.65rem] font-bold text-highlight-foreground">{badges['/notifikasi']}</span> : null}
-          </Link>
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-card/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-card/85 lg:px-6">
+          <SidebarTrigger variant="outline" className="size-11 rounded-lg md:size-9" aria-label="Buka atau tutup menu" />
+          <HeaderCrumbs items={items} />
+          <div className="ml-auto flex items-center gap-2 md:gap-3">
+            <span className="rounded-lg border px-3 py-1.5 text-sm text-muted-foreground max-md:hidden">{fmtTanggal(todayIn(settings['org.timezone']))}</span>
+            <Link href="/notifikasi" className="relative inline-flex size-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground md:size-9" aria-label={badges['/notifikasi'] ? `Notifikasi, ${badges['/notifikasi']} belum dibaca` : 'Notifikasi'}>
+              <Bell className="size-5" />
+              {badges['/notifikasi'] ? <span className="absolute top-1 right-1 min-w-4 rounded-full bg-count px-1 text-center text-[0.65rem] leading-4 font-semibold text-count-foreground">{badges['/notifikasi']}</span> : null}
+            </Link>
+            <HeaderAvatar user={user} />
+          </div>
         </header>
         <main id="konten" className={tabs ? 'flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0' : 'flex-1'}>{children}</main>
         {tabs && <TabBar items={tabs} />}

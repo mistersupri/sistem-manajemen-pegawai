@@ -15,7 +15,8 @@ export const NAV: NavItem[] = [
   {
     href: '/absensi', label: 'Absensi', icon: 'clock', perms: ['attendance.self', 'attendance.monitor', 'attendance.report', 'correction.request', 'correction.review'],
     children: [
-      { href: '/absensi/saya', label: 'Absensi Saya', icon: 'scan-face', perms: ['attendance.self'] },
+      { href: '/absensi/saya/absen', label: 'Absen Sekarang', icon: 'scan-face', perms: ['attendance.self'] },
+      { href: '/absensi/saya', label: 'Rekap Presensi Saya', icon: 'table', perms: ['attendance.self'] },
       { href: '/absensi/monitoring', label: 'Monitoring Kehadiran', icon: 'activity', perms: ['attendance.monitor'] },
       { href: '/absensi/rekap', label: 'Rekapitulasi', icon: 'table', perms: ['attendance.report'] },
       { href: '/absensi/koreksi', label: 'Koreksi Absensi', icon: 'file-pen', perms: ['correction.request', 'correction.review'] },
@@ -30,12 +31,11 @@ export const NAV: NavItem[] = [
       { href: '/perangkat/titik-absen', label: 'Titik Absen Wajah', icon: 'scan-face', perms: ['device.read'] },
     ],
   },
-  { href: '/jadwal', label: 'Jadwal Kerja', icon: 'calendar-days', perms: ['schedule.read', 'attendance.self'] },
   { href: '/cuti', label: 'Cuti & Izin', icon: 'plane', perms: ['leave.request', 'leave.approve', 'leave.manage'] },
-  { href: '/notifikasi', label: 'Notifikasi', icon: 'bell', perms: [] },
   {
-    href: '/pengaturan', label: 'Pengaturan', icon: 'settings', perms: ['unit.manage', 'unit.read', 'user.manage', 'role.manage', 'settings.manage', 'audit.read', 'schedule.manage', 'leave.manage'],
+    href: '/pengaturan', label: 'Pengaturan', icon: 'settings', perms: ['unit.manage', 'unit.read', 'user.manage', 'role.manage', 'settings.manage', 'audit.read', 'schedule.read', 'schedule.manage', 'leave.manage'],
     children: [
+      { href: '/jadwal', label: 'Jadwal Kerja', icon: 'calendar-days', perms: ['schedule.read'] },
       { href: '/pengaturan/unit', label: 'Unit Kerja', icon: 'building-2', perms: ['unit.read', 'unit.manage'] },
       { href: '/pengaturan/pengguna', label: 'Pengguna & Peran', icon: 'shield-check', perms: ['user.manage', 'role.manage'] },
       { href: '/pengaturan/aturan', label: 'Aturan Absensi', icon: 'sliders-horizontal', perms: ['settings.manage', 'schedule.manage', 'leave.manage'] },

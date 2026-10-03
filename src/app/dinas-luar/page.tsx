@@ -22,14 +22,14 @@ export default async function FieldDutyStandalone() {
   ]) : [null, null];
   return (
     <main className="min-h-dvh bg-background">
-      <header className="bg-navy text-white">
+      <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 lg:px-6">
-          {logo && <img src={logo} alt="" className="h-10 rounded-md bg-white p-1" />}
+          {logo && <img src={logo} alt="" className="h-10 object-contain" />}
           <div className="min-w-0 flex-1">
             <h1 className="text-lg font-bold">Absen dinas luar</h1>
-            <p className="truncate text-sm text-white/70">{emp ? emp.fullName : s['org.name']}</p>
+            <p className="truncate text-sm text-muted-foreground">{emp ? emp.fullName : s['org.name']}</p>
           </div>
-          <Button asChild variant="outline" size="sm" className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"><Link href="/dashboard"><ArrowLeft />Beranda</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href="/dashboard"><ArrowLeft />Beranda</Link></Button>
         </div>
       </header>
       <div className="mx-auto max-w-6xl px-4 py-6 lg:px-6">

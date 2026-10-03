@@ -14,16 +14,16 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const s = await getSettings();
   return (
     <div className="grid min-h-dvh lg:grid-cols-[6fr_5fr]">
-      <aside className="hidden flex-col justify-between bg-navy p-10 text-white lg:flex xl:p-14">
+      <aside className="hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex xl:p-14">
         <div className="flex items-center gap-4">
           {s['org.logo'] && <img className="max-h-14 max-w-40 rounded-lg bg-white object-contain p-1.5" src={`/api/v1/logo?v=${encodeURIComponent(s['org.logo'])}`} alt={`Logo ${s['org.name']}`} />}
           <div>
             <p className="text-xl font-bold">{s['org.name']}</p>
-            <p className="text-sm text-white/70">Sistem informasi manajemen pegawai</p>
+            <p className="text-sm text-white/85">Sistem informasi manajemen pegawai</p>
           </div>
         </div>
         <LiveClock serverNow={new Date().toISOString()} tz={s['org.timezone']} label={s['org.timezoneLabel']} />
-        <p className="text-sm text-white/70">Masalah akun? Hubungi admin kepegawaian di unit Anda.</p>
+        <p className="text-sm text-white/85">Masalah akun? Hubungi admin kepegawaian di unit Anda.</p>
       </aside>
       <main className="flex items-center justify-center px-4 py-10 sm:px-8">
         <div className="w-full max-w-sm">

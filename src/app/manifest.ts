@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'id',
     icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' }],
     shortcuts: [
-      { name: 'Absen wajah', short_name: 'Absen', url: '/absensi/saya' },
+      { name: 'Absen wajah', short_name: 'Absen', url: '/absensi/saya/absen' },
       { name: 'Absen dinas luar', short_name: 'Dinas luar', url: '/dinas-luar' },
     ],
   };

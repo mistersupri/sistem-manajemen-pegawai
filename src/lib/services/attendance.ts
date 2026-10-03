@@ -227,7 +227,7 @@ export async function faceAttendance(actor: Actor, method: Method, raw: unknown,
   if (employee) base.employee = { id: employee.id, name: employee.fullName, employeeNumber: employee.employeeNumber, position: employee.position };
   if (outcome !== 'SUCCESS') {
     if (employeeId && !identify) {
-      await notifyEmployee(employeeId, { type: 'attendance_failed', title: 'Absensi gagal', body: message, link: '/absensi/saya' });
+      await notifyEmployee(employeeId, { type: 'attendance_failed', title: 'Absensi gagal', body: message, link: '/absensi/saya/absen' });
     }
     return base;
   }

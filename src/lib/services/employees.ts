@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { clampPage } from '../list';
+import { clampPage, DEFAULT_PER, pickPer } from '../list';
 import type { Prisma } from '@/generated/prisma/client';
 import { prisma, type Db } from '../db';
 import { audit, diff } from '../audit';
@@ -51,8 +51,8 @@ export const listQuery = z.object({
   sort: z.enum(['nama', 'nip', 'jabatan', 'unit', 'status', 'terbaru']).catch('nama').default('nama'),
   dir: z.enum(['asc', 'desc']).catch('asc').default('asc'),
   page: z.coerce.number().int().min(1).catch(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(200).optional().default(25),
-  per: z.coerce.number().int().min(1).max(200).optional(),
+  pageSize: z.coerce.number().int().min(1).max(500).optional().default(DEFAULT_PER),
+  per: z.coerce.number().int().optional().transform((n) => (n == null ? undefined : pickPer(n))),
 });
 export type ListQuery = z.infer<typeof listQuery>;
 

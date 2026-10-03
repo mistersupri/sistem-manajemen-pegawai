@@ -5,7 +5,7 @@ describe('parameter daftar', () => {
   const schema = listSchema(['nama', 'unit'] as const, { sort: 'nama' });
 
   it('nilai URL yang salah jatuh ke bawaan, bukan galat', () => {
-    expect(schema.parse({ page: 'abc', per: '999', sort: 'hapus', dir: 'naik' })).toEqual({ page: 1, per: 25, sort: 'nama', dir: 'asc' });
+    expect(schema.parse({ page: 'abc', per: '999', sort: 'hapus', dir: 'naik' })).toEqual({ page: 1, per: 20, sort: 'nama', dir: 'asc' });
     expect(schema.parse({ page: '3', per: '100', sort: 'unit', dir: 'desc' })).toEqual({ page: 3, per: 100, sort: 'unit', dir: 'desc' });
   });
 

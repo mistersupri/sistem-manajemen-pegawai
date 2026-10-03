@@ -7,7 +7,7 @@ export interface Crumb {
   label: string;
 }
 
-/** Pita judul halaman (navy): breadcrumb, judul, keterangan, dan aksi. */
+/** Judul halaman di atas area kerja: breadcrumb turunan, judul, keterangan, dan aksi. */
 export function PageHeader({ title, description, crumbs, actions, children }: {
   title: React.ReactNode;
   description?: React.ReactNode;
@@ -16,7 +16,7 @@ export function PageHeader({ title, description, crumbs, actions, children }: {
   children?: React.ReactNode;
 }) {
   return (
-    <div className="page-head px-4 pt-4 pb-6 lg:px-8">
+    <div className="px-4 pt-6 lg:px-8">
       {crumbs && crumbs.length > 0 && (
         <nav aria-label="Breadcrumb" className="mb-3">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
@@ -25,7 +25,7 @@ export function PageHeader({ title, description, crumbs, actions, children }: {
               <li key={i} className={cn('inline-flex min-w-0 items-center gap-1.5', !c.href && 'max-md:hidden')}>
                 {i > 0 && <ChevronRight className="size-3.5 shrink-0" aria-hidden />}
                 {c.href ? (
-                  <Link className="inline-flex min-h-8 items-center hover:text-foreground max-lg:min-h-11" href={c.href}>{c.label}</Link>
+                  <Link className="inline-flex min-h-8 items-center text-primary underline-offset-4 transition-colors duration-150 hover:text-primary/80 hover:underline max-lg:min-h-11" href={c.href}>{c.label}</Link>
                 ) : (
                   <span aria-current="page" className="max-w-[40ch] truncate font-medium text-foreground" title={c.label}>{c.label}</span>
                 )}
@@ -36,7 +36,7 @@ export function PageHeader({ title, description, crumbs, actions, children }: {
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl leading-tight font-bold text-balance">{title}</h1>
+          <h1 className="text-xl leading-tight font-semibold text-balance md:text-2xl">{title}</h1>
           {description && <p className="mt-1 max-w-prose text-sm text-pretty text-muted-foreground">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -46,7 +46,7 @@ export function PageHeader({ title, description, crumbs, actions, children }: {
   );
 }
 
-/** Area isi halaman di bawah pita judul. */
+/** Area isi halaman di bawah judul. */
 export function PageBody({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div data-slot="page-body" className={cn('min-w-0 px-4 py-6 lg:px-8', className)}>{children}</div>;
+  return <div data-slot="page-body" className={cn('min-w-0 px-4 pt-5 pb-8 lg:px-8', className)}>{children}</div>;
 }

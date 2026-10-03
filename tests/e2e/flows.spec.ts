@@ -110,7 +110,10 @@ test('koreksi: pegawai mengajukan, atasan menyetujui', async ({ page }) => {
 test('cuti/izin: pegawai mengajukan, atasan menyetujui', async ({ page }) => {
   await login(page, 'pegawai');
   await open(page, '/cuti/baru');
-  await page.getByLabel('Jenis').selectOption({ label: 'Izin (contoh)' });
+  // Basis data lama memakai nama contoh, basis data baru memakai katalog.
+  const jenis = page.getByLabel('Jenis');
+  const izin = await jenis.locator('option', { hasText: /^(Ijin|Izin \(contoh\))$/ }).first().getAttribute('value');
+  await jenis.selectOption(izin!);
   const day = futureWeekday(30 + (Number(stamp) % 200));
   await page.getByLabel('Mulai').fill(day);
   await page.getByLabel('Sampai').fill(day);

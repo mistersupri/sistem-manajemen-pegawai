@@ -448,7 +448,7 @@ export const rawQuery = z.object({
   q: z.string().max(60).optional(),
   // belum = ID mesin belum dipetakan, tertunda = belum diproses, menyimpang = jam perangkat menyimpang
   state: z.enum(['belum', 'tertunda', 'menyimpang', '']).catch('').default(''),
-}).and(listSchema(['waktu', 'diterima', 'pin', 'nama'] as const, { sort: 'waktu', dir: 'desc', per: 100 }));
+}).and(listSchema(['waktu', 'diterima', 'pin', 'nama'] as const, { sort: 'waktu', dir: 'desc' }));
 
 export async function rawEvents(actor: Actor, raw: unknown) {
   assertCan(actor, 'device.read');

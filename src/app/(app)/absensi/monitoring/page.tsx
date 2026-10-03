@@ -24,7 +24,7 @@ import { ManualEntry } from './manual-entry';
 
 export const metadata = { title: 'Monitoring Kehadiran' };
 
-const listParams = listSchema(['nama', 'unit', 'masuk', 'pulang', 'status', 'terlambat'] as const, { sort: 'nama', per: 50 });
+const listParams = listSchema(['nama', 'unit', 'masuk', 'pulang', 'status', 'terlambat'] as const, { sort: 'nama' });
 
 export default async function MonitoringPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePage(['attendance.monitor']);

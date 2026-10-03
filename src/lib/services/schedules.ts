@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Prisma } from '@/generated/prisma/client';
-import { clampPage, listSchema } from '../list';
+import { clampPage, listSchema, pickPer } from '../list';
 import { prisma, type Db } from '../db';
 import { audit, diff } from '../audit';
 import { assertCan, employeeScopeWhere, getEmployeeInScope, scopeOf, unitInScope, type Actor } from '../auth/actor';
@@ -234,7 +234,7 @@ export async function scheduleGrid(actor: Actor, month: string, unitId?: string,
   assertCan(actor, 'schedule.read');
   if (unitId && !unitInScope(actor, 'schedule.read', unitId)) throw notFound();
   const { from, to } = monthBounds(month);
-  const per = [25, 50, 100].includes(opts.per ?? 0) ? opts.per! : 50;
+  const per = pickPer(opts.per);
   const where: Prisma.EmployeeWhereInput = {
     AND: [
       { deletedAt: null, isActive: true }, employeeScopeWhere(actor, 'schedule.read'), unitId ? { unitId } : {},

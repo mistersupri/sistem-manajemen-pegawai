@@ -20,7 +20,7 @@ export function LiveClock({ serverNow, tz, label, className }: { serverNow: stri
       <p className="text-lg text-white/80">{date}</p>
       <p className="clock mt-2 text-[clamp(4rem,9vw,7.5rem)] text-white" aria-live="off">
         <time dateTime={now.toISOString()} suppressHydrationWarning>{time}</time>
-        <span className="ml-3 align-top text-2xl font-semibold text-highlight">{label}</span>
+        <span className="ml-3 align-top text-2xl font-semibold text-white/85">{label}</span>
       </p>
       <p className="mt-3 text-sm text-white/70">Waktu server, dipakai untuk semua absensi.</p>
     </div>

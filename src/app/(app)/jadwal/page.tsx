@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -10,32 +11,26 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageBody, PageHeader } from '@/components/app/page-header';
 import { Segmented } from '@/components/app/segmented';
+import { MonthStepper } from '@/components/app/month-stepper';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
 import { ConfirmButton } from '@/components/app/confirm-button';
 import { requirePage } from '@/lib/guard';
-import { can, employeeScopeWhere, scopeOf, type Actor } from '@/lib/auth/actor';
+import { can, scopeOf, type Actor } from '@/lib/auth/actor';
 import { prisma } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
 import { listAssignmentsPage, listHolidays, listSchedules, scheduleGrid, scheduleRevisions } from '@/lib/services/schedules';
 import { unitOptions } from '@/lib/services/units';
-import { plansFor } from '@/lib/attendance/plan';
-import { BULAN, HARI, HARI_PENDEK, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, monthBounds, todayIn } from '@/lib/time';
+import { HARI_PENDEK, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, monthBounds, todayIn } from '@/lib/time';
 import { AssignmentForm, BulkDaysDialog, EndAssignment, HolidayForm, HolidayImport, HolidaySync, HolidayToggle, ScheduleForm, ScheduleGrid } from './forms';
 import { HOLIDAY_KIND_LABEL, HOLIDAY_SOURCE_LABEL } from '@/lib/services/holidays';
 import { Badge } from '@/components/ui/badge';
 import { getSettings } from '@/lib/settings';
-import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Jadwal Kerja' };
 
 type SP = Record<string, string | undefined>;
 
-const monthLabel = (m: string) => `${BULAN[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
-const shiftMonth = (m: string, n: number) => {
-  const d = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5)) - 1 + n, 1));
-  return d.toISOString().slice(0, 7);
-};
 const workdayText = (w: number[]) => [1, 2, 3, 4, 5, 6, 0].filter((d) => w.includes(d)).map((d) => HARI_PENDEK[d]).join(', ');
 
 export default async function SchedulePage({ searchParams }: { searchParams: Promise<SP> }) {
@@ -44,7 +39,8 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const tz = await getSetting('org.timezone');
   const today = todayIn(tz);
   const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.bulan ?? '') ? sp.bulan! : today.slice(0, 7);
-  if (!can(actor, 'schedule.read')) return <MySchedule actor={actor} month={month} today={today} />;
+  // Pegawai melihat shift di tabel rekap presensinya sendiri; halaman ini khusus pengelola jadwal.
+  if (!can(actor, 'schedule.read')) redirect('/absensi/saya');
 
   const tab = ['kalender', 'jadwal', 'penugasan', 'libur'].includes(sp.tab ?? '') ? sp.tab! : 'kalender';
   const manage = can(actor, 'schedule.manage');
@@ -93,11 +89,7 @@ async function GridTab({ actor, month, unitId, today, manage, sp }: { actor: Act
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex items-center gap-1">
-          <Button asChild variant="outline" size="icon" aria-label="Bulan sebelumnya"><Link href={q(shiftMonth(month, -1))}><ChevronLeft /></Link></Button>
-          <h2 className="min-w-40 text-center text-lg font-semibold">{monthLabel(month)}</h2>
-          <Button asChild variant="outline" size="icon" aria-label="Bulan berikutnya"><Link href={q(shiftMonth(month, 1))}><ChevronRight /></Link></Button>
-        </div>
+        <MonthStepper value={month} href={q('__bulan__')} />
         <form className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="tab" value="kalender" />
           <input type="hidden" name="bulan" value={month} />
@@ -311,38 +303,3 @@ async function HolidaysTab({ actor, manage, year }: { actor: Actor; manage: bool
   );
 }
 
-/** Tampilan pegawai: jadwalnya sendiri untuk satu bulan. */
-async function MySchedule({ actor, month, today }: { actor: Actor; month: string; today: string }) {
-  const { from, to } = monthBounds(month);
-  const plans = actor.employeeId ? await plansFor(actor.employeeId, from, to) : [];
-  const OFF: Record<string, string> = { HARI_LIBUR: 'Hari libur', BUKAN_HARI_KERJA: 'Bukan hari kerja', LIBUR_TERJADWAL: 'Libur terjadwal' };
-  return (
-    <>
-      <PageHeader title="Jadwal Saya" description="Jadwal kerja Anda per hari. Hubungi admin unit bila ada yang tidak sesuai." />
-      <PageBody className="grid gap-4">
-        <div className="flex items-center gap-1">
-          <Button asChild variant="outline" size="icon" aria-label="Bulan sebelumnya"><Link href={`?bulan=${shiftMonth(month, -1)}`}><ChevronLeft /></Link></Button>
-          <h2 className="min-w-40 text-center text-lg font-semibold">{monthLabel(month)}</h2>
-          <Button asChild variant="outline" size="icon" aria-label="Bulan berikutnya"><Link href={`?bulan=${shiftMonth(month, 1)}`}><ChevronRight /></Link></Button>
-        </div>
-        {!actor.employeeId ? <Card><EmptyState title="Akun ini tidak terhubung ke data pegawai" description="Jadwal pribadi hanya tampil untuk akun pegawai. Minta admin kepegawaian menghubungkan akun ini." actions={[{ href: '/dashboard', label: 'Kembali ke beranda' }]} /></Card> : (
-          <div className="rounded-xl border bg-card">
-            <ul className="divide-y">
-              {plans.map((p) => {
-                const wd = new Date(`${p.date}T00:00:00Z`).getUTCDay();
-                return (
-                  <li key={p.date} className={cn('flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 lg:px-6', p.date === today && 'bg-accent/50')} aria-current={p.date === today ? 'date' : undefined}>
-                    <span className="min-w-44"><span className="font-medium">{HARI[wd]}, {fmtTglPendek(p.date, false)}</span>{p.date === today && <span className="ml-2 text-xs font-semibold text-primary">Hari ini</span>}</span>
-                    <span className={p.isOffDay || !p.schedule ? 'text-muted-foreground' : 'tabular'}>
-                      {p.isOffDay ? (p.holidayName ?? OFF[p.offReason ?? ''] ?? 'Libur') : p.schedule ? `${p.schedule.code}, ${p.schedule.checkIn} sampai ${p.schedule.checkOut}` : 'Tanpa jadwal'}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-      </PageBody>
-    </>
-  );
-}

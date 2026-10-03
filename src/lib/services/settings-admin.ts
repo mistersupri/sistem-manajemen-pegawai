@@ -83,7 +83,7 @@ export const auditQuery = z.object({
   result: z.enum(['SUCCESS', 'FAILURE', '']).optional(),
   from: z.string().optional(),
   to: z.string().optional(),
-}).and(listSchema(['waktu', 'pelaku', 'aksi'] as const, { sort: 'waktu', dir: 'desc', per: 50 }));
+}).and(listSchema(['waktu', 'pelaku', 'aksi'] as const, { sort: 'waktu', dir: 'desc' }));
 
 const AUDIT_ORDER: Record<string, (d: 'asc' | 'desc') => Prisma.AuditLogOrderByWithRelationInput[]> = {
   waktu: (d) => [{ createdAt: d }, { id: d }],

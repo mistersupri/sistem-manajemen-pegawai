@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { clampPage, listSchema } from '../list';
+import { clampPage, listSchema, pickPer } from '../list';
 import type { Prisma } from '@/generated/prisma/client';
 import { prisma } from '../db';
 import { audit, diff } from '../audit';
@@ -328,7 +328,7 @@ export async function balanceTable(actor: Actor, year: number, opts: { unitId?: 
       opts.q ? { OR: [{ fullName: { contains: opts.q, mode: 'insensitive' } }, { employeeNumber: { contains: opts.q } }] } : {},
     ],
   };
-  const size = [25, 50, 100].includes(opts.per ?? 0) ? opts.per! : 50;
+  const size = pickPer(opts.per);
   const sort: 'nama' | 'unit' = opts.sort === 'unit' ? 'unit' : 'nama';
   const dir: 'asc' | 'desc' = opts.dir === 'desc' ? 'desc' : 'asc';
   const total = await prisma.employee.count({ where });

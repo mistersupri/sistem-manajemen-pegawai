@@ -15,13 +15,13 @@ export default async function SelfFacePage() {
   const current = bio.find((b) => b.status !== 'REVOKED');
   return (
     <>
-      <PageHeader title="Daftarkan wajah" description="Satu kali, sekitar satu menit." crumbs={[{ href: '/absensi/saya', label: 'Absensi Saya' }, { label: 'Daftarkan wajah' }]} />
+      <PageHeader title="Daftarkan wajah" description="Satu kali, sekitar satu menit." crumbs={[{ href: '/absensi/saya/absen', label: 'Absen Sekarang' }, { label: 'Daftarkan wajah' }]} />
       <PageBody>
         {current ? (
-          <EmptyState title={current.status === 'ACTIVE' ? 'Wajah Anda sudah terdaftar' : 'Pendaftaran menunggu verifikasi petugas'} description="Untuk mendaftar ulang atau menghapus data wajah, hubungi admin kepegawaian." actions={[{ href: '/absensi/saya', label: 'Kembali' }]} />
+          <EmptyState title={current.status === 'ACTIVE' ? 'Wajah Anda sudah terdaftar' : 'Pendaftaran menunggu verifikasi petugas'} description="Untuk mendaftar ulang atau menghapus data wajah, hubungi admin kepegawaian." actions={[{ href: '/absensi/saya/absen', label: 'Kembali ke absen' }]} />
         ) : (
           <FaceEnroll employeeId={actor.employeeId} employeeName={emp.fullName} consentText={s['face.consentText']} consentVersion={s['face.consentVersion']} mode="self"
-            minScore={Number(s['face.minDetectionScore'])} minSize={Number(s['face.minFaceSizePx'])} backHref="/absensi/saya" />
+            minScore={Number(s['face.minDetectionScore'])} minSize={Number(s['face.minFaceSizePx'])} backHref="/absensi/saya/absen" />
         )}
       </PageBody>
     </>
