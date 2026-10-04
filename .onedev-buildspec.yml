@@ -1,0 +1,58 @@
+version: 54
+jobs:
+  - name: build
+    jobExecutor: ghcr
+    steps:
+      - type: CheckoutStep
+        name: checkout
+        cloneCredential:
+          type: DefaultCredential
+        withLfs: false
+        withSubmodules: false
+        condition: SUCCESSFUL
+        optional: false
+      - type: BuildImageStep
+        name: build image
+        output:
+          type: RegistryOutput
+          tags: ghcr.io/@project_path@:@build_number@
+        condition: SUCCESSFUL
+        optional: false
+    triggers:
+      - type: BranchUpdateTrigger
+        branches: main
+        userMatch: anyone
+    retryCondition: never
+    maxAttempts: 4
+    retryDelay: 30
+    includeUpstreamWhenRebuild: false
+    includeDownstreamWhenRebuild: false
+    timeout: 14400
+  - name: pull remote
+    steps:
+      - type: CheckoutStep
+        name: checkout
+        cloneCredential:
+          type: DefaultCredential
+        withLfs: false
+        withSubmodules: false
+        condition: SUCCESSFUL
+        optional: false
+      - type: PullRepository
+        name: pull github
+        remoteUrl: https://github.com/mistersupri/sistem-manajemen-pegawai.git
+        userName: mistersupri
+        passwordSecret: github
+        targetProject: mistersupri/sistem-manajemen-pegawai
+        accessTokenSecret: onedev
+        refs: main
+        withLfs: false
+        force: true
+        condition: SUCCESSFUL
+        optional: false
+    retryCondition: never
+    maxAttempts: 4
+    retryDelay: 30
+    includeUpstreamWhenRebuild: false
+    includeDownstreamWhenRebuild: false
+    timeout: 14400
