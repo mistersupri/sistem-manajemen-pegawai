@@ -24,13 +24,14 @@ export const scheduleInput = z.object({
   breakEnd: hhmm.nullable().optional().or(z.literal('').transform(() => null)),
   lateToleranceMin: z.coerce.number().int().min(0).max(240),
   earlyLeaveToleranceMin: z.coerce.number().int().min(0).max(240),
+  flexMinutes: z.coerce.number().int().min(0).max(240).default(0),
   workdays: z.array(z.coerce.number().int().min(0).max(6)).min(1, 'Pilih minimal satu hari kerja'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Warna hex, mis. #1a3a8f'),
   changeNote: z.string().trim().max(300).optional().nullable(),
 }).refine((v) => v.checkIn !== v.checkOut, { message: 'Jam masuk dan pulang tidak boleh sama', path: ['checkOut'] })
   .refine((v) => !v.breakStart === !v.breakEnd, { message: 'Isi jam mulai dan selesai istirahat', path: ['breakEnd'] });
 
-const ruleKeys = ['code', 'name', 'kind', 'checkIn', 'checkOut', 'breakStart', 'breakEnd', 'lateToleranceMin', 'earlyLeaveToleranceMin', 'workdays'] as const;
+const ruleKeys = ['code', 'name', 'kind', 'checkIn', 'checkOut', 'breakStart', 'breakEnd', 'lateToleranceMin', 'earlyLeaveToleranceMin', 'flexMinutes', 'workdays'] as const;
 const rulesOf = (s: Record<string, unknown>) => Object.fromEntries(ruleKeys.map((k) => [k, s[k] ?? null]));
 
 export async function listSchedules(includeInactive = false) {

@@ -103,7 +103,11 @@ Semua komponen mengikuti [shadcn/ui](https://ui.shadcn.com/) gaya new-york-v4, d
 - `ConfirmButton`: aksi yang mengubah data penting selalu lewat dialog konfirmasi, dengan alasan wajib bila aksinya perlu jejak (pembatalan, penonaktifan).
 - `StatusBadge`: satu peta status untuk absensi, pengajuan, sinkronisasi, perangkat, dan wajah.
 - `EmptyState`: judul, penyebab, lalu satu langkah berikutnya ("Hapus filter" bila hasil tersaring kosong, aksi utama bila memang belum ada data). Tanpa lingkaran ikon dekoratif; ikon hanya bila memberi arti.
-- Status "Belum ada transaksi" selalu netral (abu), tidak pernah merah. Hanya status yang ditetapkan aturan atau petugas yang memakai warna peringatan.
+- Status hari kerja dihitung saat tampil (`effectiveStatus` di `attendance/engine.ts`), sehingga berganti sendiri saat hari berlalu:
+  - Hari kerja yang sudah lewat (kemarin dan sebelumnya) tanpa absen: **Alfa** (kode A, merah).
+  - Hari ini dan sesudahnya tanpa absen: **Belum absen** (kode "-", abu).
+  - Ada absen pulang tanpa absen masuk: **Alfa awal** (AW). Ada absen masuk tanpa absen pulang setelah harinya lewat: **Alfa akhir** (AK). Shift malam kemarin baru dihitung lewat besok.
+  - Hari libur, cuti, izin, sakit, dinas luar, dan status yang ditetapkan petugas tidak diubah.
 - Ikon dari Lucide, garis 2px seragam. Alasannya: satu set yang sudah menjadi bawaan shadcn, lengkap untuk istilah kerja (jadwal, sidik jari, wajah, perangkat), dan tidak menambah pustaka. Ikon selalu berdampingan dengan teks, kecuali tombol ikon yang punya `aria-label`.
 
 ## Logo
@@ -117,7 +121,7 @@ Bahan utama aplikasi ini adalah **waktu**: jam masuk, jam pulang, jadwal, dan "s
 - **Kuning** hanya berarti *sekarang* (garis waktu sekarang di papan dan garis hari). Aksi absen memakai biru seperti aksi utama lain.
 - **Jam sebagai tipografi utama**: kelas `.clock` (angka tabular, tebal 750, rapat). Dipakai untuk jam masuk/pulang di beranda pegawai dan jam server di halaman masuk.
 - **Dashboard admin**: judulnya tanggal, bukan kata "Dashboard". Enam kartu angka diganti satu batang proporsional (`RegisterBar`) dengan jumlah sebagai teks. Elemen khasnya **Papan hari ini** (`TodayBoard`): satu baris per pegawai pada sumbu 05.00 sampai 24.00, pita jadwal, tanda masuk (biru, oranye bila terlambat), tanda pulang (abu tua), dan garis kuning waktu sekarang. Yang belum ada transaksi dan terlambat di atas.
-- **Warna kategori** satu sumber (`attendance-colors.ts`) untuk batang dan grafik tren. "Belum ada transaksi" abu netral karena belum tentu tidak hadir.
+- **Warna kategori** satu sumber (`attendance-colors.ts`) untuk batang dan grafik tren. "Belum absen" (hari ini) abu netral; Alfa merah dan Alfa awal/akhir merah muda tua (`#C2255C`), lolos validator CVD bersama warna kategori lain.
 - **Beranda pegawai**: satu kartu "Absensi hari ini" dengan jam besar, garis hari, satu tombol biru untuk aksi berikutnya, lalu aksi lain sebagai baris di bawahnya. Jadwal minggu ini sebagai strip 7 hari.
 - **Navigasi bawah** di ponsel untuk pegawai tanpa peran pengelola: Beranda, Absen, Rekap, Koreksi, Cuti.
 - **Daftar di ponsel**: filter dilipat di balik tombol "Filter" (`CollapsibleFilters`); baris tabel dipadatkan (nama dan status di baris pertama, jam dalam satu kalimat); tabel banyak angka memakai varian `stack-grid` (tiga kolom, label di atas nilai). Kontrol segmen menjadi satu baris yang bisa digeser.
@@ -165,3 +169,7 @@ Setiap perubahan tata letak diuji di 1366, 1024, 820, dan 390 px dengan data 3.0
 ## Skill yang dipakai
 
 Desain ini disusun dengan skill di `.claude/skills`: antislop, antislop-code, antislop-layoutmobile, emil-design-eng, apple-design, animate, animation-vocabulary, improve-animations, find-animation-opportunities, review-animations, ask-sonner, break-ui, mobile-native, pick-ui-library, dan prototype.
+
+## Jam fleksibel
+
+Per jenis jadwal ada isian **Jam fleksibel (menit)**. Terlambat sampai batas ini tidak dihitung bila pegawai pulang selama itu lebih akhir: jadwal 07.00-16.00, masuk 07.30, pulang 16.30 berarti tidak terlambat. Pulang 16.10 berarti sisa 20 menit tetap terlambat. Terlambat melebihi batas fleksibel dihitung penuh. Toleransi terlambat tetap berlaku sesudahnya. Perubahan aturan jadwal berlaku untuk perhitungan berikutnya; pakai **Hitung ulang** di Rekapitulasi untuk tanggal yang sudah lewat.

@@ -89,12 +89,12 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
             </TableRow></TableHeader>
             <TableBody>
               {rows.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada pegawai pada kategori ini" actions={sp.kategori || sp.q || sp.unit || sp.metode ? [{ href: `/absensi/monitoring?tanggal=${d.date}`, label: 'Hapus filter' }] : undefined} /></TableCell></TableRow>}
-              {rows.map(({ employee: e, plan: p, record: r, category }) => (
+              {rows.map(({ employee: e, plan: p, record: r, status }) => (
                 <TableRow key={e.id}>
                   <TableCell className="stack-head pl-4 lg:pl-6">
                     <span className="flex items-start justify-between gap-3">
                       <span className="min-w-0"><Link href={`/absensi/rekap/${e.id}/${d.date}`} className="font-medium text-primary hover:underline">{e.fullName}</Link><span className="block text-xs text-muted-foreground">{e.unit?.name ?? ''}</span></span>
-                      <span className="shrink-0 md:hidden">{r ? <StatusBadge status={r.status} /> : <StatusBadge status="TANPA_TRANSAKSI" label={CATEGORY_LABEL[category]} />}</span>
+                      <span className="shrink-0 md:hidden">{status ? <StatusBadge status={status} /> : <StatusBadge status="LIBUR" label="Tanpa jadwal" />}</span>
                     </span>
                     <span className="mt-1 block text-sm tabular md:hidden">
                       Masuk <b>{fmtJam(r?.checkInAt, d.tz) ?? '--:--'}</b>{r && r.lateMinutes > 0 && <span className="text-[#b4501f]"> (+{r.lateMinutes} mnt)</span>}, pulang <b>{fmtJam(r?.checkOutAt, d.tz) ?? '--:--'}</b>
@@ -104,7 +104,7 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
                   <TableCell data-label="Jadwal" className="max-md:hidden! tabular text-muted-foreground">{p.isOffDay ? p.holidayName ?? 'Libur' : p.schedule ? `${p.schedule.code} ${p.schedule.checkIn}-${p.schedule.checkOut}` : 'Tanpa jadwal'}</TableCell>
                   <TableCell data-label="Masuk" className="max-md:hidden! tabular">{fmtJam(r?.checkInAt, d.tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r?.checkInMethod ?? ''] ?? ''}</span></TableCell>
                   <TableCell data-label="Pulang" className="max-md:hidden! tabular">{fmtJam(r?.checkOutAt, d.tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r?.checkOutMethod ?? ''] ?? ''}</span></TableCell>
-                  <TableCell data-label="Status" className="max-md:hidden!">{r ? <StatusBadge status={r.status} /> : <StatusBadge status="TANPA_TRANSAKSI" label={CATEGORY_LABEL[category]} />}{r && r.lateMinutes > 0 && <span className="block text-xs text-muted-foreground">{r.lateMinutes} mnt</span>}</TableCell>
+                  <TableCell data-label="Status" className="max-md:hidden!">{status ? <StatusBadge status={status} /> : <StatusBadge status="LIBUR" label="Tanpa jadwal" />}{r && r.lateMinutes > 0 && <span className="block text-xs text-muted-foreground">{r.lateMinutes} mnt</span>}</TableCell>
                   <TableCell className="pr-4 max-md:hidden lg:pr-6"><Dayline scheduleIn={p.schedule?.checkIn} scheduleOut={p.schedule?.checkOut} checkIn={fmtJam(r?.checkInAt, d.tz)} checkOut={fmtJam(r?.checkOutAt, d.tz)} late={(r?.lateMinutes ?? 0) > 0} /></TableCell>
                 </TableRow>
               ))}
@@ -112,7 +112,7 @@ export default async function MonitoringPage({ searchParams }: { searchParams: P
           </Table>
           <Pager total={sorted.length} page={page} pageSize={l.per} params={params} />
         </div>
-        <p className="text-sm text-muted-foreground">&quot;Belum ada transaksi&quot; berarti belum ada catatan dari wajah, mesin, atau petugas. Ini bukan penetapan tidak hadir; petugas menetapkan status lewat koreksi absensi setelah pemeriksaan.</p>
+        <p className="text-sm text-muted-foreground">&quot;Belum absen&quot; berarti hari ini belum ada catatan dari wajah, mesin, atau petugas. Tanggal yang sudah lewat tanpa absen tercatat sebagai Alfa; ajukan koreksi bila keliru.</p>
       </PageBody>
     </>
   );

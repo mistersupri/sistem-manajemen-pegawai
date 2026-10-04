@@ -69,8 +69,8 @@ export function PresenceRecap({ data, tz, detailHref, correctionHref }: {
     { label: 'Pulang cepat', value: s.pulangCepat, color: '#d97706' },
     { label: 'Izin, sakit, cuti', value: s.izinCuti, color: CATEGORY_COLOR.IZIN_CUTI },
     { label: 'Dinas luar', value: s.dinasLuar, color: CATEGORY_COLOR.DINAS_LUAR },
-    { label: 'Alpa', value: s.alpa, color: CATEGORY_COLOR.TIDAK_HADIR },
-    { label: 'Belum ada transaksi', value: s.tanpaTransaksi, color: CATEGORY_COLOR.BELUM_ABSEN },
+    { label: 'Alfa', value: s.alfa, color: CATEGORY_COLOR.TIDAK_HADIR },
+    { label: 'Alfa awal/akhir', value: s.alfaSebagian, color: CATEGORY_COLOR.ALFA_SEBAGIAN },
   ];
   const [kehadiran, dinas, cuti] = data.groups;
   return (
@@ -106,7 +106,7 @@ export function PresenceRecap({ data, tz, detailHref, correctionHref }: {
               </thead>
               <tbody>
                 {data.days.map((d, i) => {
-                  const fix = correctionHref && (d.status === 'TANPA_TRANSAKSI' || (d.hasRecord && (!d.checkIn || !d.checkOut) && !d.off && d.status !== 'IZIN' && d.status !== 'SAKIT' && d.status !== 'CUTI'));
+                  const fix = correctionHref && !!d.status && ['ALFA', 'ALFA_AWAL', 'ALFA_AKHIR'].includes(d.status);
                   const note = d.note ? <span className="font-medium">{d.note}</span> : d.status && d.status !== 'HADIR' ? <span className="text-muted-foreground">{statusText(d.status)}</span> : !d.shiftIn && !d.hasRecord ? <span className="text-muted-foreground">Tanpa jadwal kerja</span> : null;
                   return (
                     <tr key={d.date} className={cn('border-b align-top last:border-b-0', d.off ? 'is-off bg-off text-off-foreground' : 'transition-colors duration-150 hover:bg-secondary/60')}>

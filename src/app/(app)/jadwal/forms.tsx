@@ -20,7 +20,7 @@ const ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export interface ScheduleValues {
   id: string; code: string; name: string; kind: string; checkIn: string; checkOut: string; breakStart: string | null; breakEnd: string | null;
-  lateToleranceMin: number; earlyLeaveToleranceMin: number; workdays: number[]; color: string; version: number;
+  lateToleranceMin: number; earlyLeaveToleranceMin: number; flexMinutes: number; workdays: number[]; color: string; version: number;
 }
 
 export function ScheduleForm({ initial }: { initial?: ScheduleValues }) {
@@ -61,6 +61,7 @@ export function ScheduleForm({ initial }: { initial?: ScheduleValues }) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field id="lateToleranceMin" label="Toleransi terlambat (menit)" error={fields.lateToleranceMin}><Input {...fieldProps('lateToleranceMin', fields.lateToleranceMin)} type="number" min={0} max={240} defaultValue={initial?.lateToleranceMin ?? 0} /></Field>
             <Field id="earlyLeaveToleranceMin" label="Toleransi pulang awal (menit)" error={fields.earlyLeaveToleranceMin}><Input {...fieldProps('earlyLeaveToleranceMin', fields.earlyLeaveToleranceMin)} type="number" min={0} max={240} defaultValue={initial?.earlyLeaveToleranceMin ?? 0} /></Field>
+            <Field id="flexMinutes" className="col-span-2 sm:col-span-3" label="Jam fleksibel (menit)" hint="Terlambat sampai batas ini tidak dihitung bila pulang selama itu lebih akhir. 0 = tidak berlaku." error={fields.flexMinutes}><Input {...fieldProps('flexMinutes', fields.flexMinutes)} type="number" min={0} max={240} defaultValue={initial?.flexMinutes ?? 0} /></Field>
             <Field id="color" label="Warna penanda" error={fields.color}><Input {...fieldProps('color', fields.color)} type="color" className="h-9 p-1" defaultValue={initial?.color ?? '#2a78d6'} /></Field>
           </div>
           <fieldset className="grid gap-2">

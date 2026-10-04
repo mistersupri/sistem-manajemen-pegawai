@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { STATUS_LABEL } from '@/lib/attendance/engine';
 
 const VARIANT: Record<string, 'hadir' | 'terlambat' | 'alpa' | 'dinas' | 'netral' | 'highlight'> = {
-  HADIR: 'hadir', TERLAMBAT: 'terlambat', DINAS_LUAR: 'dinas', IZIN: 'netral', SAKIT: 'netral', CUTI: 'netral', TIDAK_HADIR: 'alpa', TANPA_TRANSAKSI: 'netral',
+  HADIR: 'hadir', TERLAMBAT: 'terlambat', DINAS_LUAR: 'dinas', IZIN: 'netral', SAKIT: 'netral', CUTI: 'netral', TIDAK_HADIR: 'alpa', ALFA: 'alpa', ALFA_AWAL: 'alpa', ALFA_AKHIR: 'alpa', BELUM: 'netral', LIBUR: 'netral',
   PENDING: 'terlambat', APPROVED: 'hadir', REJECTED: 'alpa', CANCELLED: 'netral',
   SUCCESS: 'hadir', RUNNING: 'dinas', PARTIAL: 'terlambat', FAILED: 'alpa',
   ONLINE: 'hadir', OFFLINE: 'alpa', UNKNOWN: 'netral',

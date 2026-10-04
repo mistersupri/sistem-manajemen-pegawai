@@ -7,7 +7,7 @@ import { unprocessable } from '../errors';
 import { getSettings } from '../settings';
 import { addDays, dateRange, fromDbDate, isValidDate, toDbDate, todayIn, zonedToUtc } from '../time';
 import { loadPlanContext, isScheduledWorkday } from '../attendance/plan';
-import type { DayPlan } from '../attendance/engine';
+import { effectiveStatus, type DayPlan } from '../attendance/engine';
 
 export const reportFilter = z.object({
   from: z.string().refine(isValidDate, 'Tanggal tidak valid'),
@@ -34,9 +34,22 @@ function employeeFilter(actor: Actor, f: Partial<ReportFilter>, perm: 'attendanc
   };
 }
 
-function recordFilter(f: Partial<ReportFilter>): Prisma.AttendanceRecordWhereInput {
+/** Pilihan filter status: status rekap ditambah status Alfa yang dihitung dari hari yang sudah lewat. */
+export const STATUS_FILTER: [string, string][] = [
+  ['HADIR', 'Hadir'], ['TERLAMBAT', 'Terlambat'], ['DINAS_LUAR', 'Dinas luar'], ['IZIN', 'Izin'], ['SAKIT', 'Sakit'], ['CUTI', 'Cuti'],
+  ['ALFA', 'Alfa'], ['ALFA_AWAL', 'Alfa awal (tidak absen masuk)'], ['ALFA_AKHIR', 'Alfa akhir (tidak absen pulang)'],
+];
+
+/**
+ * Filter status pada rekap tersimpan. ALFA mencakup yang ditetapkan petugas (hari tanpa transaksi tidak punya
+ * baris rekap). ALFA_AWAL dan ALFA_AKHIR dicari dari jam yang kosong, mengikuti effectiveStatus.
+ */
+function recordFilter(f: Partial<ReportFilter>, today: string): Prisma.AttendanceRecordWhereInput {
   const and: Prisma.AttendanceRecordWhereInput[] = [];
-  if (f.status && f.status !== 'TANPA_TRANSAKSI') and.push({ status: f.status });
+  if (f.status === 'ALFA') and.push({ status: 'TIDAK_HADIR' });
+  else if (f.status === 'ALFA_AWAL') and.push({ statusLocked: false, isOffDay: false, checkInAt: null, checkOutAt: { not: null } });
+  else if (f.status === 'ALFA_AKHIR') and.push({ statusLocked: false, isOffDay: false, checkInAt: { not: null }, checkOutAt: null, workDate: { lt: toDbDate(today) } });
+  else if (f.status) and.push({ status: f.status, ...(['HADIR', 'TERLAMBAT'].includes(f.status) ? { NOT: [{ checkInAt: null }, { checkOutAt: null, workDate: { lt: toDbDate(today) } }] } : {}) });
   if (f.method) and.push({ OR: [{ checkInMethod: f.method }, { checkOutMethod: f.method }] });
   if (f.deviceId) {
     and.push({ employee: { rawEvents: { some: { deviceId: f.deviceId } } } });
@@ -59,14 +72,15 @@ export interface RecapRow {
   permit: number;
   sick: number;
   leave: number;
-  absent: number;
-  noRecord: number;
+  alfa: number;
+  alfaAwal: number;
+  alfaAkhir: number;
   attendancePct: number | null;
 }
 
 /**
- * Rekap per pegawai untuk rentang tanggal. "Tanpa transaksi" = hari kerja terjadwal yang sudah lewat
- * tanpa catatan apa pun; ini BUKAN otomatis "tidak hadir". Status tidak hadir hanya dari penetapan petugas.
+ * Rekap per pegawai untuk rentang tanggal, memakai status efektif per hari (lihat effectiveStatus):
+ * hari kerja yang lewat tanpa transaksi dihitung Alfa, satu jam yang kosong dihitung Alfa awal/akhir.
  */
 export async function recap(actor: Actor, raw: unknown, perm: 'attendance.report' | 'attendance.export' = 'attendance.report') {
   assertCan(actor, perm);
@@ -80,7 +94,7 @@ export async function recap(actor: Actor, raw: unknown, perm: 'attendance.report
   });
   const ids = employees.map((e) => e.id);
   const [records, ctx] = await Promise.all([
-    prisma.attendanceRecord.findMany({ where: { employeeId: { in: ids }, workDate: { gte: toDbDate(f.from), lte: toDbDate(f.to) }, ...recordFilter(f) } }),
+    prisma.attendanceRecord.findMany({ where: { employeeId: { in: ids }, workDate: { gte: toDbDate(f.from), lte: toDbDate(f.to) }, ...(f.method || f.deviceId ? recordFilter({ method: f.method, deviceId: f.deviceId }, today) : {}) } }),
     loadPlanContext(ids, f.from, f.to),
   ]);
   const byEmp = new Map<string, typeof records>();
@@ -92,22 +106,33 @@ export async function recap(actor: Actor, raw: unknown, perm: 'attendance.report
   const days = dateRange(f.from, f.to);
   const rows: RecapRow[] = employees.map((e) => {
     const recs = byEmp.get(e.id) || [];
-    const recDates = new Set(recs.map((r) => fromDbDate(r.workDate)));
-    const plans = days.map((d) => ctx.planFor(e.id, d));
-    const scheduled = plans.filter((p) => isScheduledWorkday(p) && p.date <= today);
-    const count = (s: string) => recs.filter((r) => r.status === s).length;
-    const present = count('HADIR') + count('TERLAMBAT');
+    const recByDate = new Map(recs.map((r) => [fromDbDate(r.workDate), r]));
+    const plans = days.map((d) => ctx.planFor(e.id, d)).filter((p) => p.date <= today);
+    const scheduled = plans.filter((p) => isScheduledWorkday(p));
+    // Status efektif per hari; hari dengan filter metode/perangkat yang tidak cocok tidak dihitung Alfa.
+    const statuses = plans.map((p) => {
+      const r = recByDate.get(p.date) ?? null;
+      if (!r && (f.method || f.deviceId)) return null;
+      return effectiveStatus(r, p, today);
+    });
+    const count = (...s: string[]) => statuses.filter((x) => x && s.includes(x)).length;
+    const counted = recs.filter((r) => fromDbDate(r.workDate) <= today);
+    const present = count('HADIR', 'TERLAMBAT');
     const fieldDuty = count('DINAS_LUAR');
-    const noRecord = f.status && f.status !== 'TANPA_TRANSAKSI' ? 0 : scheduled.filter((p) => !recDates.has(p.date)).length;
     return {
       employeeId: e.id, name: e.fullName, employeeNumber: e.employeeNumber, unit: e.unit?.name ?? null,
-      scheduledDays: scheduled.length, present, late: count('TERLAMBAT'), lateMinutes: recs.reduce((n, r) => n + r.lateMinutes, 0),
-      earlyLeave: recs.filter((r) => r.earlyLeaveMinutes > 0).length, earlyLeaveMinutes: recs.reduce((n, r) => n + r.earlyLeaveMinutes, 0),
-      fieldDuty, permit: count('IZIN'), sick: count('SAKIT'), leave: count('CUTI'), absent: count('TIDAK_HADIR'), noRecord,
+      scheduledDays: scheduled.length, present, late: count('TERLAMBAT'), lateMinutes: counted.reduce((n, r) => n + r.lateMinutes, 0),
+      earlyLeave: counted.filter((r) => r.earlyLeaveMinutes > 0).length, earlyLeaveMinutes: counted.reduce((n, r) => n + r.earlyLeaveMinutes, 0),
+      fieldDuty, permit: count('IZIN'), sick: count('SAKIT'), leave: count('CUTI'),
+      alfa: count('ALFA', 'TIDAK_HADIR'), alfaAwal: count('ALFA_AWAL'), alfaAkhir: count('ALFA_AKHIR'),
       attendancePct: scheduled.length ? Math.round(((present + fieldDuty) / scheduled.length) * 1000) / 10 : null,
     };
   });
-  return { filter: f, rows: f.status === 'TANPA_TRANSAKSI' ? rows.filter((r) => r.noRecord > 0) : rows };
+  const by: Record<string, (r: RecapRow) => number> = {
+    HADIR: (r) => r.present, TERLAMBAT: (r) => r.late, DINAS_LUAR: (r) => r.fieldDuty, IZIN: (r) => r.permit, SAKIT: (r) => r.sick, CUTI: (r) => r.leave,
+    ALFA: (r) => r.alfa, ALFA_AWAL: (r) => r.alfaAwal, ALFA_AKHIR: (r) => r.alfaAkhir,
+  };
+  return { filter: f, rows: f.status && by[f.status] ? rows.filter((r) => by[f.status!](r) > 0) : rows };
 }
 
 /** Detail harian (satu baris per pegawai per tanggal yang punya catatan). */
@@ -128,8 +153,7 @@ export async function dailyRecords(actor: Actor, raw: unknown, opts: { page?: nu
   const where: Prisma.AttendanceRecordWhereInput = {
     workDate: { gte: toDbDate(f.from), lte: toDbDate(f.to) },
     employee: employeeFilter(actor, f, perm),
-    ...recordFilter(f),
-    ...(f.status === 'TANPA_TRANSAKSI' ? { id: '00000000-0000-0000-0000-000000000000' } : {}),
+    ...recordFilter(f, todayIn((await getSettings())['org.timezone'])),
   };
   const size = opts.pageSize ?? 50;
   const sort = opts.sort && DAILY_ORDER[opts.sort] ? opts.sort : 'tanggal';
@@ -171,17 +195,26 @@ export const CATEGORY_LABEL: Record<string, string> = {
   TERLAMBAT: 'Terlambat',
   DINAS_LUAR: 'Dinas luar',
   IZIN_CUTI: 'Izin, sakit, cuti',
-  TIDAK_HADIR: 'Tidak hadir',
-  BELUM_ABSEN: 'Belum ada transaksi',
+  TIDAK_HADIR: 'Alfa',
+  BELUM_ABSEN: 'Belum absen',
   LIBUR: 'Libur / tanpa jadwal',
 };
 
-export function categoryOf(plan: DayPlan, rec: { status: string } | null) {
-  if (rec) {
-    if (['IZIN', 'SAKIT', 'CUTI'].includes(rec.status)) return 'IZIN_CUTI';
-    return rec.status;
-  }
-  return isScheduledWorkday(plan) ? 'BELUM_ABSEN' : 'LIBUR';
+type RecLike = { status: string; statusLocked: boolean; checkInAt: Date | null; checkOutAt: Date | null };
+
+/** Status efektif satu baris rekap tersimpan, memakai jadwal yang tercatat pada baris itu. */
+export function recordStatus(r: RecLike & { workDate: Date; isOffDay: boolean; schedule: { checkIn: string; checkOut: string } | null }, today: string) {
+  return effectiveStatus(r, { date: fromDbDate(r.workDate), isOffDay: r.isOffDay, schedule: r.schedule }, today) ?? r.status;
+}
+
+/** Kategori monitoring dari status efektif. Semua jenis Alfa (termasuk awal/akhir) masuk kategori TIDAK_HADIR. */
+export function categoryOf(plan: DayPlan, rec: RecLike | null, today: string) {
+  const st = effectiveStatus(rec, plan, today);
+  if (!st || st === 'LIBUR') return 'LIBUR';
+  if (st === 'BELUM') return 'BELUM_ABSEN';
+  if (['IZIN', 'SAKIT', 'CUTI'].includes(st)) return 'IZIN_CUTI';
+  if (['ALFA', 'ALFA_AWAL', 'ALFA_AKHIR', 'TIDAK_HADIR'].includes(st)) return 'TIDAK_HADIR';
+  return st;
 }
 
 export async function monitoring(actor: Actor, raw: unknown) {
@@ -194,7 +227,8 @@ export async function monitoring(actor: Actor, raw: unknown) {
     q: z.string().max(100).optional(),
   }).parse(raw);
   const tz = (await getSettings())['org.timezone'];
-  const date = q.date ?? todayIn(tz);
+  const today = todayIn(tz);
+  const date = q.date ?? today;
   const employees = await prisma.employee.findMany({
     where: { AND: [employeeFilter(actor, { unitId: q.unitId, q: q.q }, 'attendance.monitor'), { isActive: true }] },
     select: { id: true, fullName: true, employeeNumber: true, unit: { select: { name: true } } },
@@ -209,7 +243,7 @@ export async function monitoring(actor: Actor, raw: unknown) {
   let rows = employees.map((e) => {
     const plan = ctx.planFor(e.id, date);
     const rec = recMap.get(e.id) ?? null;
-    return { employee: e, plan, record: rec, category: categoryOf(plan, rec) };
+    return { employee: e, plan, record: rec, status: effectiveStatus(rec, plan, today), category: categoryOf(plan, rec, today) };
   });
   const counts: Record<string, number> = Object.fromEntries(Object.keys(CATEGORY_LABEL).map((k) => [k, 0]));
   for (const r of rows) counts[r.category] = (counts[r.category] || 0) + 1;
@@ -219,13 +253,14 @@ export async function monitoring(actor: Actor, raw: unknown) {
 }
 
 // Rekap kalender: pegawai x tanggal dalam satu bulan
-/** Kode singkat status di sel kalender. "-" = hari kerja lewat tanpa transaksi (bukan otomatis tidak hadir). */
+/** Kode singkat status efektif di sel kalender. "-" = hari kerja yang belum lewat (hari ini atau sesudahnya). */
 export const CALENDAR_CODE: Record<string, string> = {
-  HADIR: 'H', TERLAMBAT: 'T', DINAS_LUAR: 'DL', IZIN: 'I', SAKIT: 'S', CUTI: 'C', TIDAK_HADIR: 'A', LIBUR: 'L', TANPA_TRANSAKSI: '-',
+  HADIR: 'H', TERLAMBAT: 'T', DINAS_LUAR: 'DL', IZIN: 'I', SAKIT: 'S', CUTI: 'C', TIDAK_HADIR: 'A', ALFA: 'A', ALFA_AWAL: 'AW', ALFA_AKHIR: 'AK', LIBUR: 'L', BELUM: '-',
 };
 export const CALENDAR_LEGEND: [string, string][] = [
   ['H', 'Hadir'], ['T', 'Terlambat'], ['DL', 'Dinas luar'], ['I', 'Izin'], ['S', 'Sakit'], ['C', 'Cuti'],
-  ['A', 'Tidak hadir (ditetapkan petugas)'], ['L', 'Libur atau bukan hari kerja'], ['-', 'Belum ada transaksi'],
+  ['A', 'Alfa (hari kerja lewat tanpa absen)'], ['AW', 'Alfa awal (tidak absen masuk)'], ['AK', 'Alfa akhir (tidak absen pulang)'],
+  ['L', 'Libur atau bukan hari kerja'], ['-', 'Belum terlewati'],
 ];
 
 export interface CalendarCell {
@@ -266,7 +301,7 @@ export async function calendarRecap(actor: Actor, raw: unknown, perm: 'attendanc
   const ids = employees.map((e) => e.id);
   const range = { gte: toDbDate(from), lte: toDbDate(to) };
   const [records, corrections, holidays, ctx] = await Promise.all([
-    prisma.attendanceRecord.findMany({ where: { employeeId: { in: ids }, workDate: range }, select: { employeeId: true, workDate: true, status: true, checkInAt: true, checkOutAt: true, lateMinutes: true, note: true } }),
+    prisma.attendanceRecord.findMany({ where: { employeeId: { in: ids }, workDate: range }, select: { employeeId: true, workDate: true, status: true, statusLocked: true, checkInAt: true, checkOutAt: true, lateMinutes: true, note: true } }),
     prisma.attendanceCorrection.findMany({ where: { employeeId: { in: ids }, workDate: range, status: 'APPROVED' }, select: { employeeId: true, workDate: true } }),
     prisma.holiday.findMany({ where: { date: range, unitId: null, disabled: false }, select: { date: true, name: true, kind: true } }),
     loadPlanContext(ids, from, to),
@@ -287,13 +322,11 @@ export async function calendarRecap(actor: Actor, raw: unknown, perm: 'attendanc
       const p = ctx.planFor(e.id, d);
       const checkIn = hhmm(r?.checkInAt ?? null);
       const checkOut = hhmm(r?.checkOutAt ?? null);
-      let code: string | null;
-      if (r) code = CALENDAR_CODE[r.status] ?? r.status;
-      else if (!isScheduledWorkday(p)) code = 'L';
-      else code = d < today ? '-' : null;
+      const st = effectiveStatus(r ?? null, p, today);
+      const code = st ? CALENDAR_CODE[st] ?? st : isScheduledWorkday(p) ? null : 'L';
       const presence = !!r && ['HADIR', 'TERLAMBAT', 'DINAS_LUAR'].includes(r.status);
       return {
-        date: d, code, status: r?.status ?? null, checkIn, checkOut, lateMinutes: r?.lateMinutes ?? 0,
+        date: d, code, status: st, checkIn, checkOut, lateMinutes: r?.lateMinutes ?? 0,
         missingIn: presence && !checkIn && !!checkOut,
         missingOut: presence && !!checkIn && !checkOut && d < today,
         corrected: fixed.has(`${e.id}:${d}`),

@@ -13,6 +13,8 @@ export interface ScheduleRules {
   breakEnd?: string | null;
   lateToleranceMin: number;
   earlyLeaveToleranceMin: number;
+  /** Jam fleksibel: terlambat sampai sekian menit diganti dengan pulang selama itu lebih akhir. 0 = tidak berlaku. */
+  flexMinutes?: number;
   workdays: number[];
   version: number;
   revisionId?: string | null;
@@ -39,13 +41,23 @@ export function shiftWindow(s: Pick<ScheduleRules, 'checkIn' | 'checkOut'>, date
   };
 }
 
-/** Menit terlambat dan pulang awal. Toleransi: terlambat dihitung bila melebihi toleransi. */
+/**
+ * Menit terlambat dan pulang awal. Toleransi: terlambat dihitung bila melebihi toleransi.
+ * Jam fleksibel: terlambat sampai `flexMinutes` tidak dihitung bila pegawai pulang selama itu lebih akhir
+ * (masuk 07.30 pada jadwal 07.00-16.00 harus pulang 16.30). Bila pulangnya kurang, yang dihitung terlambat
+ * hanya sisa yang belum terganti.
+ */
 export function lateAndEarly(plan: DayPlan, checkInAt: Date | null, checkOutAt: Date | null, tz: string) {
   const out = { lateMinutes: 0, earlyLeaveMinutes: 0 };
   if (!plan.schedule || plan.isOffDay) return out;
   const win = shiftWindow(plan.schedule, plan.date, tz);
   if (checkInAt) {
-    const late = minutesBetween(win.start, checkInAt);
+    let late = Math.max(0, minutesBetween(win.start, checkInAt));
+    const flex = plan.schedule.flexMinutes ?? 0;
+    if (flex > 0 && late > 0 && late <= flex && checkOutAt) {
+      const stayedAfterEnd = Math.max(0, minutesBetween(win.end, checkOutAt));
+      late = Math.max(0, late - stayedAfterEnd);
+    }
     if (late > plan.schedule.lateToleranceMin) out.lateMinutes = late;
   }
   if (checkOutAt) {
@@ -211,9 +223,40 @@ export const STATUS_LABEL: Record<string, string> = {
   IZIN: 'Izin',
   SAKIT: 'Sakit',
   CUTI: 'Cuti',
-  TIDAK_HADIR: 'Tidak hadir',
-  TANPA_TRANSAKSI: 'Belum ada transaksi',
+  TIDAK_HADIR: 'Alfa',
+  ALFA: 'Alfa',
+  ALFA_AWAL: 'Alfa awal',
+  ALFA_AKHIR: 'Alfa akhir',
+  BELUM: 'Belum absen',
+  LIBUR: 'Libur',
 };
+
+/** Status Alfa: hari kerja yang lewat tanpa transaksi, salah satu jam tidak terekam, atau ditetapkan petugas. */
+export const ALFA_STATUSES = ['ALFA', 'ALFA_AWAL', 'ALFA_AKHIR', 'TIDAK_HADIR'] as const;
+
+/**
+ * Status yang ditampilkan untuk satu pegawai pada satu tanggal. Rekap tersimpan hanya berisi transaksi;
+ * status yang bergantung pada "hari sudah lewat" dihitung di sini agar berganti sendiri tanpa hitung ulang.
+ * - Hari kerja yang sudah lewat tanpa transaksi: ALFA. Hari ini dan sesudahnya: BELUM ("-").
+ * - Ada absen pulang tanpa absen masuk: ALFA_AWAL.
+ * - Hari sudah lewat, ada absen masuk tanpa absen pulang: ALFA_AKHIR.
+ * - Hari libur dan status yang ditetapkan (cuti, izin, dinas luar, ditetapkan petugas) tidak diubah.
+ */
+export function effectiveStatus(
+  rec: { status: string; statusLocked: boolean; checkInAt: Date | null; checkOutAt: Date | null } | null,
+  plan: { date: string; isOffDay: boolean; schedule: Pick<ScheduleRules, 'checkIn' | 'checkOut'> | null },
+  today: string,
+): string | null {
+  const scheduled = !!plan.schedule && !plan.isOffDay;
+  // Shift malam kemarin baru berakhir pagi ini, jadi baru dianggap lewat mulai besok.
+  const overnightYesterday = !!plan.schedule && isOvernight(plan.schedule) && plan.date === addDays(today, -1);
+  const past = plan.date < today && !overnightYesterday;
+  if (!rec) return scheduled ? (past ? 'ALFA' : 'BELUM') : plan.isOffDay ? 'LIBUR' : null;
+  if (rec.statusLocked || !scheduled) return rec.status;
+  if (!rec.checkInAt && rec.checkOutAt) return 'ALFA_AWAL';
+  if (rec.checkInAt && !rec.checkOutAt && past) return 'ALFA_AKHIR';
+  return rec.status;
+}
 
 export const METHOD_LABEL: Record<string, string> = {
   FACE_SELF: 'Wajah (perangkat pribadi)',

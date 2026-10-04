@@ -525,6 +525,7 @@ model WorkSchedule {
   breakEnd            String?   @map("break_end")
   lateToleranceMin    Int       @default(0) @map("late_tolerance_min")
   earlyLeaveToleranceMin Int    @default(0) @map("early_leave_tolerance_min")
+  flexMinutes         Int       @default(0) @map("flex_minutes") // jam fleksibel: terlambat diganti pulang lebih akhir
   workdays            Int[]     @default([1, 2, 3, 4, 5]) // 0 = Minggu
   color               String    @default("#1a3a8f")
   isActive            Boolean   @default(true) @map("is_active")
