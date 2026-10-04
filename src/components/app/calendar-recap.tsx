@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 type Column = { date: string; day: number; weekday: number; weekend: boolean; holiday: { name: string; kind: string } | null; isToday: boolean };
 type Row = { employee: { id: string; fullName: string; employeeNumber: string | null; unit: { name: string } | null }; cells: CalendarCell[] };
 
-const STATUS_TEXT: Record<string, string> = { H: 'Hadir', T: 'Terlambat', DL: 'Dinas luar', I: 'Izin', S: 'Sakit', C: 'Cuti', A: 'Tidak hadir', L: 'Libur', '-': 'Belum ada transaksi' };
+const STATUS_TEXT: Record<string, string> = { H: 'Hadir', T: 'Terlambat', DL: 'Dinas luar', I: 'Izin', S: 'Sakit', C: 'Cuti', A: 'Alfa', AW: 'Alfa awal', AK: 'Alfa akhir', L: 'Libur', '-': 'Belum terlewati' };
 
 /** Rekap satu bulan dalam bentuk kalender: nama pegawai di kolom pertama, tanggal sebagai kepala kolom. */
 export function CalendarRecap({ columns, rows }: { columns: Column[]; rows: Row[] }) {
@@ -38,7 +38,8 @@ export function CalendarRecap({ columns, rows }: { columns: Column[]; rows: Row[
                 const body = cell.code ? (
                   <>
                     <span className={cn('cal-code', `c-${cell.code === '-' ? 'x' : cell.code}`)}>{cell.code}</span>
-                    {cell.code !== 'L' && cell.code !== '-' && (
+                    {/* Jam hanya untuk hari yang punya rekap; Alfa tanpa transaksi cukup kodenya. */}
+                    {cell.code !== 'L' && cell.code !== '-' && (cell.checkIn || cell.checkOut || cell.status !== 'ALFA') && (
                       <>
                         <span className={cn('cal-time', cell.checkIn ? 'in' : cell.missingIn ? 'warn' : 'none')}>{cell.checkIn ?? '--:--'}</span>
                         <span className={cn('cal-time', cell.checkOut ? 'out' : cell.missingOut ? 'warn' : 'none')}>{cell.checkOut ?? '--:--'}</span>

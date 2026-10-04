@@ -118,7 +118,7 @@ describe('rekap kalender', () => {
     const row = r.rows.find((x) => x.employee.id === f.stafA.id)!;
     expect(row.cells).toHaveLength(r.columns.length);
     // Akhir pekan tanpa rekap selalu L (tes lain bisa membuat rekap di hari ini, yang mungkin jatuh di akhir pekan).
-    const weekendNoRecord = row.cells.filter((c, i) => r.columns[i].weekend && !c.status);
+    const weekendNoRecord = row.cells.filter((c, i) => r.columns[i].weekend && (!c.status || c.status === 'LIBUR'));
     expect(weekendNoRecord.length).toBeGreaterThan(0);
     expect(weekendNoRecord.every((c) => c.code === 'L')).toBe(true);
   });

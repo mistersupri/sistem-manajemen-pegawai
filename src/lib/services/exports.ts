@@ -6,18 +6,19 @@ import { assertCan, can, type Actor } from '../auth/actor';
 import { decryptOptional } from '../crypto';
 import { toCsv } from '../files/csv';
 import { getSettings } from '../settings';
-import { BULAN, HARI_PENDEK, fmtJam, fmtTglPendek, fromDbDate } from '../time';
+import { BULAN, HARI_PENDEK, fmtJam, fmtTglPendek, fromDbDate, todayIn } from '../time';
 import { METHOD_LABEL, STATUS_LABEL } from '../attendance/engine';
-import { CALENDAR_LEGEND, calendarRecap, dailyRecords, recap, type RecapRow } from './reports';
+import { CALENDAR_LEGEND, calendarRecap, dailyRecords, recap, recordStatus, type RecapRow } from './reports';
 import { employeeWhere, listQuery } from './employees';
 
-const RECAP_HEADERS = ['Nama', 'NIP', 'Unit', 'Hari kerja terjadwal', 'Hadir', 'Terlambat (kali)', 'Terlambat (menit)', 'Pulang awal (kali)', 'Pulang awal (menit)', 'Dinas luar', 'Izin', 'Sakit', 'Cuti', 'Tidak hadir', 'Tanpa transaksi', '% Kehadiran'];
-const recapCells = (r: RecapRow) => [r.name, r.employeeNumber ?? '', r.unit ?? '', r.scheduledDays, r.present, r.late, r.lateMinutes, r.earlyLeave, r.earlyLeaveMinutes, r.fieldDuty, r.permit, r.sick, r.leave, r.absent, r.noRecord, r.attendancePct ?? ''];
+const RECAP_HEADERS = ['Nama', 'NIP', 'Unit', 'Hari kerja terjadwal', 'Hadir', 'Terlambat (kali)', 'Terlambat (menit)', 'Pulang awal (kali)', 'Pulang awal (menit)', 'Dinas luar', 'Izin', 'Sakit', 'Cuti', 'Alfa', 'Alfa awal', 'Alfa akhir', '% Kehadiran'];
+const recapCells = (r: RecapRow) => [r.name, r.employeeNumber ?? '', r.unit ?? '', r.scheduledDays, r.present, r.late, r.lateMinutes, r.earlyLeave, r.earlyLeaveMinutes, r.fieldDuty, r.permit, r.sick, r.leave, r.alfa, r.alfaAwal, r.alfaAkhir, r.attendancePct ?? ''];
 
 const DETAIL_HEADERS = ['Tanggal', 'Nama', 'NIP', 'Unit', 'Jadwal', 'Masuk', 'Metode masuk', 'Pulang', 'Metode pulang', 'Status', 'Terlambat (menit)', 'Pulang awal (menit)', 'Dispensasi', 'Perlu ditinjau', 'Catatan'];
 
 async function detailRows(actor: Actor, raw: unknown) {
   const tz = (await getSettings())['org.timezone'];
+  const today = todayIn(tz);
   const out: unknown[][] = [];
   for (let page = 1; ; page++) {
     const r = await dailyRecords(actor, raw, { page, pageSize: 1000, perm: 'attendance.export' });
@@ -26,7 +27,7 @@ async function detailRows(actor: Actor, raw: unknown) {
         fromDbDate(x.workDate), x.employee.fullName, x.employee.employeeNumber ?? '', x.employee.unit?.name ?? '',
         x.schedule ? `${x.schedule.code} ${x.schedule.checkIn}-${x.schedule.checkOut}` : '',
         fmtJam(x.checkInAt, tz) ?? '', METHOD_LABEL[x.checkInMethod ?? ''] ?? x.checkInMethod ?? '', fmtJam(x.checkOutAt, tz) ?? '', METHOD_LABEL[x.checkOutMethod ?? ''] ?? x.checkOutMethod ?? '',
-        STATUS_LABEL[x.status] ?? x.status, x.lateMinutes, x.earlyLeaveMinutes, x.dispensation ? 'Ya' : '', x.needsReview ? x.reviewReason ?? 'Ya' : '', x.note ?? '',
+        STATUS_LABEL[recordStatus(x, today)] ?? x.status, x.lateMinutes, x.earlyLeaveMinutes, x.dispensation ? 'Ya' : '', x.needsReview ? x.reviewReason ?? 'Ya' : '', x.note ?? '',
       ]);
     }
     if (page * r.pageSize >= r.total) break;
@@ -65,7 +66,7 @@ export async function exportAttendance(actor: Actor, raw: unknown, format: 'xlsx
     const info = wb.addWorksheet('Keterangan');
     info.addRows([
       ['Instansi', s['org.name']], ['Periode', `${filter.from} sampai ${filter.to}`], ['Dibuat', new Date().toISOString()], ['Oleh', actor.username],
-      ['Catatan', '"Tanpa transaksi" adalah hari kerja terjadwal tanpa catatan absensi. Bukan otomatis tidak hadir sebelum diperiksa petugas.'],
+      ['Catatan', 'Alfa = hari kerja yang sudah lewat tanpa absen. Alfa awal = tidak absen masuk. Alfa akhir = tidak absen pulang. Ajukan koreksi bila ada absen yang tidak tercatat.'],
     ]);
     info.getColumn(1).width = 14;
     info.getColumn(2).width = 100;
@@ -93,8 +94,8 @@ function recapPdf(org: string, title: string, rows: RecapRow[]): Promise<Buffer>
       { h: 'Terlambat', w: 55, v: (r: RecapRow) => `${r.late} (${r.lateMinutes}m)` },
       { h: 'Dinas', w: 38, v: (r: RecapRow) => r.fieldDuty },
       { h: 'Izin/Sakit/Cuti', w: 70, v: (r: RecapRow) => r.permit + r.sick + r.leave },
-      { h: 'Tidak hadir', w: 50, v: (r: RecapRow) => r.absent },
-      { h: 'Tanpa transaksi', w: 60, v: (r: RecapRow) => r.noRecord },
+      { h: 'Alfa', w: 40, v: (r: RecapRow) => r.alfa },
+      { h: 'Alfa awal/akhir', w: 70, v: (r: RecapRow) => `${r.alfaAwal}/${r.alfaAkhir}` },
       { h: '%', w: 40, v: (r: RecapRow) => (r.attendancePct == null ? '' : `${r.attendancePct}`) },
     ];
     const drawRow = (vals: string[], bold: boolean) => {
@@ -111,13 +112,13 @@ function recapPdf(org: string, title: string, rows: RecapRow[]): Promise<Buffer>
       drawRow(cols.map((c) => String(c.v(r))), false);
     }
     doc.moveDown(1).font('Helvetica').fontSize(8).fillColor('#556079')
-      .text('"Tanpa transaksi" = hari kerja terjadwal tanpa catatan absensi; bukan otomatis tidak hadir sebelum diperiksa petugas.', doc.page.margins.left);
+      .text('Alfa = hari kerja yang sudah lewat tanpa absen. Alfa awal/akhir = tidak absen masuk/pulang.', doc.page.margins.left);
     doc.end();
   });
 }
 
 // Pegawai
-const CAL_FILL: Record<string, string> = { H: 'FFDCF3E3', T: 'FFFDE7D7', DL: 'FFDCE6FB', I: 'FFD8EFEC', S: 'FFD8EFEC', C: 'FFD8EFEC', A: 'FFF8D9D9', L: 'FFEEF1F6' };
+const CAL_FILL: Record<string, string> = { H: 'FFDCF3E3', T: 'FFFDE7D7', DL: 'FFDCE6FB', I: 'FFD8EFEC', S: 'FFD8EFEC', C: 'FFD8EFEC', A: 'FFF8D9D9', AW: 'FFFBE0EB', AK: 'FFFBE0EB', L: 'FFEEF1F6' };
 
 /** Rekap kalender satu bulan: satu baris per pegawai, satu kolom per tanggal (kode, jam masuk, jam pulang). */
 export async function exportCalendar(actor: Actor, raw: Record<string, unknown>) {

@@ -9,10 +9,10 @@ import { Dayline } from '@/components/app/dayline';
 import { requirePage } from '@/lib/guard';
 import { can } from '@/lib/auth/actor';
 import { traceRecord } from '@/lib/services/reports';
-import { METHOD_LABEL } from '@/lib/attendance/engine';
+import { METHOD_LABEL, effectiveStatus } from '@/lib/attendance/engine';
 import { OUTCOME_MESSAGE, type Outcome } from '@/lib/services/attendance';
 import { KIND_LABEL } from '@/lib/services/corrections';
-import { fmtJam, fmtTanggal, fmtWaktu, isValidDate } from '@/lib/time';
+import { fmtJam, fmtTanggal, fmtWaktu, isValidDate, todayIn } from '@/lib/time';
 import { AdminCorrection } from '../../../koreksi/admin-correction';
 
 export const metadata = { title: 'Rincian absensi' };
@@ -43,7 +43,7 @@ export default async function TracePage({ params }: { params: Promise<{ employee
           <CardHeader><CardTitle>Hasil rekap</CardTitle><CardDescription>Disusun otomatis dari transaksi sumber di bawah, koreksi yang disetujui, dan cuti/izin yang disetujui.</CardDescription></CardHeader>
           <CardContent className="grid gap-5">
             <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div><dt className="text-sm text-muted-foreground">Status</dt><dd className="mt-1 flex flex-wrap gap-1">{r ? <StatusBadge status={r.status} /> : <StatusBadge status="TANPA_TRANSAKSI" />}{r?.dispensation && <StatusBadge status="CANCELLED" label="Dispensasi" />}{r?.needsReview && <StatusBadge status="PENDING" label="Perlu ditinjau" />}</dd></div>
+              <div><dt className="text-sm text-muted-foreground">Status</dt><dd className="mt-1 flex flex-wrap gap-1">{(() => { const st = effectiveStatus(r ?? null, t.plan, todayIn(t.tz)); return st ? <StatusBadge status={st} /> : <StatusBadge status="LIBUR" label="Tanpa jadwal" />; })()}{r?.dispensation && <StatusBadge status="CANCELLED" label="Dispensasi" />}{r?.needsReview && <StatusBadge status="PENDING" label="Perlu ditinjau" />}</dd></div>
               <div><dt className="text-sm text-muted-foreground">Masuk</dt><dd className="mt-1 text-xl font-semibold tabular">{fmtJam(r?.checkInAt, tz) ?? '-'}</dd><dd className="text-xs text-muted-foreground">{METHOD_LABEL[r?.checkInMethod ?? ''] ?? ''}</dd></div>
               <div><dt className="text-sm text-muted-foreground">Pulang</dt><dd className="mt-1 text-xl font-semibold tabular">{fmtJam(r?.checkOutAt, tz) ?? '-'}</dd><dd className="text-xs text-muted-foreground">{METHOD_LABEL[r?.checkOutMethod ?? ''] ?? ''}</dd></div>
               <div><dt className="text-sm text-muted-foreground">Terlambat / pulang awal</dt><dd className="mt-1 tabular">{r?.lateMinutes ?? 0} mnt / {r?.earlyLeaveMinutes ?? 0} mnt</dd></div>

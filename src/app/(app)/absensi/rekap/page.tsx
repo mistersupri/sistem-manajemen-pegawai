@@ -16,12 +16,12 @@ import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/
 import { clampPage, listSchema, pickPer, qs, sortRows } from '@/lib/list';
 import { requirePage } from '@/lib/guard';
 import { can } from '@/lib/auth/actor';
-import { CALENDAR_LEGEND, calendarRecap, dailyRecords, recap, type RecapRow } from '@/lib/services/reports';
+import { CALENDAR_LEGEND, STATUS_FILTER, calendarRecap, dailyRecords, recap, recordStatus, type RecapRow } from '@/lib/services/reports';
 import { CalendarRecap } from '@/components/app/calendar-recap';
 import { unitOptions } from '@/lib/services/units';
 import { getSettings } from '@/lib/settings';
 import { prisma } from '@/lib/db';
-import { METHOD_LABEL, STATUS_LABEL } from '@/lib/attendance/engine';
+import { METHOD_LABEL } from '@/lib/attendance/engine';
 import { BULAN, addDays, fmtJam, fmtTglPendek, fromDbDate, isValidDate, monthBounds, todayIn, weekdayOf } from '@/lib/time';
 import { Recalculate } from './recalculate';
 import { cn } from '@/lib/utils';
@@ -91,7 +91,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
           <div className="grid gap-2"><Label htmlFor="dari">Dari</Label><Input id="dari" name="dari" type="date" defaultValue={from} /></div>
           <div className="grid gap-2"><Label htmlFor="sampai">Sampai</Label><Input id="sampai" name="sampai" type="date" defaultValue={to} /></div>
           <div className="grid gap-2"><Label htmlFor="unit">Unit kerja</Label><NativeSelect id="unit" name="unit" defaultValue={f.unitId}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect></div>
-          <div className="grid gap-2"><Label htmlFor="status">Status</Label><NativeSelect id="status" name="status" defaultValue={f.status}><NativeSelectOption value="">Semua</NativeSelectOption>{Object.entries(STATUS_LABEL).map(([k, v]) => <NativeSelectOption key={k} value={k}>{v}</NativeSelectOption>)}</NativeSelect></div>
+          <div className="grid gap-2"><Label htmlFor="status">Status</Label><NativeSelect id="status" name="status" defaultValue={f.status}><NativeSelectOption value="">Semua</NativeSelectOption>{STATUS_FILTER.map(([k, v]) => <NativeSelectOption key={k} value={k}>{v}</NativeSelectOption>)}</NativeSelect></div>
           <div className="grid gap-2"><Label htmlFor="metode">Metode</Label><NativeSelect id="metode" name="metode" defaultValue={f.method}><NativeSelectOption value="">Semua</NativeSelectOption>{Object.entries(METHOD_LABEL).map(([k, v]) => <NativeSelectOption key={k} value={k}>{v}</NativeSelectOption>)}</NativeSelect></div>
           <div className="grid gap-2"><Label htmlFor="q">Pegawai</Label><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden /><Input id="q" name="q" type="search" defaultValue={f.q} placeholder="Nama atau NIP" className="pl-9" /></div></div>
           <input type="hidden" name="tampilan" value={view} />
@@ -122,7 +122,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
           return dailyRecords(actor, f, { page: l.page, pageSize: l.per, sort: l.sort, dir: sp.dir ? l.dir : undefined }).then((data) => <DailyTable data={data} tz={tz} params={params} />);
         })()}
         {view === 'kalender' && <CalendarView data={await calendarRecap(actor, { month: bulan, unitId: f.unitId, q: f.q, page: Number(sp.page) || 1, pageSize: pickPer(sp.per) })} params={params} />}
-        <p className="text-sm text-muted-foreground">&quot;Tanpa transaksi&quot; = hari kerja terjadwal yang sudah lewat tanpa catatan apa pun. Bukan otomatis tidak hadir; status tidak hadir hanya ditetapkan petugas setelah pemeriksaan.</p>
+        <p className="text-sm text-muted-foreground">Alfa = hari kerja yang sudah lewat tanpa absen. Alfa awal = tidak absen masuk, Alfa akhir = tidak absen pulang. Hari ini dan sesudahnya belum dihitung. Ajukan koreksi bila absen ternyata tercatat di tempat lain.</p>
       </PageBody>
     </>
   );
@@ -156,7 +156,7 @@ function CalendarView({ data, params }: { data: Awaited<ReturnType<typeof calend
   );
 }
 
-const RECAP_SORTS = ['nama', 'unit', 'hari', 'hadir', 'terlambat', 'pulangawal', 'dinas', 'izin', 'absen', 'tanpa', 'persen'] as const;
+const RECAP_SORTS = ['nama', 'unit', 'hari', 'hadir', 'terlambat', 'pulangawal', 'dinas', 'izin', 'alfa', 'alfasebagian', 'persen'] as const;
 const recapSchema = listSchema(RECAP_SORTS, { sort: 'nama' });
 const dailySchema = listSchema(['tanggal', 'nama', 'masuk', 'pulang', 'status', 'terlambat'] as const, { sort: 'tanggal', dir: 'desc' });
 
@@ -165,7 +165,7 @@ function RecapTable({ data, sp, params }: { data: Awaited<ReturnType<typeof reca
   const l = recapSchema.parse(sp);
   const key: Record<(typeof RECAP_SORTS)[number], (r: RecapRow) => string | number | null> = {
     nama: (r) => r.name, unit: (r) => r.unit, hari: (r) => r.scheduledDays, hadir: (r) => r.present, terlambat: (r) => r.lateMinutes,
-    pulangawal: (r) => r.earlyLeaveMinutes, dinas: (r) => r.fieldDuty, izin: (r) => r.permit + r.sick + r.leave, absen: (r) => r.absent, tanpa: (r) => r.noRecord, persen: (r) => r.attendancePct,
+    pulangawal: (r) => r.earlyLeaveMinutes, dinas: (r) => r.fieldDuty, izin: (r) => r.permit + r.sick + r.leave, alfa: (r) => r.alfa, alfasebagian: (r) => r.alfaAwal + r.alfaAkhir, persen: (r) => r.attendancePct,
   };
   const sorted = sortRows(all, key[l.sort], l.dir);
   const page = clampPage(l.page, l.per, sorted.length);
@@ -174,7 +174,7 @@ function RecapTable({ data, sp, params }: { data: Awaited<ReturnType<typeof reca
   const num = { align: 'right' as const, firstDir: 'desc' as const };
   return (
     <div className="rounded-xl border bg-card">
-      <TableToolbar {...sortProps} sorts={[{ value: 'nama', label: 'Nama' }, { value: 'persen', label: 'Kehadiran' }, { value: 'terlambat', label: 'Menit terlambat' }, { value: 'tanpa', label: 'Tanpa transaksi' }, { value: 'unit', label: 'Unit' }]}>
+      <TableToolbar {...sortProps} sorts={[{ value: 'nama', label: 'Nama' }, { value: 'persen', label: 'Kehadiran' }, { value: 'terlambat', label: 'Menit terlambat' }, { value: 'alfa', label: 'Alfa' }, { value: 'unit', label: 'Unit' }]}>
         <span className="tabular-nums">{all.length.toLocaleString('id-ID')}</span> pegawai
       </TableToolbar>
       <Table className="table-stack stack-grid">
@@ -186,8 +186,8 @@ function RecapTable({ data, sp, params }: { data: Awaited<ReturnType<typeof reca
           <SortableHead label="Pulang awal" value="pulangawal" {...sortProps} {...num} />
           <SortableHead label="Dinas luar" value="dinas" {...sortProps} {...num} />
           <SortableHead label="Izin/sakit/cuti" value="izin" {...sortProps} {...num} />
-          <SortableHead label="Tidak hadir" value="absen" {...sortProps} {...num} />
-          <SortableHead label="Tanpa transaksi" value="tanpa" {...sortProps} {...num} />
+          <SortableHead label="Alfa" value="alfa" {...sortProps} {...num} />
+          <SortableHead label="Alfa awal/akhir" value="alfasebagian" {...sortProps} {...num} />
           <SortableHead label="Kehadiran" value="persen" {...sortProps} {...num} className="pr-4 lg:pr-6" />
         </TableRow></TableHeader>
         <TableBody>
@@ -201,8 +201,8 @@ function RecapTable({ data, sp, params }: { data: Awaited<ReturnType<typeof reca
               <TableCell data-label="Pulang awal" className="tabular md:text-right">{r.earlyLeave}{r.earlyLeaveMinutes ? <span className="block text-xs text-muted-foreground">{r.earlyLeaveMinutes} mnt</span> : null}</TableCell>
               <TableCell data-label="Dinas luar" className="tabular md:text-right">{r.fieldDuty}</TableCell>
               <TableCell data-label="Izin/sakit/cuti" className="tabular md:text-right">{r.permit + r.sick + r.leave}</TableCell>
-              <TableCell data-label="Tidak hadir" className="tabular md:text-right">{r.absent}</TableCell>
-              <TableCell data-label="Tanpa transaksi" className="tabular md:text-right">{r.noRecord ? <StatusBadge status="TERLAMBAT" label={String(r.noRecord)} /> : 0}</TableCell>
+              <TableCell data-label="Alfa" className="tabular md:text-right">{r.alfa ? <StatusBadge status="ALFA" label={String(r.alfa)} /> : 0}</TableCell>
+              <TableCell data-label="Alfa awal/akhir" className="tabular md:text-right">{r.alfaAwal + r.alfaAkhir ? <span title={`Alfa awal ${r.alfaAwal}, alfa akhir ${r.alfaAkhir}`}><StatusBadge status="ALFA_AWAL" label={`${r.alfaAwal}/${r.alfaAkhir}`} /></span> : 0}</TableCell>
               <TableCell data-label="Kehadiran" className="pr-4 tabular md:text-right lg:pr-6">{r.attendancePct == null ? '-' : `${r.attendancePct}%`}</TableCell>
             </TableRow>
           ))}
@@ -214,6 +214,7 @@ function RecapTable({ data, sp, params }: { data: Awaited<ReturnType<typeof reca
 }
 
 function DailyTable({ data, tz, params }: { data: Awaited<ReturnType<typeof dailyRecords>>; tz: string; params: Record<string, string | undefined> }) {
+  const today = todayIn(tz);
   const sortProps = { sort: data.sort, dir: data.dir, params };
   return (
     <div className="rounded-xl border bg-card">
@@ -239,7 +240,7 @@ function DailyTable({ data, tz, params }: { data: Awaited<ReturnType<typeof dail
               <TableCell data-label="Jadwal" className="tabular text-muted-foreground">{r.schedule ? `${r.schedule.code} ${r.schedule.checkIn}-${r.schedule.checkOut}` : '-'}</TableCell>
               <TableCell data-label="Masuk" className="tabular">{fmtJam(r.checkInAt, tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r.checkInMethod ?? ''] ?? ''}</span></TableCell>
               <TableCell data-label="Pulang" className="tabular">{fmtJam(r.checkOutAt, tz) ?? '-'}<span className="block text-xs text-muted-foreground">{METHOD_LABEL[r.checkOutMethod ?? ''] ?? ''}</span></TableCell>
-              <TableCell data-label="Status"><StatusBadge status={r.status} />{r.lateMinutes > 0 && <span className="block text-xs text-muted-foreground">{r.lateMinutes} mnt</span>}</TableCell>
+              <TableCell data-label="Status"><StatusBadge status={recordStatus(r, today)} />{r.lateMinutes > 0 && <span className="block text-xs text-muted-foreground">{r.lateMinutes} mnt</span>}</TableCell>
               <TableCell data-label="Catatan" className="span-all pr-4 whitespace-normal text-sm text-muted-foreground lg:pr-6">{[r.dispensation && 'Dispensasi', r.reviewReason, r.note].filter(Boolean).join('; ')}</TableCell>
             </TableRow>
           ))}

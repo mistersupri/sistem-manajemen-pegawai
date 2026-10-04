@@ -142,7 +142,7 @@ async function SchedulesTab({ manage, revFor, tz }: { manage: boolean; revFor?: 
                 <TableCell className="stack-head pl-4 lg:pl-6"><span className="inline-flex items-center gap-2"><span className="size-3 shrink-0 rounded-sm" style={{ background: s.color }} aria-hidden /><b>{s.code}</b>{s.name}</span><span className="block text-xs text-muted-foreground">{s.kind === 'SHIFT' ? 'Shift' : 'Reguler'}{s.checkOut <= s.checkIn ? ', melewati tengah malam' : ''}</span></TableCell>
                 <TableCell data-label="Jam kerja" className="tabular">{s.checkIn} sampai {s.checkOut}{s.breakStart && <span className="block text-xs text-muted-foreground">istirahat {s.breakStart} sampai {s.breakEnd}</span>}</TableCell>
                 <TableCell data-label="Hari kerja" className="whitespace-normal">{workdayText(s.workdays)}</TableCell>
-                <TableCell data-label="Toleransi" className="tabular">{s.lateToleranceMin} / {s.earlyLeaveToleranceMin} mnt</TableCell>
+                <TableCell data-label="Toleransi" className="tabular">{s.lateToleranceMin} / {s.earlyLeaveToleranceMin} mnt{s.flexMinutes > 0 && <span className="block text-xs text-muted-foreground">Fleksibel {s.flexMinutes} mnt</span>}</TableCell>
                 <TableCell data-label="Versi"><Link className="text-primary hover:underline" href={`?tab=jadwal&rev=${s.id}#riwayat`}>v{s.version}</Link></TableCell>
                 <TableCell data-label="Penugasan" className="tabular">{s._count.assignments}</TableCell>
                 <TableCell data-label="Status"><StatusBadge status={s.isActive ? 'ACTIVE' : 'CANCELLED'} label={s.isActive ? 'Aktif' : 'Nonaktif'} /></TableCell>
@@ -172,7 +172,7 @@ async function SchedulesTab({ manage, revFor, tz }: { manage: boolean; revFor?: 
                 return (
                   <li key={r.id} className="rounded-lg border p-3 text-sm">
                     <div className="flex flex-wrap justify-between gap-2"><b>Versi {r.version}</b><span className="text-muted-foreground">{fmtWaktu(r.createdAt, tz)}{users.find((u) => u.id === r.changedById) ? ` oleh ${users.find((u) => u.id === r.changedById)!.username}` : ''}</span></div>
-                    <p className="mt-1 tabular">{String(x.checkIn)} sampai {String(x.checkOut)}, toleransi {String(x.lateToleranceMin)}/{String(x.earlyLeaveToleranceMin)} mnt, {workdayText((x.workdays as number[]) ?? [])}</p>
+                    <p className="mt-1 tabular">{String(x.checkIn)} sampai {String(x.checkOut)}, toleransi {String(x.lateToleranceMin)}/{String(x.earlyLeaveToleranceMin)} mnt, {Number(x.flexMinutes ?? 0) > 0 ? `fleksibel ${String(x.flexMinutes)} mnt, ` : ''}{workdayText((x.workdays as number[]) ?? [])}</p>
                     {r.changeNote && <p className="mt-1 text-muted-foreground">{r.changeNote}</p>}
                   </li>
                 );

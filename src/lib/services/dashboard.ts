@@ -4,6 +4,7 @@ import { getSettings } from '../settings';
 import { addDays, dateRange, fromDbDate, toDbDate, todayIn, zonedParts, zonedToUtc } from '../time';
 import { loadPlanContext, isScheduledWorkday } from '../attendance/plan';
 import { categoryOf } from './reports';
+import { effectiveStatus } from '../attendance/engine';
 import { balancesFor, pendingLeaveApprovalWhere } from './leave';
 import { pendingVerifications } from './biometrics';
 
@@ -66,7 +67,9 @@ export async function adminDashboard(actor: Actor, f: DashboardFilter) {
   const [packed, ctx] = await Promise.all([
     ids.length
       ? prisma.$queryRaw<{ e: string; d: string }[]>`
-          select employee_id::text as e, string_agg(to_char(work_date, 'YYYY-MM-DD') || status, ',') as d
+          select employee_id::text as e, string_agg(to_char(work_date, 'YYYY-MM-DD') || status || '|'
+            || case when status_locked then 'L' else '-' end || case when check_in_at is null then '0' else '1' end
+            || case when check_out_at is null then '0' else '1' end, ',') as d
           from attendance_records
           where employee_id = any(${ids}::uuid[]) and work_date between ${toDbDate(from)} and ${toDbDate(date)}
             and (${f.method ?? null}::text is null or check_in_method = ${f.method ?? null} or check_out_method = ${f.method ?? null})
@@ -85,25 +88,31 @@ export async function adminDashboard(actor: Actor, f: DashboardFilter) {
 
   // Ringkasan tanggal terpilih
   const summary: Record<string, number> = { HADIR: 0, TERLAMBAT: 0, DINAS_LUAR: 0, IZIN_CUTI: 0, TIDAK_HADIR: 0, BELUM_ABSEN: 0, LIBUR: 0 };
+  // "STATUS|L11": status rekap, terkunci (L), ada jam masuk (1), ada jam pulang (1); cukup untuk status efektif.
+  const recOf = (packed: string | undefined) => {
+    if (!packed) return null;
+    const [status, f = '-11'] = packed.split('|');
+    return { status, statusLocked: f[0] === 'L', checkInAt: f[1] === '1' ? new Date(0) : null, checkOutAt: f[2] === '1' ? new Date(0) : null };
+  };
   for (const id of ids) {
-    const st = statusOf.get(id)?.get(date);
-    summary[categoryOf(ctx.planFor(id, date), st ? { status: st } : null)]++;
+    summary[categoryOf(ctx.planFor(id, date), recOf(statusOf.get(id)?.get(date)), today)]++;
   }
 
   // Tren harian: pegawai di luar, tanggal di dalam, agar peta per pegawai diambil sekali.
   const dates = dateRange(from, date);
-  const trend = dates.map((d) => ({ date: d, hadir: 0, terlambat: 0, izin: 0, tanpaTransaksi: 0, dijadwalkan: 0 }));
+  const trend = dates.map((d) => ({ date: d, hadir: 0, terlambat: 0, izin: 0, alfa: 0, belum: 0, dijadwalkan: 0 }));
   for (const id of ids) {
     const recs = statusOf.get(id) ?? NO_RECORDS;
     for (let i = 0; i < dates.length; i++) {
       const t = trend[i];
-      const scheduled = isScheduledWorkday(ctx.planFor(id, dates[i]));
-      if (scheduled) t.dijadwalkan++;
-      const st = recs.get(dates[i]);
-      if (!st) { if (scheduled) t.tanpaTransaksi++; continue; }
-      if (st === 'HADIR' || st === 'DINAS_LUAR') t.hadir++;
-      else if (st === 'TERLAMBAT') t.terlambat++;
-      else if (st === 'IZIN' || st === 'SAKIT' || st === 'CUTI') t.izin++;
+      const plan = ctx.planFor(id, dates[i]);
+      if (isScheduledWorkday(plan)) t.dijadwalkan++;
+      const cat = categoryOf(plan, recOf(recs.get(dates[i])), today);
+      if (cat === 'HADIR' || cat === 'DINAS_LUAR') t.hadir++;
+      else if (cat === 'TERLAMBAT') t.terlambat++;
+      else if (cat === 'IZIN_CUTI') t.izin++;
+      else if (cat === 'TIDAK_HADIR') t.alfa++;
+      else if (cat === 'BELUM_ABSEN') t.belum++;
     }
   }
 
@@ -139,7 +148,9 @@ export async function employeeDashboard(actor: Actor) {
   ]);
   const monthPlans = await loadPlanContext([empId], monthStart, today);
   const scheduled = dateRange(monthStart, today).filter((d) => isScheduledWorkday(monthPlans.planFor(empId, d)));
-  const recDates = new Set(monthRecs.map((r) => fromDbDate(r.workDate)));
+  const recByDate = new Map(monthRecs.map((r) => [fromDbDate(r.workDate), r]));
+  const monthStatus = dateRange(monthStart, today).map((d) => effectiveStatus(recByDate.get(d) ?? null, monthPlans.planFor(empId, d), today));
+  const monthCount = (...st: string[]) => monthStatus.filter((x) => x && st.includes(x)).length;
   return {
     today, tz, employee: emp, now: zonedParts(new Date(), tz).time.slice(0, 5),
     plan: ctx.planFor(empId, today),
@@ -149,11 +160,12 @@ export async function employeeDashboard(actor: Actor) {
     recent,
     month: {
       scheduled: scheduled.length,
-      present: monthRecs.filter((r) => ['HADIR', 'TERLAMBAT', 'DINAS_LUAR'].includes(r.status)).length,
-      late: monthRecs.filter((r) => r.status === 'TERLAMBAT').length,
+      present: monthCount('HADIR', 'TERLAMBAT', 'DINAS_LUAR'),
+      late: monthCount('TERLAMBAT'),
       lateMinutes: monthRecs.reduce((n, r) => n + r.lateMinutes, 0),
-      leave: monthRecs.filter((r) => ['IZIN', 'SAKIT', 'CUTI'].includes(r.status)).length,
-      noRecord: scheduled.filter((d) => !recDates.has(d) && d < today).length,
+      leave: monthCount('IZIN', 'SAKIT', 'CUTI'),
+      // Alfa: hari kerja lewat tanpa absen, salah satu jam kosong, atau ditetapkan petugas.
+      alfa: monthCount('ALFA', 'ALFA_AWAL', 'ALFA_AKHIR', 'TIDAK_HADIR'),
     },
     balances: s['modules.leave'] ? await balancesFor(empId, Number(today.slice(0, 4))) : [],
     corrections, leaves,

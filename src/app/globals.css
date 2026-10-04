@@ -244,7 +244,7 @@
   @media (hover: hover) and (pointer: fine) { .cal-table td.cell > a:hover { background: var(--accent); } }
   .cal-code { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.25rem; padding: 0 .3rem; border-radius: .375rem; font-size: .7rem; font-weight: 800; color: #fff; }
   .cal-code.c-H { background: #15803d; } .cal-code.c-T { background: #c2410c; } .cal-code.c-DL { background: #1d4ed8; }
-  .cal-code.c-I, .cal-code.c-S, .cal-code.c-C { background: #0f766e; } .cal-code.c-A { background: #991b1b; }
+  .cal-code.c-I, .cal-code.c-S, .cal-code.c-C { background: #0f766e; } .cal-code.c-A { background: #991b1b; } .cal-code.c-AW, .cal-code.c-AK { background: #c2255c; }
   .cal-code.c-L { background: #e3e7ee; color: #4b5567; } .cal-code.c-x { background: transparent; color: #4b5567; box-shadow: inset 0 0 0 1px #c3cad6; }
   .cal-time { font-size: .72rem; line-height: 1.15; font-weight: 600; font-variant-numeric: tabular-nums; }
   .cal-time.in { color: #15803d; } .cal-time.out { color: #b4501f; } .cal-time.none { color: var(--muted-foreground); font-weight: 500; }

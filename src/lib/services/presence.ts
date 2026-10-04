@@ -1,6 +1,6 @@
 import { prisma } from '../db';
 import { plansFor } from '../attendance/plan';
-import { STATUS_LABEL } from '../attendance/engine';
+import { STATUS_LABEL, effectiveStatus } from '../attendance/engine';
 import { fromDbDate, monthBounds, toDbDate } from '../time';
 
 // Rekapitulasi presensi satu pegawai untuk satu bulan: ringkasan, rincian per jenis, dan tabel harian.
@@ -91,8 +91,8 @@ export async function presenceMonth(employeeId: string, month: string, today: st
       placeOut: r?.checkOutAt ? placeOf(r.checkOutSourceId, r.checkOutMethod) : null,
       lateMinutes: r?.lateMinutes ?? 0,
       earlyMinutes: r?.earlyLeaveMinutes ?? 0,
-      status: r ? r.status : scheduled && p.date < today ? 'TANPA_TRANSAKSI' : null,
-      note: leave?.leaveType.name ?? (r?.status === 'TIDAK_HADIR' ? 'Alpa' : r?.note ?? null),
+      status: off ? null : effectiveStatus(r ?? null, p, today),
+      note: leave?.leaveType.name ?? (r?.status === 'TIDAK_HADIR' ? 'Alfa (ditetapkan petugas)' : r?.note ?? null),
       hasRecord: !!r,
     };
   });
@@ -108,7 +108,9 @@ export async function presenceMonth(employeeId: string, month: string, today: st
     const rows = types.filter((t) => GROUP_OF[t.attendanceStatus] === g).sort((a, b) => byteOrder(a.name, b.name)).map((t) => ({ label: t.name, days: perType.get(t.id) ?? 0 }));
     if (g === 'KEHADIRAN') {
       rows.push(
-        { label: 'Alpa', days: records.filter((r) => r.status === 'TIDAK_HADIR').length },
+        { label: 'Alfa', days: days.filter((d) => d.status === 'ALFA' || d.status === 'TIDAK_HADIR').length },
+        { label: 'Alfa Awal', days: days.filter((d) => d.status === 'ALFA_AWAL').length },
+        { label: 'Alfa Akhir', days: days.filter((d) => d.status === 'ALFA_AKHIR').length },
         { label: 'Terlambat', days: records.filter((r) => r.lateMinutes > 0).length },
         { label: 'Pulang Cepat', days: records.filter((r) => r.earlyLeaveMinutes > 0).length },
       );
@@ -122,7 +124,7 @@ export async function presenceMonth(employeeId: string, month: string, today: st
   });
 
   const workdays = plans.filter((p) => !p.isOffDay && p.schedule).length;
-  const count = (s: string[]) => records.filter((r) => s.includes(r.status)).length;
+  const count = (s: string[]) => days.filter((d) => d.status && s.includes(d.status)).length;
   const summary = {
     workdays,
     hadir: count(['HADIR', 'TERLAMBAT']),
@@ -130,8 +132,8 @@ export async function presenceMonth(employeeId: string, month: string, today: st
     pulangCepat: records.filter((r) => r.earlyLeaveMinutes > 0).length,
     izinCuti: count(['IZIN', 'SAKIT', 'CUTI']),
     dinasLuar: count(['DINAS_LUAR']),
-    alpa: count(['TIDAK_HADIR']),
-    tanpaTransaksi: days.filter((d) => d.status === 'TANPA_TRANSAKSI').length,
+    alfa: count(['ALFA', 'TIDAK_HADIR']),
+    alfaSebagian: count(['ALFA_AWAL', 'ALFA_AKHIR']),
   };
   return { month, from, to, empty, days, groups, summary };
 }

@@ -8,13 +8,14 @@ const config = {
   hadir: { label: 'Hadir dan dinas luar', color: CATEGORY_COLOR.HADIR },
   terlambat: { label: 'Terlambat', color: CATEGORY_COLOR.TERLAMBAT },
   izin: { label: 'Izin, sakit, cuti', color: CATEGORY_COLOR.IZIN_CUTI },
-  tanpaTransaksi: { label: 'Belum ada transaksi', color: CATEGORY_COLOR.BELUM_ABSEN },
+  alfa: { label: 'Alfa', color: CATEGORY_COLOR.TIDAK_HADIR },
+  belum: { label: 'Belum absen', color: CATEGORY_COLOR.BELUM_ABSEN },
 } satisfies ChartConfig;
 
-export function TrendChart({ data }: { data: { date: string; hadir: number; terlambat: number; izin: number; tanpaTransaksi: number }[] }) {
+export function TrendChart({ data }: { data: { date: string; hadir: number; terlambat: number; izin: number; alfa: number; belum: number }[] }) {
   const rows = data.map((d) => ({ ...d, label: `${Number(d.date.slice(8))}/${Number(d.date.slice(5, 7))}` }));
   // Lebar sumbu Y mengikuti digit total terbesar agar angka ribuan tidak terpotong.
-  const top = Math.max(0, ...data.map((d) => d.hadir + d.terlambat + d.izin + d.tanpaTransaksi));
+  const top = Math.max(0, ...data.map((d) => d.hadir + d.terlambat + d.izin + d.alfa + d.belum));
   const yWidth = Math.max(40, String(top).length * 8 + 24);
   return (
     <ChartContainer config={config} className="aspect-auto h-60 w-full">
@@ -24,7 +25,7 @@ export function TrendChart({ data }: { data: { date: string; hadir: number; terl
         <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={yWidth} />
         <ChartTooltip content={<ChartTooltipContent />} cursor={{ fillOpacity: 0.08 }} />
         <ChartLegend content={<ChartLegendContent />} />
-        {(['hadir', 'terlambat', 'izin', 'tanpaTransaksi'] as const).map((k, i, all) => (
+        {(['hadir', 'terlambat', 'izin', 'alfa', 'belum'] as const).map((k, i, all) => (
           <Bar key={k} dataKey={k} stackId="a" fill={`var(--color-${k})`} stroke="var(--card)" strokeWidth={1} isAnimationActive={false} radius={i === all.length - 1 ? [3, 3, 0, 0] : undefined} />
         ))}
       </BarChart>

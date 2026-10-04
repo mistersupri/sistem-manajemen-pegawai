@@ -22,7 +22,7 @@ import { TodayBoard, type BoardRow } from '@/components/app/today-board';
 import { FilterPopover } from '@/components/app/filter-popover';
 import { unitOptions } from '@/lib/services/units';
 import { CATEGORY_LABEL } from '@/lib/services/reports';
-import { METHOD_LABEL, STATUS_LABEL } from '@/lib/attendance/engine';
+import { METHOD_LABEL, STATUS_LABEL, effectiveStatus } from '@/lib/attendance/engine';
 import { BULAN, HARI_PENDEK, fmtJam, fmtTanggal, fmtTglPendek, fmtWaktu, fromDbDate, isValidDate, zonedParts } from '@/lib/time';
 import { OUTCOME_MESSAGE, type Outcome } from '@/lib/services/attendance';
 import { cn } from '@/lib/utils';
@@ -70,7 +70,7 @@ async function AdminDashboard({ sp }: { actorId: string; sp: Record<string, stri
     .sort((a, b) => (BOARD_ORDER[a.category] ?? 9) - (BOARD_ORDER[b.category] ?? 9) || a.employee.fullName.localeCompare(b.employee.fullName))
     .map((r) => ({
       id: r.employee.id, name: r.employee.fullName, unit: r.employee.unit?.name ?? null, href: `/absensi/rekap/${r.employee.id}/${d.date}`,
-      category: r.category, status: r.record?.status ?? 'TANPA_TRANSAKSI',
+      category: r.category, status: r.status ?? 'LIBUR',
       scheduleIn: r.plan.schedule?.checkIn ?? null, scheduleOut: r.plan.schedule?.checkOut ?? null,
       checkIn: fmtJam(r.record?.checkInAt, d.tz), checkOut: fmtJam(r.record?.checkOutAt, d.tz), late: (r.record?.lateMinutes ?? 0) > 0,
     }));
@@ -136,7 +136,7 @@ async function AdminDashboard({ sp }: { actorId: string; sp: Record<string, stri
           <Card>
             <CardHeader>
               <CardTitle>Kehadiran {isToday ? 'hari ini' : fmtTglPendek(d.date)}</CardTitle>
-              <CardDescription>Dari {scheduled} pegawai yang dijadwalkan bekerja. Belum ada transaksi belum tentu tidak hadir.</CardDescription>
+              <CardDescription>Dari {scheduled} pegawai yang dijadwalkan bekerja. Yang belum absen hari ini belum dihitung Alfa.</CardDescription>
             </CardHeader>
             <CardContent>
               <RegisterBar total={scheduled} hrefFor={monitorHref} items={SUMMARY_ORDER.map((k) => ({ key: k, label: CATEGORY_LABEL[k], count: d.summary[k] }))} />
@@ -180,8 +180,8 @@ async function AdminDashboard({ sp }: { actorId: string; sp: Record<string, stri
                     <summary className="inline-flex min-h-11 cursor-pointer items-center font-medium text-primary">Lihat sebagai tabel</summary>
                     <div className="mt-2 max-h-72 overflow-auto rounded-md border">
                       <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-muted"><tr><th className="p-2 text-left">Tanggal</th><th className="p-2 text-right">Dijadwalkan</th><th className="p-2 text-right">Hadir</th><th className="p-2 text-right">Terlambat</th><th className="p-2 text-right">Izin/sakit/cuti</th><th className="p-2 text-right">Belum ada transaksi</th></tr></thead>
-                        <tbody>{d.trend.map((t) => <tr key={t.date} className="border-t"><td className="p-2">{fmtTglPendek(t.date)}</td><td className="p-2 text-right">{t.dijadwalkan}</td><td className="p-2 text-right">{t.hadir}</td><td className="p-2 text-right">{t.terlambat}</td><td className="p-2 text-right">{t.izin}</td><td className="p-2 text-right">{t.tanpaTransaksi}</td></tr>)}</tbody>
+                        <thead className="sticky top-0 bg-muted"><tr><th className="p-2 text-left">Tanggal</th><th className="p-2 text-right">Dijadwalkan</th><th className="p-2 text-right">Hadir</th><th className="p-2 text-right">Terlambat</th><th className="p-2 text-right">Izin/sakit/cuti</th><th className="p-2 text-right">Alfa</th><th className="p-2 text-right">Belum absen</th></tr></thead>
+                        <tbody>{d.trend.map((t) => <tr key={t.date} className="border-t"><td className="p-2">{fmtTglPendek(t.date)}</td><td className="p-2 text-right">{t.dijadwalkan}</td><td className="p-2 text-right">{t.hadir}</td><td className="p-2 text-right">{t.terlambat}</td><td className="p-2 text-right">{t.izin}</td><td className="p-2 text-right">{t.alfa}</td><td className="p-2 text-right">{t.belum}</td></tr>)}</tbody>
                       </table>
                     </div>
                   </details>
@@ -313,7 +313,7 @@ async function EmployeeDashboard() {
                   <div className="mt-1 flex justify-between text-xs text-muted-foreground tabular" aria-hidden><span>05.00</span><span>13.30</span><span>22.00</span></div>
                 </div>
               )}
-              {rec && <p className="flex items-center gap-2 text-sm">Status <StatusBadge status={rec.status} />{p.schedule && <span className="text-muted-foreground">toleransi terlambat {p.schedule.lateToleranceMin} menit</span>}</p>}
+              {rec && <p className="flex items-center gap-2 text-sm">Status <StatusBadge status={effectiveStatus(rec, p, d.today) ?? rec.status} />{p.schedule && <span className="text-muted-foreground">toleransi terlambat {p.schedule.lateToleranceMin} menit</span>}</p>}
               {next ? (
                 <Button asChild size="lg" variant="highlight" className="h-14 w-full text-base font-semibold"><Link href="/absensi/saya/absen"><ScanFace className="size-5" />{next}</Link></Button>
               ) : (
@@ -393,10 +393,10 @@ async function EmployeeDashboard() {
                   ['Hadir', d.month.present],
                   ['Terlambat', d.month.late],
                   ['Izin, sakit, cuti', d.month.leave],
-                  ['Belum ada transaksi', d.month.noRecord],
+                  ['Alfa', d.month.alfa],
                 ].map(([k, v]) => <div key={String(k)}><dt className="text-sm text-muted-foreground">{k}</dt><dd className="text-2xl font-bold tabular">{v}</dd></div>)}
               </dl>
-              {d.month.noRecord > 0 && <p className="mt-3 text-sm text-muted-foreground">Ada hari tanpa transaksi? Periksa <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/absensi/saya">riwayat</Link>, lalu ajukan koreksi bila perlu.</p>}
+              {d.month.alfa > 0 && <p className="mt-3 text-sm text-muted-foreground">Ada hari Alfa yang keliru? Periksa <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/absensi/saya">riwayat</Link>, lalu ajukan koreksi bila perlu.</p>}
             </CardContent>
           </Card>
 

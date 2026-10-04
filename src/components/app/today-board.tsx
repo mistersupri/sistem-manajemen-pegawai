@@ -67,7 +67,7 @@ export function TodayBoard({ rows, now }: { rows: BoardRow[]; now: string | null
                     <span className="block truncate text-sm font-medium">{r.name}</span>
                     {r.unit && <span className="block truncate text-xs text-muted-foreground">{r.unit}</span>}
                   </span>
-                  <StatusBadge status={r.category === 'BELUM_ABSEN' ? 'TANPA_TRANSAKSI' : r.status} className="shrink-0 md:hidden" />
+                  <StatusBadge status={r.status} className="shrink-0 md:hidden" />
                 </span>
                 <span className="board-track" aria-hidden>
                   {HOURS.map((h) => <span key={h} className="board-grid" style={{ left: `${pos(`${String(h).padStart(2, '0')}:00`)}%` }} />)}
