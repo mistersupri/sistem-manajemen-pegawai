@@ -29,7 +29,7 @@ async function ensureAdmins() {
     const r = await ensureSuperAdmin(prisma, { username, password, mustChangePassword: !isDemo });
     console.log(r === 'created'
       ? `Akun Super Admin dibuat dari .env: ${username}${isDemo ? '' : ' (wajib ganti password saat masuk pertama)'}`
-      : `Akun ${username} sudah ada; password tidak diubah. Untuk memakai ADMIN_PASSWORD dari .env jalankan: npm run admin:reset`);
+      : `Akun ${username} sudah ada; password tidak diubah. Untuk memakai ADMIN_PASSWORD dari .env jalankan: npm run admin:reset (Docker: docker compose run --rm app reset-admin)`);
   }
   if (isDemo) {
     const r = await ensureSuperAdmin(prisma, { username: 'superadmin', password: DEMO_PASSWORD, mustChangePassword: false });

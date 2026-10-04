@@ -19,32 +19,24 @@ services:
       timeout: 5s
       retries: 20
 
-  # Menjalankan migrasi skema dan seed peran/akun admin pertama, lalu selesai.
-  migrate:
-    build: { context: ., target: tools }
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-simpeg}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-simpeg}
-      SEED_DEMO: ${SEED_DEMO:-0}
-      DISABLE_SCHEDULER: "1"
-    depends_on:
-      db: { condition: service_healthy }
-    restart: "no"
-
+  # Satu image. Saat mulai, container menjalankan migrasi skema dan seed peran/akun admin, lalu server.
+  # Migrasi manual: docker compose run --rm app migrate   (matikan otomatis dengan MIGRATE_ON_START=0)
   app:
-    build: { context: ., target: runner }
+    build: .
+    image: simpeg:latest
     restart: unless-stopped
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-simpeg}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-simpeg}
       STORAGE_DIR: /data/storage
+      SEED_DEMO: ${SEED_DEMO:-0}
+      MIGRATE_ON_START: ${MIGRATE_ON_START:-1}
     ports:
       - "${APP_PORT:-3000}:3000"
     volumes:
       - storage:/data/storage
     depends_on:
       db: { condition: service_healthy }
-      migrate: { condition: service_completed_successfully }
 
   # Backup sesuai jadwal Anda (cron host):  docker compose --profile ops run --rm backup
   # Pemulihan:  docker compose stop app && docker compose --profile ops run --rm backup sh /scripts/restore.sh /backups/simpeg-YYYYMMDD-HHMMSS
