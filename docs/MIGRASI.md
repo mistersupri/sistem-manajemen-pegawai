@@ -16,10 +16,10 @@ npm run migrate:sqlite -- --sqlite /path/ke/absensi.db --dry-run
 npm run migrate:sqlite -- --sqlite /path/ke/absensi.db --uploads /path/ke/uploads
 ```
 
-Dengan Docker, salin berkas lama ke folder proyek lalu jalankan di layanan `migrate`:
+Dengan Docker, salin berkas lama ke folder proyek lalu jalankan lewat image aplikasi:
 
 ```bash
-docker compose run --rm -v "$PWD/lama:/lama:ro" migrate npx tsx scripts/migrate-sqlite.ts --sqlite /lama/absensi.db --uploads /lama/uploads
+docker compose run --rm -v "$PWD/lama:/lama:ro" app migrate-sqlite --sqlite /lama/absensi.db --uploads /lama/uploads
 ```
 
 Laporan berisi jumlah per jenis data dan peringatan tersimpan di `storage/migrasi/laporan-*.json`. Skrip menolak berjalan bila database tujuan sudah berisi pegawai (kecuali `--allow-existing`) atau migrasi sudah pernah dijalankan.

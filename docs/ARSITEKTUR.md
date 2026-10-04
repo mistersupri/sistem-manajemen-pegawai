@@ -7,7 +7,7 @@ prisma/
   schema.prisma          model data
   migrations/            migrasi SQL (termasuk trigger imutabilitas dari prisma/sql/immutability.sql)
   seed.ts                peran/izin, Super Admin pertama, data demo (SEED_DEMO=1)
-scripts/                 migrate-sqlite.ts, backup.sh, restore.sh
+scripts/                 migrate-sqlite.ts, backup.sh, restore.sh, docker-entrypoint.sh
 src/
   app/
     (public)/login       halaman masuk

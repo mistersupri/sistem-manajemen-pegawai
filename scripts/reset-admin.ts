@@ -4,6 +4,7 @@
 //   npm run admin:reset                       pakai ADMIN_USERNAME dan ADMIN_PASSWORD dari .env
 //   npm run admin:reset -- --username budi    username lain
 //   npm run admin:reset -- --hapus-mfa        juga lepaskan MFA (mis. ponsel autentikator hilang)
+//   Docker: docker compose run --rm app reset-admin [--username budi] [--hapus-mfa]
 //
 // Tanpa ADMIN_PASSWORD, password sementara dibuat, ditampilkan sekali, dan wajib diganti saat masuk.
 import 'dotenv/config';

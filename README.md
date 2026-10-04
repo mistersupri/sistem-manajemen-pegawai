@@ -35,9 +35,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Layanan `migrate` menjalankan migrasi skema dan membuat peran serta akun Super Admin pertama, lalu `app` berjalan di port `APP_PORT` (bawaan 3000). Health check: `GET /api/health`.
+Hanya satu image yang dibangun. Setiap kali container `app` mulai, ia menjalankan migrasi skema dan membuat peran serta akun Super Admin pertama (bila belum ada), lalu server berjalan di port `APP_PORT` (bawaan 3000). Health check: `GET /api/health`. Untuk menjalankan migrasi secara manual saja, set `MIGRATE_ON_START=0` lalu `docker compose run --rm app migrate`.
 
-Lupa password admin atau akun terkunci: isi `ADMIN_USERNAME`/`ADMIN_PASSWORD` di `.env`, lalu `docker compose run --rm migrate npx tsx scripts/reset-admin.ts`.
+Lupa password admin atau akun terkunci: isi `ADMIN_USERNAME`/`ADMIN_PASSWORD` di `.env`, lalu `docker compose run --rm app reset-admin`.
 
 Pasang aplikasi di belakang reverse proxy HTTPS (kamera dan GPS di browser hanya bekerja lewat HTTPS atau localhost) dan biarkan `COOKIE_SECURE=1`.
 
