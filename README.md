@@ -37,6 +37,8 @@ docker compose up -d --build
 
 Hanya satu image yang dibangun. Setiap kali container `app` mulai, ia menjalankan migrasi skema dan membuat peran serta akun Super Admin pertama (bila belum ada), lalu server berjalan di port `APP_PORT` (bawaan 3000). Health check: `GET /api/health`. Untuk menjalankan migrasi secara manual saja, set `MIGRATE_ON_START=0` lalu `docker compose run --rm app migrate`.
 
+Folder penyimpanan (`STORAGE_DIR`, bawaan `/data/storage`) boleh berupa volume atau folder di host. Saat mulai, container memperbaiki pemiliknya lalu menjalankan aplikasi sebagai user `node` (uid 1000). Bila container dipaksa berjalan sebagai user lain (`user:` di compose atau `--user`), pastikan folder itu bisa ditulis user tersebut, misalnya `chown -R 1000:1000 <folder>`.
+
 Lupa password admin atau akun terkunci: isi `ADMIN_USERNAME`/`ADMIN_PASSWORD` di `.env`, lalu `docker compose run --rm app reset-admin`.
 
 Pasang aplikasi di belakang reverse proxy HTTPS (kamera dan GPS di browser hanya bekerja lewat HTTPS atau localhost) dan biarkan `COOKIE_SECURE=1`.

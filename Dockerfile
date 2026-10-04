@@ -43,7 +43,7 @@ COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/ops ./ops
 COPY --chown=node:node scripts/docker-entrypoint.sh /usr/local/bin/simpeg
-USER node
+# Tanpa USER node: entrypoint mulai sebagai root untuk memperbaiki pemilik STORAGE_DIR, lalu menjalankan aplikasi sebagai node.
 EXPOSE 3000
 VOLUME ["/data/storage"]
 # Waktu mulai lebih panjang karena migrasi berjalan sebelum server.
