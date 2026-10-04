@@ -43,6 +43,17 @@ HEADER_MAP.set('nama', 'nama');
 HEADER_MAP.set('unit', 'kode_unit');
 HEADER_MAP.set('unit_kerja', 'kode_unit');
 
+const LABEL = new Map<string, string>(EMPLOYEE_COLUMNS.map(([k, label]) => [k, label]));
+// Nama isian di skema pegawai -> kolom berkas, agar pesan galat memakai judul kolom yang dilihat pengguna.
+const FIELD_COLUMN: Record<string, string> = {
+  employeeNumber: 'nip', nik: 'nik', fullName: 'nama', frontTitle: 'gelar_depan', backTitle: 'gelar_belakang', birthPlace: 'tempat_lahir',
+  birthDate: 'tanggal_lahir', gender: 'jenis_kelamin', address: 'alamat', phone: 'telepon', email: 'email', employmentStatus: 'status_kepegawaian',
+  position: 'jabatan', rank: 'pangkat_golongan', unitId: 'kode_unit', supervisorId: 'nip_atasan', startDate: 'tanggal_mulai', machinePin: 'id_mesin',
+};
+// Kolom nomor identitas. Excel menyimpan angka hanya sampai 15 digit, jadi NIP 18 digit yang diketik di kolom
+// berformat General sudah berubah sebelum sampai ke sini; tolak alih-alih menyimpan nomor yang salah.
+const ID_COLUMNS = new Set(['nip', 'nik', 'nip_atasan', 'id_mesin']);
+
 function text(v: unknown) {
   if (v instanceof Date) return normDateTime(v)?.slice(0, 10) ?? '';
   if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(v);
@@ -84,8 +95,18 @@ export async function previewImport(actor: Actor, buffer: Buffer, fileName: stri
   for (let i = 1; i < rowsRaw.length; i++) {
     const r = rowsRaw[i];
     const values: Record<string, string> = {};
-    header.forEach((k, c) => { if (k) values[k] = ['tanggal_lahir', 'tanggal_mulai'].includes(k) ? dateText(r[c]) : text(r[c]); });
     const messages: string[] = [];
+    header.forEach((k, c) => {
+      if (!k) return;
+      const raw = r[c];
+      if (ID_COLUMNS.has(k) && typeof raw === 'number' && !Number.isSafeInteger(raw)) {
+        messages.push(`${LABEL.get(k)} tersimpan sebagai angka sehingga digit terakhirnya berubah. Format kolom sebagai Teks di Excel lalu ketik ulang nomornya.`);
+      }
+      // Telepon yang diketik sebagai angka kehilangan 0 di depan (81234... menjadi 081234...).
+      values[k] = ['tanggal_lahir', 'tanggal_mulai'].includes(k) ? dateText(raw)
+        : k === 'telepon' && typeof raw === 'number' && /^8/.test(String(raw)) ? `0${raw}` : text(raw);
+    });
+    if (/\(hapus baris ini\)/i.test(values.nama ?? '')) messages.push('Baris contoh dari template lama; hapus baris ini');
     const nip = values.nip || '';
     if (nip) {
       if (seenNip.has(nip)) messages.push(`NIP sama dengan baris ${seenNip.get(nip)}`);
@@ -115,7 +136,10 @@ export async function previewImport(actor: Actor, buffer: Buffer, fileName: stri
       rank: values.pangkat_golongan || null, unitId, supervisorId, startDate: values.tanggal_mulai || null, machinePin: values.id_mesin || null,
     };
     const parsed = employeeInput.safeParse(data);
-    if (!parsed.success) for (const iss of parsed.error.issues) messages.push(`${String(iss.path[0] ?? '')}: ${iss.message}`);
+    if (!parsed.success) for (const iss of parsed.error.issues) {
+      const col = FIELD_COLUMN[String(iss.path[0] ?? '')];
+      messages.push(col ? `${LABEL.get(col)}: ${iss.message}` : iss.message);
+    }
     const ex = nip ? byNip.get(nip) : undefined;
     if (ex && !unitInScope(actor, 'employee.write', ex.unitId)) messages.push('NIP ini milik pegawai di luar kewenangan Anda');
     if (data.machinePin) {

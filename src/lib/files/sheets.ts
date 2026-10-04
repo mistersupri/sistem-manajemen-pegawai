@@ -4,13 +4,21 @@ import { readXls, type Sheet } from './xls';
 
 export type { Sheet };
 
-function cellValue(v: ExcelJS.CellValue): unknown {
+/**
+ * Nilai sel menjadi nilai polos. Excel sering membungkus nilai: hyperlink otomatis untuk email
+ * ({ text, hyperlink }, dengan text yang bisa berupa rich text), rumus ({ formula, result }),
+ * dan galat rumus ({ error: '#N/A' }). Galat rumus dianggap kosong.
+ */
+function cellValue(v: ExcelJS.CellValue | unknown): unknown {
   if (v == null) return '';
   if (v instanceof Date) return v;
   if (typeof v === 'object') {
-    const o = v as { text?: unknown; result?: unknown; richText?: { text: string }[] };
+    const o = v as { text?: unknown; result?: unknown; richText?: { text: string }[]; error?: unknown };
     if (o.richText) return o.richText.map((x) => x.text).join('');
-    return o.text ?? o.result ?? '';
+    if ('error' in o) return '';
+    if (o.text !== undefined) return cellValue(o.text);
+    if ('result' in o) return cellValue(o.result);
+    return '';
   }
   return v;
 }

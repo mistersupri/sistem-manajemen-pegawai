@@ -35,6 +35,7 @@ export const NAV: NavItem[] = [
   {
     href: '/pengaturan', label: 'Pengaturan', icon: 'settings', perms: ['unit.manage', 'unit.read', 'user.manage', 'role.manage', 'settings.manage', 'audit.read', 'schedule.read', 'schedule.manage', 'leave.manage'],
     children: [
+      { href: '/pengaturan/umum', label: 'Umum', icon: 'settings', perms: ['settings.manage'] },
       { href: '/jadwal', label: 'Jadwal Kerja', icon: 'calendar-days', perms: ['schedule.read'] },
       { href: '/pengaturan/unit', label: 'Unit Kerja', icon: 'building-2', perms: ['unit.read', 'unit.manage'] },
       { href: '/pengaturan/pengguna', label: 'Pengguna & Peran', icon: 'shield-check', perms: ['user.manage', 'role.manage'] },
