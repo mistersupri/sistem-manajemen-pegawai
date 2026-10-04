@@ -16,12 +16,6 @@ import { LeaveTypeForm } from './leave-types';
 
 export const metadata = { title: 'Aturan Absensi' };
 
-const ORG: SettingField[] = [
-  { key: 'org.name', label: 'Nama instansi', type: 'text', wide: true },
-  { key: 'org.timezone', label: 'Zona waktu', type: 'select', hint: 'Dipakai untuk tanggal kerja, jadwal, dan laporan. Unit kerja bisa punya zona waktu sendiri.', options: [['Asia/Jakarta', 'WIB (Asia/Jakarta)'], ['Asia/Makassar', 'WITA (Asia/Makassar)'], ['Asia/Jayapura', 'WIT (Asia/Jayapura)']].map(([value, label]) => ({ value, label })) },
-  { key: 'org.timezoneLabel', label: 'Label zona waktu', type: 'text', hint: 'Mis. WIB.' },
-];
-
 const RULES: SettingField[] = [
   { key: 'rules.checkoutGraceHours', label: 'Batas absen pulang setelah jam pulang', type: 'number', min: 0, max: 12, suffix: 'jam', hint: 'Scan setelah batas ini dianggap milik hari berikutnya.' },
   { key: 'rules.duplicateWindowMinutes', label: 'Abaikan scan berulang dalam', type: 'number', min: 0, max: 60, suffix: 'menit', hint: 'Scan dalam rentang ini dianggap satu transaksi.' },
@@ -41,7 +35,6 @@ export default async function RulesPage() {
     <>
       <PageHeader title="Aturan Absensi" description="Aturan umum, jenis cuti/izin, dan tautan ke jadwal kerja. Semua perubahan tercatat di audit log." crumbs={[{ label: 'Pengaturan' }, { label: 'Aturan Absensi' }]} />
       <PageBody className="grid max-w-5xl gap-6">
-        {settingsOk && <SettingsCard title="Instansi" fields={ORG} values={s} />}
         {settingsOk && <SettingsCard title="Aturan perhitungan" description="Perubahan berlaku untuk perhitungan berikutnya. Rekap lama tidak berubah sampai dihitung ulang." fields={RULES} values={s} />}
         {can(actor, 'schedule.manage') && (
           <Card>

@@ -52,7 +52,7 @@ export function ImportFlow() {
         <CardHeader>
           <CardTitle>1. Unggah berkas</CardTitle>
           <CardDescription>
-            Gunakan <a className="text-primary underline" href="/api/v1/employees/template" download>template impor (.xlsx)</a>. Kolom kode unit memakai kode di sheet &quot;Kode unit&quot;. NIP yang sudah ada akan diperbarui (bila dipilih); kolom kosong tidak menghapus data lama.
+            Gunakan <a className="text-primary underline" href="/api/v1/employees/template" download>template impor (.xlsx)</a>. Kolom kode unit memakai kode di sheet &quot;Kode unit&quot;; aturan tiap kolom ada di sheet &quot;Petunjuk&quot;. NIP yang sudah ada akan diperbarui (bila dipilih); kolom kosong tidak menghapus data lama.
           </CardDescription>
         </CardHeader>
         <CardContent>

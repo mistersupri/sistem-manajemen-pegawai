@@ -4,7 +4,6 @@ import { requirePage } from '@/lib/guard';
 import { scopeOf } from '@/lib/auth/actor';
 import { getSettings } from '@/lib/settings';
 import { SettingsCard, type SettingField } from '../settings-form';
-import { LogoCard } from './logo';
 
 export const metadata = { title: 'Retensi & Privasi' };
 
@@ -28,12 +27,11 @@ export default async function PrivacyPage() {
   const s = await getSettings();
   return (
     <>
-      <PageHeader title="Retensi & Privasi" description="Penyimpanan foto, persetujuan data wajah, keamanan akun, dan identitas instansi." crumbs={[{ label: 'Pengaturan' }, { label: 'Retensi & Privasi' }]} />
+      <PageHeader title="Retensi & Privasi" description="Penyimpanan foto, persetujuan data wajah, dan keamanan akun." crumbs={[{ label: 'Pengaturan' }, { label: 'Retensi & Privasi' }]} />
       <PageBody className="grid max-w-4xl gap-6">
         <SettingsCard title="Foto absensi" description="Absen wajah mandiri dan kiosk tidak menyimpan foto; yang dikirim ke server hanya data numerik wajah untuk dicocokkan." fields={PHOTOS} values={s} />
         <SettingsCard title={`Persetujuan data wajah (versi ${s['face.consentVersion']})`} fields={CONSENT} values={s} />
         <SettingsCard title="Keamanan akun" fields={SECURITY} values={s} />
-        <LogoCard hasLogo={!!s['org.logo']} />
       </PageBody>
     </>
   );

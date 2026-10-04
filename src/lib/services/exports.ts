@@ -36,7 +36,7 @@ async function detailRows(actor: Actor, raw: unknown) {
 
 function styleHeader(ws: ExcelJS.Worksheet) {
   ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0C1A45' } };
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A6CC2' } };
   ws.views = [{ state: 'frozen', ySplit: 1 }];
   ws.columns.forEach((c) => { c.width = 16; });
   if (ws.columns[1]) ws.getColumn(2).width = 30;
@@ -219,13 +219,43 @@ export async function employeeTemplate() {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Pegawai');
   ws.addRow(EMPLOYEE_COLUMNS.map(([, h]) => h));
-  ws.addRow(['198001012005011001', '', 'Contoh Nama Pegawai (hapus baris ini)', '', 'S.Pd.', 'Jakarta', '1980-01-01', 'L', '', '08123456789', 'contoh@instansi.go.id', 'PNS', 'Guru Ahli Pertama', 'III/a', 'KODE-UNIT', '', '2005-01-01', '101']);
   styleHeader(ws);
   ws.getColumn(3).width = 36;
   const units = await prisma.organizationUnit.findMany({ where: { deletedAt: null, isActive: true }, select: { code: true, name: true }, orderBy: { name: 'asc' } });
+  // Nomor dan tanggal diformat Teks: tanpa ini Excel mengubah NIP 18 digit menjadi angka 15 digit dan membuang 0 di depan telepon.
+  const ROWS = 2000;
+  const col = (k: string) => EMPLOYEE_COLUMNS.findIndex(([key]) => key === k) + 1;
+  for (const k of ['nip', 'nik', 'tanggal_lahir', 'telepon', 'nip_atasan', 'tanggal_mulai', 'id_mesin']) ws.getColumn(col(k)).numFmt = '@';
+  for (let r = 2; r <= ROWS + 1; r++) {
+    ws.getCell(r, col('jenis_kelamin')).dataValidation = { type: 'list', allowBlank: true, formulae: ['"L,P"'], showErrorMessage: true, errorTitle: 'Jenis kelamin', error: 'Isi L atau P.' };
+    if (units.length) ws.getCell(r, col('kode_unit')).dataValidation = { type: 'list', allowBlank: true, formulae: [`'Kode unit'!$A$2:$A$${units.length + 1}`], showErrorMessage: true, errorTitle: 'Kode unit', error: 'Pilih kode dari sheet "Kode unit".' };
+  }
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
   const u = wb.addWorksheet('Kode unit');
   u.addRow(['Kode unit', 'Nama unit']);
   units.forEach((x) => u.addRow([x.code, x.name]));
   styleHeader(u);
+
+  const help = wb.addWorksheet('Petunjuk');
+  help.addRow(['Kolom', 'Wajib', 'Contoh', 'Keterangan']);
+  const notes: Record<string, [string, string, string]> = {
+    nip: ['Tidak', '198001012005011001', 'Ketik sebagai teks (kolom sudah berformat Teks). NIP yang sudah ada akan diperbarui.'],
+    nik: ['Tidak', '3171010101800001', '16 angka.'],
+    nama: ['Ya', 'Contoh Nama Pegawai', 'Tanpa gelar; gelar diisi di kolomnya sendiri.'],
+    gelar_belakang: ['Tidak', 'S.Pd.', ''],
+    tanggal_lahir: ['Tidak', '1980-01-01', 'Format YYYY-MM-DD atau DD/MM/YYYY.'],
+    jenis_kelamin: ['Tidak', 'L', 'L atau P.'],
+    telepon: ['Tidak', '08123456789', ''],
+    email: ['Tidak', 'nama@instansi.go.id', ''],
+    status_kepegawaian: ['Tidak', 'PNS', 'Mis. PNS, PPPK, Honorer.'],
+    kode_unit: ['Ya*', units[0]?.code ?? 'KODE-UNIT', 'Pilih dari sheet "Kode unit". *Wajib bila Anda hanya berwenang atas unit tertentu.'],
+    nip_atasan: ['Tidak', '197501012000011001', 'Atasan harus sudah ada di data pegawai.'],
+    tanggal_mulai: ['Tidak', '2005-01-01', ''],
+    id_mesin: ['Tidak', '101', 'PIN/ID pegawai di mesin absensi; tidak boleh dipakai pegawai lain.'],
+  };
+  for (const [k, label] of EMPLOYEE_COLUMNS) { const n = notes[k]; help.addRow([label, n?.[0] ?? 'Tidak', n?.[1] ?? '', n?.[2] ?? '']); }
+  styleHeader(help);
+  help.getColumn(1).width = 34; help.getColumn(3).width = 24; help.getColumn(4).width = 80;
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
