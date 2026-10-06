@@ -22,6 +22,7 @@ export const leaveTypeInput = z.object({
   attendanceStatus: z.enum(['CUTI', 'IZIN', 'SAKIT', 'DINAS_LUAR']),
   usesBalance: z.boolean(),
   defaultAnnualQuota: z.coerce.number().int().min(0).max(366).nullable().optional(),
+  maxCarryOver: z.coerce.number().int().min(0).max(366).default(0),
   eligibleEmploymentStatuses: z.array(z.string().trim().min(1).max(50)).default([]),
   maxDaysPerRequest: z.coerce.number().int().min(1).max(366).nullable().optional(),
   minNoticeDays: z.coerce.number().int().min(0).max(90).default(0),
@@ -91,21 +92,54 @@ export async function setBalance(actor: Actor, raw: unknown) {
   return b;
 }
 
-/** Buat saldo tahun tertentu dari kuota bawaan jenis cuti untuk pegawai yang memenuhi syarat. */
+/**
+ * Sisa hak tahun lalu yang dibawa ke tahun ini: hak tahun lalu (termasuk bawaan dan penyesuaian) dikurangi
+ * cuti disetujui, tidak kurang dari 0 dan tidak lebih dari batas jenis cuti.
+ */
+export function carryOverOf(prev: { entitled: number; carriedOver: number; adjustment: number } | undefined, usedDays: number, max: number) {
+  if (!prev || max <= 0) return 0;
+  return Math.min(max, Math.max(0, prev.entitled + prev.carriedOver + prev.adjustment - usedDays));
+}
+
+/**
+ * Buat saldo tahun tertentu dari kuota bawaan jenis cuti untuk pegawai yang memenuhi syarat.
+ * Jenis cuti dengan batas bawa-sisa menambahkan sisa tahun lalu (maksimal batas itu) ke hak tahun ini.
+ * Saldo yang sudah ada tidak diubah, kecuali sisa tahun lalunya masih 0 dan belum diatur manual.
+ */
 export async function generateBalances(actor: Actor, year: number) {
   assertCan(actor, 'leave.manage');
   const types = await prisma.leaveType.findMany({ where: { usesBalance: true, isActive: true, defaultAnnualQuota: { not: null } } });
   const emps = await prisma.employee.findMany({ where: { AND: [{ deletedAt: null, isActive: true }, employeeScopeWhere(actor, 'leave.manage')] }, select: { id: true, employmentStatus: true } });
+  const prevBalances = await prisma.leaveBalance.findMany({ where: { year: year - 1, leaveTypeId: { in: types.map((t) => t.id) } } });
+  const used = await prisma.leaveRequest.groupBy({
+    by: ['employeeId', 'leaveTypeId'],
+    where: { status: 'APPROVED', leaveTypeId: { in: types.map((t) => t.id) }, startDate: { gte: toDbDate(`${year - 1}-01-01`), lte: toDbDate(`${year - 1}-12-31`) } },
+    _sum: { days: true },
+  });
+  const usedOf = new Map(used.map((u) => [`${u.employeeId}:${u.leaveTypeId}`, u._sum.days ?? 0]));
+  const prevOf = new Map(prevBalances.map((b) => [`${b.employeeId}:${b.leaveTypeId}`, b]));
+  const existing = await prisma.leaveBalance.findMany({ where: { year, leaveTypeId: { in: types.map((t) => t.id) } }, select: { id: true, employeeId: true, leaveTypeId: true, carriedOver: true, note: true } });
+  const existingOf = new Map(existing.map((b) => [`${b.employeeId}:${b.leaveTypeId}`, b]));
   let created = 0;
+  let carried = 0;
   for (const t of types) {
     for (const e of emps) {
       if (t.eligibleEmploymentStatuses.length && !t.eligibleEmploymentStatuses.includes(e.employmentStatus ?? '')) continue;
-      const r = await prisma.leaveBalance.createMany({ data: [{ employeeId: e.id, leaveTypeId: t.id, year, entitled: t.defaultAnnualQuota! }], skipDuplicates: true });
-      created += r.count;
+      const k = `${e.id}:${t.id}`;
+      const carry = carryOverOf(prevOf.get(k), usedOf.get(k) ?? 0, t.maxCarryOver);
+      const cur = existingOf.get(k);
+      if (!cur) {
+        await prisma.leaveBalance.create({ data: { employeeId: e.id, leaveTypeId: t.id, year, entitled: t.defaultAnnualQuota!, carriedOver: carry } });
+        created += 1;
+        if (carry) carried += 1;
+      } else if (cur.carriedOver === 0 && !cur.note && carry > 0) {
+        await prisma.leaveBalance.update({ where: { id: cur.id }, data: { carriedOver: carry } });
+        carried += 1;
+      }
     }
   }
-  await audit(actor, { action: 'leave_balance.generate', entityType: 'LeaveBalance', meta: { year, created } });
-  return { created };
+  await audit(actor, { action: 'leave_balance.generate', entityType: 'LeaveBalance', meta: { year, created, carried } });
+  return { created, carried };
 }
 
 // Pengajuan

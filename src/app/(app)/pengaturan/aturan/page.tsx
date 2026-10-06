@@ -58,7 +58,7 @@ export default async function RulesPage() {
                 {types.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="stack-head pl-6"><b>{t.code}</b> {t.name}{t.eligibleEmploymentStatuses.length > 0 && <span className="block text-xs text-muted-foreground">Hanya {t.eligibleEmploymentStatuses.join(', ')}</span>}</TableCell>
-                    <TableCell data-label="Saldo">{t.usesBalance ? `${t.defaultAnnualQuota ?? '-'} hari/tahun` : 'Tanpa saldo'}</TableCell>
+                    <TableCell data-label="Saldo">{t.usesBalance ? `${t.defaultAnnualQuota ?? '-'} hari/tahun${t.maxCarryOver ? `, bawa sisa maks. ${t.maxCarryOver}` : ''}` : 'Tanpa saldo'}</TableCell>
                     <TableCell data-label="Hitungan" className="whitespace-normal">{t.countWorkdaysOnly ? 'Hari kerja' : 'Hari kalender'}{t.maxDaysPerRequest ? `, maks. ${t.maxDaysPerRequest}` : ''}</TableCell>
                     <TableCell data-label="Persetujuan">{t.approvalLevels === 2 ? '2 tahap' : 'Atasan'}</TableCell>
                     <TableCell data-label="Status"><StatusBadge status={t.isActive ? 'ACTIVE' : 'CANCELLED'} label={t.isActive ? 'Aktif' : 'Nonaktif'} /></TableCell>

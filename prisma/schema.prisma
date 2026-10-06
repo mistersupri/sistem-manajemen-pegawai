@@ -371,6 +371,8 @@ model DeviceUser {
   pin        String   @unique
   name       String?
   department String?
+  // Diisi saat admin memutuskan ID ini tidak perlu dihubungkan ke pegawai; scan-nya dilewati.
+  ignoredAt  DateTime? @map("ignored_at") @db.Timestamptz(3)
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   device AttendanceDevice? @relation(fields: [deviceId], references: [id])
@@ -614,6 +616,7 @@ model LeaveType {
   attendanceStatus          String   @map("attendance_status") // CUTI | IZIN | SAKIT | DINAS_LUAR
   usesBalance               Boolean  @default(false) @map("uses_balance")
   defaultAnnualQuota        Int?     @map("default_annual_quota")
+  maxCarryOver              Int      @default(0) @map("max_carry_over") // batas sisa tahun lalu yang dibawa; 0 = tidak dibawa
   eligibleEmploymentStatuses String[] @default([]) @map("eligible_employment_statuses") // kosong = semua
   maxDaysPerRequest         Int?     @map("max_days_per_request")
   minNoticeDays             Int      @default(0) @map("min_notice_days")

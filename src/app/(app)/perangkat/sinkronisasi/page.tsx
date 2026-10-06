@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,21 +8,27 @@ import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
 import { requirePage } from '@/lib/guard';
 import { can, employeeScopeWhere } from '@/lib/auth/actor';
-import { listDevices, syncRunsPage, unmatchedPins } from '@/lib/services/devices';
+import { ignoredPins, listDevices, syncRunsPage, unmatchedPins } from '@/lib/services/devices';
 import { Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
 import { Segmented } from '@/components/app/segmented';
 import { qs } from '@/lib/list';
 import { getSettings } from '@/lib/settings';
 import { prisma } from '@/lib/db';
 import { fmtWaktu } from '@/lib/time';
-import { ImportFile, MapPin } from './forms';
+import { IgnorePins, ImportFile, MapPin, RestorePin } from './forms';
+
+/** Ringkasan singkat dari rincian sinkronisasi: ID mesin yang belum terhubung. */
+function runNote(details: unknown) {
+  const pins = (details as { unmatchedPins?: unknown } | null)?.unmatchedPins;
+  return Array.isArray(pins) && pins.length ? `${pins.length} ID mesin belum terhubung` : '';
+}
 
 export const metadata = { title: 'Status Sinkronisasi' };
 
 export default async function SyncPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePage(['device.read']);
   const sp = await searchParams;
-  const [data, devices, pins, s] = await Promise.all([syncRunsPage(actor, { deviceId: sp.mesin, status: sp.status, page: sp.page, per: sp.per, sort: sp.sort, dir: sp.dir }), listDevices(actor), unmatchedPins(actor), getSettings()]);
+  const [data, devices, pins, skipped, s] = await Promise.all([syncRunsPage(actor, { deviceId: sp.mesin, status: sp.status, page: sp.page, per: sp.per, sort: sp.sort, dir: sp.dir }), listDevices(actor), unmatchedPins(actor), ignoredPins(actor), getSettings()]);
   const runs = data.rows;
   const params = { mesin: sp.mesin, status: sp.status, sort: sp.sort, dir: sp.dir, per: sp.per };
   const sortProps = { sort: data.sort, dir: data.dir, params };
@@ -35,17 +41,39 @@ export default async function SyncPage({ searchParams }: { searchParams: Promise
         <div className="grid items-start gap-6 lg:grid-cols-2">
           {can(actor, 'device.sync') && <ImportFile devices={devices.filter((d) => d.adapter === 'FILE_IMPORT').map((d) => ({ id: d.id, name: d.name }))} />}
           <Card className="gap-0 py-0">
-            <CardHeader className="border-b py-4"><CardTitle>ID mesin belum terhubung ({pins.length})</CardTitle><CardDescription>Scan dari ID ini disimpan tetapi belum masuk rekap sampai dipetakan ke pegawai.</CardDescription></CardHeader>
+            <CardHeader className="border-b py-4">
+              <CardTitle>ID mesin belum terhubung ({pins.length})</CardTitle>
+              <CardDescription>Scan dari ID ini disimpan tetapi belum masuk rekap sampai dipetakan ke pegawai. ID yang memang tidak perlu dihubungkan bisa dilewati.</CardDescription>
+              {canMap && pins.length > 1 && <CardAction><IgnorePins pins={pins.map((p) => p.pin)} label="Lewati semua" /></CardAction>}
+            </CardHeader>
             {pins.length ? (
               <ul className="max-h-[28rem] divide-y overflow-y-auto">
                 {pins.map((p) => (
                   <li key={p.pin} className="grid gap-2 px-6 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
                     <span><b className="tabular">ID {p.pin}</b> {p.name && `(${p.name})`}<span className="block text-xs text-muted-foreground">{[p.department, p.device, `${p.scans} scan`, p.lastScan && `terakhir ${fmtWaktu(p.lastScan, tz)}`].filter(Boolean).join(', ')}</span></span>
-                    {canMap && <MapPin pin={p.pin} name={p.name} />}
+                    {canMap && (
+                      <div className="grid gap-2 sm:min-w-72">
+                        <MapPin pin={p.pin} name={p.name} />
+                        <IgnorePins pins={[p.pin]} variant="ghost" label="Lewati ID ini" className="justify-self-end" />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
             ) : <EmptyState title="Semua ID mesin sudah terhubung" description="Setiap scan dari mesin sudah masuk ke rekap pegawai yang benar." />}
+            {skipped.length > 0 && (
+              <details className="group border-t">
+                <summary className="flex cursor-pointer items-center justify-between px-6 py-3 text-sm font-medium transition-colors hover:bg-secondary/60">ID mesin dilewati ({skipped.length})</summary>
+                <ul className="divide-y border-t">
+                  {skipped.map((p) => (
+                    <li key={p.pin} className="flex items-center justify-between gap-3 px-6 py-2.5 text-sm">
+                      <span><b className="tabular">ID {p.pin}</b> {p.name && `(${p.name})`}</span>
+                      {canMap && <RestorePin pin={p.pin} />}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </Card>
         </div>
         <Card className="gap-0 py-0">
@@ -77,7 +105,7 @@ export default async function SyncPage({ searchParams }: { searchParams: Promise
                   <TableCell data-label="Diterima" className="tabular md:text-right">{r.received}</TableCell>
                   <TableCell data-label="Baru" className="tabular md:text-right">{r.inserted}</TableCell>
                   <TableCell data-label="Duplikat" className="tabular md:text-right">{r.duplicates}</TableCell>
-                  <TableCell data-label="Pesan" className="pr-6 whitespace-normal text-sm text-muted-foreground">{r.errorMessage ?? ''}</TableCell>
+                  <TableCell data-label="Pesan" className="pr-6 whitespace-normal text-sm text-muted-foreground">{r.errorMessage ?? runNote(r.details)}</TableCell>
                 </TableRow>
               ))}</TableBody>
             </Table>

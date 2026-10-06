@@ -19,6 +19,7 @@ import { qs } from '@/lib/list';
 import { Search } from 'lucide-react';
 import { unitOptions } from '@/lib/services/units';
 import { fmtWaktu } from '@/lib/time';
+import { BulkBar, BulkHeadCell, BulkRowCell, BulkSelect } from '@/components/app/bulk-select';
 import { CreateUser, RoleChip, RolePermissions, UserActions } from './forms';
 
 export const metadata = { title: 'Pengguna & Peran' };
@@ -64,22 +65,25 @@ async function UsersTab({ sp, actorId, actor }: { sp: Record<string, string | un
         <div className="grid gap-2"><Label htmlFor="mfa">MFA</Label><NativeSelect id="mfa" name="mfa" defaultValue={sp.mfa ?? ''}><NativeSelectOption value="">Semua</NativeSelectOption><NativeSelectOption value="ya">Aktif</NativeSelectOption><NativeSelectOption value="tidak">Tidak aktif</NativeSelectOption></NativeSelect></div>
         <div className="flex gap-2"><Button type="submit">Terapkan</Button>{filtered && <Button asChild variant="outline"><Link href="?tab=pengguna">Reset</Link></Button>}</div>
       </form>
+      <BulkSelect pageIds={users.filter((u) => u.id !== actorId).map((u) => u.id)}>
       <div className="rounded-xl border bg-card">
         <TableToolbar {...sortProps} sorts={[{ value: 'username', label: 'Username' }, { value: 'nama', label: 'Nama pegawai' }, { value: 'login', label: 'Terakhir masuk' }]}>
           <span className="tabular-nums">{data.total.toLocaleString('id-ID')}</span> pengguna{filtered ? ' sesuai filter' : ''}
         </TableToolbar>
         <Table className="table-stack">
           <TableHeader><TableRow>
-            <SortableHead label="Pengguna" value="username" {...sortProps} className="pl-4 lg:pl-6" />
+            <BulkHeadCell />
+            <SortableHead label="Pengguna" value="username" {...sortProps} />
             <TableHead>Peran dan cakupan</TableHead><TableHead>MFA</TableHead>
             <SortableHead label="Terakhir masuk" value="login" {...sortProps} firstDir="desc" />
             <TableHead>Status</TableHead><TableHead className="pr-4 lg:pr-6"><span className="sr-only">Aksi</span></TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {users.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState title="Tidak ada pengguna yang cocok" description="Ubah kata kunci atau filter." actions={[{ href: qs({ tab: 'pengguna' }), label: 'Hapus filter' }]} /></TableCell></TableRow>}
+            {users.length === 0 && <TableRow><TableCell colSpan={7}><EmptyState title="Tidak ada pengguna yang cocok" description="Ubah kata kunci atau filter." actions={[{ href: qs({ tab: 'pengguna' }), label: 'Hapus filter' }]} /></TableCell></TableRow>}
             {users.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell className="stack-head pl-4 lg:pl-6"><span className="font-medium">{u.username}</span><span className="block text-xs text-muted-foreground">{u.employee ? `${u.employee.fullName}${u.employee.unit ? `, ${u.employee.unit.name}` : ''}` : 'Bukan akun pegawai'}</span></TableCell>
+              <TableRow key={u.id} className="relative">
+                {u.id === actorId ? <TableCell className="w-10 pl-4 max-md:hidden lg:pl-6" /> : <BulkRowCell id={u.id} name={u.username} />}
+                <TableCell className="stack-head max-md:pr-8"><span className="font-medium">{u.username}</span><span className="block text-xs text-muted-foreground">{u.employee ? `${u.employee.fullName}${u.employee.unit ? `, ${u.employee.unit.name}` : ''}` : 'Bukan akun pegawai'}</span></TableCell>
                 <TableCell data-label="Peran" className="whitespace-normal">
                   <div className="flex flex-wrap gap-1">
                     {u.roles.length === 0 && <span className="text-sm text-muted-foreground">Belum ada peran</span>}
@@ -99,7 +103,9 @@ async function UsersTab({ sp, actorId, actor }: { sp: Record<string, string | un
           </TableBody>
         </Table>
         <Pager total={data.total} page={data.page} pageSize={data.pageSize} params={params} />
+        <BulkBar mode="user" noun="pengguna" roles={roles.map((r) => ({ id: r.id, name: r.name }))} units={units} canAllUnits={canAll} canAccounts />
       </div>
+      </BulkSelect>
       <p className="text-sm text-muted-foreground">Tanda + setelah nama unit berarti cakupan termasuk sub-unit. Peran Pegawai hanya memberi akses ke data milik sendiri.</p>
     </>
   );

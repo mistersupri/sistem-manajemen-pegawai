@@ -9,6 +9,7 @@ export const PERMISSIONS = {
   'employee.read_sensitive': ['Pegawai', 'Lihat NIK dan data sensitif pegawai'],
   'employee.write': ['Pegawai', 'Tambah dan ubah data pegawai'],
   'employee.deactivate': ['Pegawai', 'Nonaktifkan pegawai'],
+  'employee.delete': ['Pegawai', 'Hapus data pegawai'],
   'employee.import': ['Pegawai', 'Impor data pegawai'],
   'employee.export': ['Pegawai', 'Ekspor data pegawai'],
   'biometric.enroll_self': ['Biometrik', 'Daftarkan wajah sendiri'],
@@ -51,7 +52,7 @@ export const ROLES: Record<string, { name: string; description: string; permissi
   ADMIN_KEPEGAWAIAN: {
     name: 'Admin Kepegawaian',
     description: 'Data pegawai, absensi, jadwal, dan cuti pada unit yang diberikan.',
-    permissions: ['dashboard.view', 'unit.read', 'employee.read', 'employee.read_sensitive', 'employee.write', 'employee.deactivate',
+    permissions: ['dashboard.view', 'unit.read', 'employee.read', 'employee.read_sensitive', 'employee.write', 'employee.deactivate', 'employee.delete',
       'employee.import', 'employee.export', 'biometric.manage', 'attendance.monitor', 'attendance.report', 'attendance.export',
       'attendance.manual_entry', 'attendance.recalculate', 'correction.review', 'schedule.read', 'schedule.manage',
       'leave.approve', 'leave.manage', 'kiosk.operate', 'device.read'],

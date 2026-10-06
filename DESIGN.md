@@ -172,4 +172,13 @@ Desain ini disusun dengan skill di `.claude/skills`: antislop, antislop-code, an
 
 ## Jam fleksibel
 
-Per jenis jadwal ada isian **Jam fleksibel (menit)**. Terlambat sampai batas ini tidak dihitung bila pegawai pulang selama itu lebih akhir: jadwal 07.00-16.00, masuk 07.30, pulang 16.30 berarti tidak terlambat. Pulang 16.10 berarti sisa 20 menit tetap terlambat. Terlambat melebihi batas fleksibel dihitung penuh. Toleransi terlambat tetap berlaku sesudahnya. Perubahan aturan jadwal berlaku untuk perhitungan berikutnya; pakai **Hitung ulang** di Rekapitulasi untuk tanggal yang sudah lewat.
+Per jenis jadwal ada isian **Jam fleksibel (menit)**. Keterlambatan diganti dengan pulang lebih akhir selama itu: jadwal 07.00-16.00, masuk 07.30, pulang 16.30 berarti tidak terlambat. Pulang 16.10 berarti sisa 20 menit tetap terlambat. Penggantian dihitung lebih dulu, lalu toleransi dipakai pada sisanya: jadwal 07.30-16.00, toleransi 60, masuk 08.32, pulang 17.40 tetap hadir. Isian bernilai 0 berarti tanpa batas; bila diisi, keterlambatan di atas batas itu dihitung penuh. Perubahan aturan jadwal berlaku untuk perhitungan berikutnya; pakai **Hitung ulang** di Rekapitulasi untuk tanggal yang sudah lewat.
+
+## Aksi massal, koreksi impor, rollover cuti, ID mesin dilewati
+
+- **Aksi massal**: daftar Data Pegawai dan Pengguna punya kotak centang per baris dan satu kotak di kepala tabel (halaman ini saja). Setelah ada yang dipilih, bilah aksi menempel di bawah tabel: Beri peran, Reset password, Nonaktifkan atau Aktifkan akun, dan Hapus data (hanya di Data Pegawai, izin `employee.delete`). Baris yang tidak bisa diproses dilewati dengan alasannya, sisanya tetap jalan. Password sementara hasil reset tampil sekali dan bisa diunduh CSV. Hapus data bersifat hapus lunak: NIP, username, dan ID mesin dibebaskan, riwayat absensi tetap ada.
+- **Impor koreksi absensi**: Koreksi Absensi > Impor dari Excel. Satu baris per pegawai dan tanggal (NIP, tanggal, jam masuk, jam pulang, status, dispensasi, alasan). Pratinjau memeriksa tiap baris sebelum diterapkan; yang valid menjadi koreksi petugas lengkap dengan nilai awal dan audit.
+- **Rollover cuti**: jenis cuti punya isian "Sisa tahun lalu yang dibawa (maks. hari)". Saat Buat saldo, hak tahun ini = kuota + min(sisa tahun lalu, batas). Contoh cuti tahunan 12 hari, batas 6: sisa 9 hari menjadi 12 + 6 = 18.
+- **ID mesin dilewati**: di Status Sinkronisasi, ID mesin yang tidak perlu dihubungkan ke pegawai bisa dilewati satu per satu, semuanya, atau langsung dari hasil impor USB. Scan-nya tidak menunggu pemetaan dan ID bisa dipulihkan dari bagian "ID mesin dilewati".
+- **Ikon tab** mengikuti logo instansi bila logo diunggah.
+- **Akun admin** tidak menampilkan menu Absen Sekarang dan Rekap Presensi Saya.

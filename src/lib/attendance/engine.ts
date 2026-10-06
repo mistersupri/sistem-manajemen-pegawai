@@ -43,9 +43,11 @@ export function shiftWindow(s: Pick<ScheduleRules, 'checkIn' | 'checkOut'>, date
 
 /**
  * Menit terlambat dan pulang awal. Toleransi: terlambat dihitung bila melebihi toleransi.
- * Jam fleksibel: terlambat sampai `flexMinutes` tidak dihitung bila pegawai pulang selama itu lebih akhir
- * (masuk 07.30 pada jadwal 07.00-16.00 harus pulang 16.30). Bila pulangnya kurang, yang dihitung terlambat
- * hanya sisa yang belum terganti.
+ * Jam fleksibel: keterlambatan diganti dengan pulang lebih akhir sama lamanya (masuk 07.30 pada jadwal
+ * 07.00-16.00 harus pulang 16.30). Penggantian dilakukan sebelum toleransi dihitung, jadi terlambat 62 menit
+ * dengan toleransi 60 menit tetap hadir bila pulang 62 menit atau lebih setelah jam pulang. Bila pulangnya
+ * kurang, yang dihitung terlambat hanya sisa yang belum terganti. `flexMinutes` > 0 membatasi keterlambatan
+ * yang boleh diganti; 0 berarti tanpa batas.
  */
 export function lateAndEarly(plan: DayPlan, checkInAt: Date | null, checkOutAt: Date | null, tz: string) {
   const out = { lateMinutes: 0, earlyLeaveMinutes: 0 };
@@ -54,7 +56,7 @@ export function lateAndEarly(plan: DayPlan, checkInAt: Date | null, checkOutAt: 
   if (checkInAt) {
     let late = Math.max(0, minutesBetween(win.start, checkInAt));
     const flex = plan.schedule.flexMinutes ?? 0;
-    if (flex > 0 && late > 0 && late <= flex && checkOutAt) {
+    if (late > 0 && (flex === 0 || late <= flex) && checkOutAt) {
       const stayedAfterEnd = Math.max(0, minutesBetween(win.end, checkOutAt));
       late = Math.max(0, late - stayedAfterEnd);
     }

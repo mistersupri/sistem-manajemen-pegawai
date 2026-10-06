@@ -26,8 +26,17 @@ describe('jam fleksibel', () => {
   it('belum absen pulang: keterlambatan tetap terhitung sampai pulang tercatat', () => {
     expect(lateAndEarly(plan(D), at(D, '07:30'), null, TZ).lateMinutes).toBe(30);
   });
-  it('tanpa jam fleksibel perilaku lama tidak berubah', () => {
-    expect(lateAndEarly(plan(D, { ...flex, flexMinutes: 0 }), at(D, '07:30'), at(D, '16:30'), TZ).lateMinutes).toBe(30);
+  it('batas fleksibel 0 berarti tanpa batas: terlambat diganti penuh', () => {
+    expect(lateAndEarly(plan(D, { ...flex, flexMinutes: 0 }), at(D, '07:30'), at(D, '16:30'), TZ).lateMinutes).toBe(0);
+  });
+  it('contoh: jadwal 07.30-16.00, toleransi 60, masuk 08.32 pulang 17.40 tidak terlambat', () => {
+    const s = { ...flex, checkIn: '07:30', checkOut: '16:00', lateToleranceMin: 60, flexMinutes: 0 };
+    expect(lateAndEarly(plan(D, s), at(D, '08:32'), at(D, '17:40'), TZ)).toEqual({ lateMinutes: 0, earlyLeaveMinutes: 0 });
+  });
+  it('contoh yang sama tapi pulang 16.30: sisa 32 menit masih di bawah toleransi', () => {
+    const s = { ...flex, checkIn: '07:30', checkOut: '16:00', lateToleranceMin: 60, flexMinutes: 0 };
+    expect(lateAndEarly(plan(D, s), at(D, '08:32'), at(D, '16:30'), TZ).lateMinutes).toBe(0);
+    expect(lateAndEarly(plan(D, s), at(D, '09:00'), at(D, '16:00'), TZ).lateMinutes).toBe(90);
   });
 });
 
