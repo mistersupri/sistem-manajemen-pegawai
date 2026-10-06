@@ -6,6 +6,8 @@ export interface NavItem {
   label: string;
   icon: string;
   perms: Permission[];
+  /** Disembunyikan untuk akun admin (akun pengelola tidak absen sendiri). */
+  hideForAdmin?: boolean;
   children?: NavItem[];
 }
 
@@ -15,8 +17,8 @@ export const NAV: NavItem[] = [
   {
     href: '/absensi', label: 'Absensi', icon: 'clock', perms: ['attendance.self', 'attendance.monitor', 'attendance.report', 'correction.request', 'correction.review'],
     children: [
-      { href: '/absensi/saya/absen', label: 'Absen Sekarang', icon: 'scan-face', perms: ['attendance.self'] },
-      { href: '/absensi/saya', label: 'Rekap Presensi Saya', icon: 'table', perms: ['attendance.self'] },
+      { href: '/absensi/saya/absen', label: 'Absen Sekarang', icon: 'scan-face', perms: ['attendance.self'], hideForAdmin: true },
+      { href: '/absensi/saya', label: 'Rekap Presensi Saya', icon: 'table', perms: ['attendance.self'], hideForAdmin: true },
       { href: '/absensi/monitoring', label: 'Monitoring Kehadiran', icon: 'activity', perms: ['attendance.monitor'] },
       { href: '/absensi/rekap', label: 'Rekapitulasi', icon: 'table', perms: ['attendance.report'] },
       { href: '/absensi/koreksi', label: 'Koreksi Absensi', icon: 'file-pen', perms: ['correction.request', 'correction.review'] },
@@ -46,3 +48,5 @@ export const NAV: NavItem[] = [
     ],
   },
 ];
+
+export const ADMIN_ROLE_CODES = ['SUPER_ADMIN', 'ADMIN_KEPEGAWAIAN', 'ADMIN_IT'];

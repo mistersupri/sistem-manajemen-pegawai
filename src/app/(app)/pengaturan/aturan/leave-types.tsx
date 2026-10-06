@@ -12,7 +12,7 @@ import { Field, fieldProps } from '@/components/app/field';
 import { api, useAction } from '@/components/app/api-client';
 
 export interface LeaveTypeValues {
-  id: string; code: string; name: string; attendanceStatus: string; usesBalance: boolean; defaultAnnualQuota: number | null; eligibleEmploymentStatuses: string[];
+  id: string; code: string; name: string; attendanceStatus: string; usesBalance: boolean; defaultAnnualQuota: number | null; maxCarryOver: number; eligibleEmploymentStatuses: string[];
   maxDaysPerRequest: number | null; minNoticeDays: number; approvalLevels: number; countWorkdaysOnly: boolean; allowAttachment: boolean; isActive: boolean;
 }
 
@@ -37,6 +37,7 @@ export function LeaveTypeForm({ initial, statuses }: { initial?: LeaveTypeValues
             ...d, ...flags, eligibleEmploymentStatuses: eligible,
             defaultAnnualQuota: flags.usesBalance && d.defaultAnnualQuota ? Number(d.defaultAnnualQuota) : null,
             maxDaysPerRequest: d.maxDaysPerRequest ? Number(d.maxDaysPerRequest) : null,
+            maxCarryOver: flags.usesBalance && d.maxCarryOver ? Number(d.maxCarryOver) : 0,
           };
           const r = await run(() => (initial ? api('PATCH', `/api/v1/leave/types/${initial.id}`, data) : api('POST', '/api/v1/leave/types', data)), { success: 'Jenis cuti/izin disimpan.' });
           if (r !== undefined) setOpen(false);
@@ -62,9 +63,14 @@ export function LeaveTypeForm({ initial, statuses }: { initial?: LeaveTypeValues
           <div className="grid gap-3">
             {flag('usesBalance', 'Memakai saldo tahunan')}
             {flags.usesBalance && (
-              <Field id="defaultAnnualQuota" label="Kuota bawaan per tahun" error={fields.defaultAnnualQuota} hint="Dipakai saat membuat saldo tahunan. Saldo tiap pegawai bisa disesuaikan." className="pl-7">
-                <Input {...fieldProps('defaultAnnualQuota', fields.defaultAnnualQuota, true)} type="number" min={0} max={366} defaultValue={initial?.defaultAnnualQuota ?? ''} className="w-32" />
-              </Field>
+              <div className="grid gap-3 pl-7 sm:grid-cols-2">
+                <Field id="defaultAnnualQuota" label="Kuota bawaan per tahun" error={fields.defaultAnnualQuota} hint="Dipakai saat membuat saldo tahunan. Saldo tiap pegawai bisa disesuaikan.">
+                  <Input {...fieldProps('defaultAnnualQuota', fields.defaultAnnualQuota, true)} type="number" min={0} max={366} defaultValue={initial?.defaultAnnualQuota ?? ''} className="w-32" />
+                </Field>
+                <Field id="maxCarryOver" label="Sisa tahun lalu yang dibawa (maks. hari)" error={fields.maxCarryOver} hint="Hak tahun ini = kuota + sisa tahun lalu, sampai batas ini. 0 = tidak dibawa.">
+                  <Input {...fieldProps('maxCarryOver', fields.maxCarryOver)} type="number" min={0} max={366} defaultValue={initial?.maxCarryOver ?? 0} className="w-32" />
+                </Field>
+              </div>
             )}
             {flag('countWorkdaysOnly', 'Hitung hari kerja terjadwal saja (bukan hari kalender)')}
             {flag('allowAttachment', 'Boleh melampirkan berkas (mis. surat dokter)')}

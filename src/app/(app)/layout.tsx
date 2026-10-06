@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Bell } from 'lucide-react';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar, type SidebarItem } from '@/components/app/app-sidebar';
-import { NAV, type NavItem } from '@/lib/nav';
+import { ADMIN_ROLE_CODES, NAV, type NavItem } from '@/lib/nav';
 import { canAny, type Actor } from '@/lib/auth/actor';
 import { pendingAccountStep, requirePage } from '@/lib/guard';
 import { getSettings } from '@/lib/settings';
@@ -16,7 +16,9 @@ import { HeaderAvatar } from '@/components/app/user-menu';
 import { fmtTanggal, todayIn } from '@/lib/time';
 
 function visible(items: NavItem[], actor: Actor, badges: Record<string, number>): SidebarItem[] {
+  const isAdmin = actor.roleCodes.some((c) => ADMIN_ROLE_CODES.includes(c));
   return items
+    .filter((i) => !(i.hideForAdmin && isAdmin))
     .filter((i) => i.perms.length === 0 || canAny(actor, i.perms))
     .map((i) => {
       const children = i.children ? visible(i.children, actor, badges) : undefined;

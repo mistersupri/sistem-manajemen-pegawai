@@ -12,7 +12,7 @@ import { api, useAction } from '@/components/app/api-client';
 export function GenerateBalances({ year }: { year: number }) {
   return (
     <ConfirmButton variant="highlight" destructive={false} label={`Buat saldo ${year}`} title={`Buat saldo tahun ${year}?`}
-      description="Saldo dibuat dari kuota bawaan tiap jenis cuti untuk pegawai aktif yang memenuhi syarat. Saldo yang sudah ada tidak diubah."
+      description="Saldo dibuat dari kuota bawaan tiap jenis cuti untuk pegawai aktif yang memenuhi syarat. Jenis cuti yang boleh dibawa ke tahun berikutnya menambahkan sisa tahun lalu, sampai batas yang diatur. Saldo yang sudah ada tidak diubah, kecuali sisa tahun lalunya masih kosong."
       confirmLabel="Buat saldo" url="/api/v1/leave/balances/generate" body={{ year }} success="Saldo dibuat." />
   );
 }

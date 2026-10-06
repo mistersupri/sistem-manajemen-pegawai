@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, Search } from 'lucide-react';
+import { FileUp, Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
@@ -40,7 +40,12 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
       <PageHeader
         title="Koreksi Absensi"
         description="Pengajuan perbaikan absensi dengan alasan dan persetujuan. Nilai awal tetap tersimpan."
-        actions={actor.employeeId && can(actor, 'correction.request') ? <Button asChild><Link href="/absensi/koreksi/baru"><Plus />Ajukan koreksi</Link></Button> : undefined}
+        actions={
+          <>
+            {canReview && <Button asChild variant="outline"><Link href="/absensi/koreksi/impor"><FileUp />Impor dari Excel</Link></Button>}
+            {actor.employeeId && can(actor, 'correction.request') && <Button asChild><Link href="/absensi/koreksi/baru"><Plus />Ajukan koreksi</Link></Button>}
+          </>
+        }
       />
       <PageBody className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

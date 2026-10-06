@@ -29,7 +29,8 @@ export const deviceInput = z.object({
   secret: z.string().max(100).optional().nullable(), // kosong = tidak diubah
   location: z.string().trim().max(150).optional().nullable(),
   unitId: z.string().uuid().optional().nullable().transform((v) => v || null),
-  syncIntervalMinutes: z.coerce.number().int().min(0).max(1440),
+  // Pilihan yang dinonaktifkan (adapter tanpa tarik) tidak ikut terkirim; dianggap manual.
+  syncIntervalMinutes: z.preprocess((v) => (v === undefined || v === null || v === '' ? 0 : v), z.coerce.number().int().min(0).max(1440)),
   timeoutMs: z.coerce.number().int().min(1000).max(120000),
   maxRetries: z.coerce.number().int().min(0).max(5),
 });
@@ -194,8 +195,13 @@ export async function processPendingRawEvents(filter: Prisma.DeviceRawEventWhere
   const touched = new Map<string, Set<string>>();
   const unmatched = new Set<string>();
   const now = new Date();
+  const ignoredPins = new Set((await prisma.deviceUser.findMany({ where: { pin: { in: pins }, ignoredAt: { not: null } }, select: { pin: true } })).map((u) => u.pin));
   for (const p of pending) {
     const employeeId = byPin.get(p.devicePin) ?? null;
+    if (!employeeId && ignoredPins.has(p.devicePin)) {
+      await prisma.deviceRawEvent.update({ where: { id: p.id }, data: { processedAt: now, processingNote: 'ID mesin dilewati admin' } });
+      continue;
+    }
     if (!employeeId) {
       unmatched.add(p.devicePin);
       continue; // tetap belum diproses sampai PIN dipetakan
@@ -368,12 +374,43 @@ export async function importDeviceFile(actor: Actor, deviceId: string | null, bu
 // Pemetaan PIN mesin ke pegawai
 export async function unmatchedPins(actor: Actor) {
   assertCan(actor, 'device.read');
-  const users = await prisma.deviceUser.findMany({ include: { device: { select: { name: true } } }, orderBy: [{ name: 'asc' }, { pin: 'asc' }] });
+  const users = await prisma.deviceUser.findMany({ where: { ignoredAt: null }, include: { device: { select: { name: true } } }, orderBy: [{ name: 'asc' }, { pin: 'asc' }] });
   const mapped = new Set((await prisma.employee.findMany({ where: { machinePin: { in: users.map((u) => u.pin) } }, select: { machinePin: true } })).map((e) => e.machinePin));
   const list = users.filter((u) => !mapped.has(u.pin));
   const counts = await prisma.deviceRawEvent.groupBy({ by: ['devicePin'], where: { devicePin: { in: list.map((u) => u.pin) } }, _count: { _all: true }, _max: { deviceTime: true } });
   const c = new Map(counts.map((x) => [x.devicePin, x]));
   return list.map((u) => ({ pin: u.pin, name: u.name, department: u.department, device: u.device?.name ?? null, scans: c.get(u.pin)?._count._all ?? 0, lastScan: c.get(u.pin)?._max.deviceTime ?? null }));
+}
+
+/** ID mesin yang dilewati admin, untuk ditampilkan dan bisa dipulihkan. */
+export async function ignoredPins(actor: Actor) {
+  assertCan(actor, 'device.read');
+  const users = await prisma.deviceUser.findMany({ where: { ignoredAt: { not: null } }, orderBy: [{ name: 'asc' }, { pin: 'asc' }] });
+  return users.map((u) => ({ pin: u.pin, name: u.name, department: u.department }));
+}
+
+/** Lewati ID mesin yang memang tidak perlu dihubungkan ke pegawai; scan-nya tidak lagi menunggu pemetaan. */
+export async function ignorePins(actor: Actor, pins: string[]) {
+  if (!can(actor, 'employee.write') && !can(actor, 'device.manage')) throw forbidden();
+  const list = [...new Set(pins.map((p) => p.trim()).filter(Boolean))];
+  if (!list.length) throw unprocessable('Pilih ID mesin yang dilewati.');
+  const mapped = await prisma.employee.findMany({ where: { machinePin: { in: list }, deletedAt: null }, select: { machinePin: true } });
+  const target = list.filter((p) => !mapped.some((e) => e.machinePin === p));
+  const now = new Date();
+  await prisma.deviceUser.createMany({ data: target.map((pin) => ({ pin })), skipDuplicates: true });
+  await prisma.deviceUser.updateMany({ where: { pin: { in: target } }, data: { ignoredAt: now } });
+  const r = await prisma.deviceRawEvent.updateMany({ where: { devicePin: { in: target }, processedAt: null }, data: { processedAt: now, processingNote: 'ID mesin dilewati admin' } });
+  await audit(actor, { action: 'device.ignore_pin', entityType: 'DeviceUser', meta: { pins: target, scans: r.count } });
+  return { ignored: target.length, scans: r.count };
+}
+
+/** Batalkan pelewatan: scan yang dulu dilewati diproses lagi, ID kembali menunggu pemetaan. */
+export async function restorePin(actor: Actor, pin: string) {
+  if (!can(actor, 'employee.write') && !can(actor, 'device.manage')) throw forbidden();
+  await prisma.deviceUser.updateMany({ where: { pin }, data: { ignoredAt: null } });
+  const r = await prisma.deviceRawEvent.updateMany({ where: { devicePin: pin, employeeId: null, processingNote: 'ID mesin dilewati admin' }, data: { processedAt: null, processingNote: null } });
+  await audit(actor, { action: 'device.restore_pin', entityType: 'DeviceUser', meta: { pin, scans: r.count } });
+  return { scans: r.count };
 }
 
 /** Hubungkan PIN mesin ke pegawai, lalu proses scan yang tertunda. */

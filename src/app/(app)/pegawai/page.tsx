@@ -12,8 +12,10 @@ import { EmptyState } from '@/components/app/empty-state';
 import { KeepParams, Pager, SortableHead, TableToolbar } from '@/components/app/pagination';
 import { StatusBadge } from '@/components/app/status-badge';
 import { requirePage } from '@/lib/guard';
-import { can } from '@/lib/auth/actor';
+import { can, scopeOf } from '@/lib/auth/actor';
 import { listEmployees } from '@/lib/services/employees';
+import { listRoles } from '@/lib/services/users';
+import { BulkBar, BulkHeadCell, BulkRowCell, BulkSelect } from '@/components/app/bulk-select';
 import { unitOptions } from '@/lib/services/units';
 import { pendingVerifications } from '@/lib/services/biometrics';
 import { VerifyButtons } from './verify-buttons';
@@ -24,9 +26,14 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const actor = await requirePage(['employee.read']);
   const sp = await searchParams;
   const filters = { q: sp.q, unitId: sp.unitId, status: sp.status, face: sp.face, employmentStatus: sp.employmentStatus };
-  const [data, units] = await Promise.all([
+  const canAccounts = can(actor, 'user.manage');
+  const canDelete = can(actor, 'employee.delete');
+  const bulk = canAccounts || canDelete;
+  const [data, units, roles, assignUnits] = await Promise.all([
     listEmployees(actor, { ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)), sort: sp.sort, dir: sp.dir, page: sp.page, per: sp.per }),
     unitOptions(actor, 'employee.read'),
+    canAccounts ? listRoles() : Promise.resolve([]),
+    canAccounts ? unitOptions(actor, 'user.manage') : Promise.resolve([]),
   ]);
   const params = { ...filters, sort: sp.sort, dir: sp.dir, per: sp.per };
   const sortProps = { sort: data.sort, dir: data.dir, params };
@@ -90,6 +97,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
           </div>
         )}
 
+        <BulkSelect pageIds={bulk ? data.rows.map((e) => e.id) : []}>
         <div className="rounded-xl border bg-card">
           <TableToolbar {...sortProps} sorts={[{ value: 'nama', label: 'Nama' }, { value: 'nip', label: 'NIP' }, { value: 'jabatan', label: 'Jabatan' }, { value: 'unit', label: 'Unit' }, { value: 'terbaru', label: 'Terbaru ditambahkan' }]}>
             <span className="tabular-nums">{data.total.toLocaleString('id-ID')}</span> pegawai{filtered ? ' sesuai filter' : ''}
@@ -97,7 +105,8 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
           <Table className="table-stack">
             <TableHeader>
               <TableRow>
-                <SortableHead label="Nama" value="nama" {...sortProps} className="pl-4 lg:pl-6" />
+                {bulk && <BulkHeadCell />}
+                <SortableHead label="Nama" value="nama" {...sortProps} className={bulk ? undefined : 'pl-4 lg:pl-6'} />
                 <SortableHead label="NIP" value="nip" {...sortProps} />
                 <SortableHead label="Jabatan" value="jabatan" {...sortProps} />
                 <SortableHead label="Unit" value="unit" {...sortProps} />
@@ -108,15 +117,16 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
             </TableHeader>
             <TableBody>
               {data.rows.length === 0 && (
-                <TableRow><TableCell colSpan={7}>
+                <TableRow><TableCell colSpan={bulk ? 8 : 7}>
                   {filtered
                     ? <EmptyState title="Tidak ada pegawai yang cocok" description="Coba kata kunci lain atau hapus filter." actions={[{ href: '/pegawai', label: 'Tampilkan semua pegawai' }]} />
                     : <EmptyState title="Belum ada data pegawai" description="Tambahkan satu per satu atau impor dari Excel." actions={can(actor, 'employee.write') ? [{ href: '/pegawai/baru', label: 'Tambah pegawai', primary: true }, { href: '/pegawai/impor', label: 'Impor dari Excel' }] : undefined} />}
                 </TableCell></TableRow>
               )}
               {data.rows.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell className="stack-head pl-4 lg:pl-6"><Link href={`/pegawai/${e.id}`} className="font-medium text-primary hover:underline">{[e.frontTitle, e.fullName].filter(Boolean).join(' ')}{e.backTitle ? `, ${e.backTitle}` : ''}</Link>{e.email && <span className="block text-xs text-muted-foreground max-md:hidden">{e.email}</span>}
+                <TableRow key={e.id} className="relative">
+                  {bulk && <BulkRowCell id={e.id} name={e.fullName} />}
+                  <TableCell className={bulk ? 'stack-head max-md:pr-8' : 'stack-head pl-4 lg:pl-6'}><Link href={`/pegawai/${e.id}`} className="font-medium text-primary hover:underline">{[e.frontTitle, e.fullName].filter(Boolean).join(' ')}{e.backTitle ? `, ${e.backTitle}` : ''}</Link>{e.email && <span className="block text-xs text-muted-foreground max-md:hidden">{e.email}</span>}
                     <span className="mt-1 block text-sm md:hidden">
                       {[e.position, e.unit?.name].filter(Boolean).join(', ') || 'Jabatan dan unit belum diisi'}
                       <span className="block text-xs text-muted-foreground tabular">{[e.employeeNumber ? `NIP ${e.employeeNumber}` : null, e.employmentStatus, e.faceStatus === 'ACTIVE' ? 'wajah terdaftar' : e.faceStatus === 'PENDING_VERIFICATION' ? 'wajah menunggu verifikasi' : 'wajah belum terdaftar'].filter(Boolean).join(', ')}</span>
@@ -134,7 +144,9 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
             </TableBody>
           </Table>
           <Pager total={data.total} page={data.page} pageSize={data.pageSize} params={params} />
+          {bulk && <BulkBar mode="employee" noun="pegawai" roles={roles.map((r) => ({ id: r.id, name: r.name }))} units={assignUnits} canAllUnits={!!scopeOf(actor, 'user.manage')?.all} canAccounts={canAccounts} canDelete={canDelete} />}
         </div>
+        </BulkSelect>
       </PageBody>
     </>
   );
