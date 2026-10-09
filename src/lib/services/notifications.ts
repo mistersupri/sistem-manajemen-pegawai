@@ -2,12 +2,15 @@ import { prisma, type Db } from '../db';
 import { log } from '../logger';
 import { unitDescendants } from '../auth/actor';
 import type { Permission } from '../auth/catalog';
+import { publish } from '../realtime';
 
 export interface NotificationInput {
   type: string;
   title: string;
   body?: string | null;
   link?: string | null;
+  /** Bila diisi, notifikasi dengan kunci yang sama tidak dibuat dua kali. */
+  dedupeKey?: string | null;
 }
 
 // Kanal tambahan (email/WhatsApp) bersifat opsional. Aplikasi berfungsi penuh hanya dengan
@@ -19,13 +22,23 @@ export interface ExternalChannel {
 const channels: ExternalChannel[] = [];
 export const registerChannel = (c: ExternalChannel) => channels.push(c);
 
+/** Mengembalikan jumlah notifikasi yang benar-benar dibuat (yang terkena kunci anti-ganda tidak dihitung). */
 export async function notifyUsers(userIds: string[], n: NotificationInput, db: Db = prisma) {
   const ids = [...new Set(userIds)];
-  if (!ids.length) return;
-  await db.notification.createMany({ data: ids.map((userId) => ({ userId, type: n.type, title: n.title, body: n.body ?? null, link: n.link ?? null })) });
-  for (const c of channels) {
-    for (const id of ids) c.send(id, n).catch((err) => log.warn('Kanal notifikasi gagal', { channel: c.name, err: String(err) }));
+  if (!ids.length) return 0;
+  // Kunci anti-ganda dibuat per penerima; yang sudah ada dilewati.
+  const rows = await db.notification.createManyAndReturn({
+    data: ids.map((userId) => ({ userId, type: n.type, title: n.title, body: n.body ?? null, link: n.link ?? null, dedupeKey: n.dedupeKey ? `${n.dedupeKey}:${userId}` : null })),
+    skipDuplicates: true,
+  });
+  for (const r of rows) {
+    publish(r.userId, { type: 'notification', data: { id: r.id, type: r.type, title: r.title, body: r.body, link: r.link, createdAt: r.createdAt.toISOString() } });
+    void unreadCount(r.userId).then((count) => publish(r.userId, { type: 'unread', data: { count } })).catch(() => undefined);
   }
+  for (const c of channels) {
+    for (const r of rows) c.send(r.userId, n).catch((err) => log.warn('Kanal notifikasi gagal', { channel: c.name, err: String(err) }));
+  }
+  return rows.length;
 }
 
 export async function notifyEmployee(employeeId: string, n: NotificationInput, db: Db = prisma) {
@@ -64,6 +77,10 @@ export async function listNotifications(userId: string, opts: { unreadOnly?: boo
   return { total, unread, page, pageSize: size, rows };
 }
 
+export const unreadCount = (userId: string) => prisma.notification.count({ where: { userId, readAt: null } });
+
 export async function markRead(userId: string, ids: string[] | 'all') {
   await prisma.notification.updateMany({ where: { userId, readAt: null, ...(ids === 'all' ? {} : { id: { in: ids } }) }, data: { readAt: new Date() } });
+  // Tab lain milik pengguna yang sama ikut memperbarui lencananya.
+  publish(userId, { type: 'unread', data: { count: await unreadCount(userId) } });
 }

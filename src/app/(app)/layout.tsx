@@ -13,6 +13,7 @@ import { TabBar } from '@/components/app/tab-bar';
 import { can } from '@/lib/auth/actor';
 import { HeaderCrumbs } from '@/components/app/header-crumbs';
 import { HeaderAvatar } from '@/components/app/user-menu';
+import { NotificationBell } from '@/components/app/notification-bell';
 import { fmtTanggal, todayIn } from '@/lib/time';
 
 function visible(items: NavItem[], actor: Actor, badges: Record<string, number>): SidebarItem[] {
@@ -60,10 +61,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <HeaderCrumbs items={items} />
           <div className="ml-auto flex items-center gap-2 md:gap-3">
             <span className="rounded-lg border px-3 py-1.5 text-sm text-muted-foreground max-md:hidden">{fmtTanggal(todayIn(settings['org.timezone']))}</span>
-            <Link href="/notifikasi" className="relative inline-flex size-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground md:size-9" aria-label={badges['/notifikasi'] ? `Notifikasi, ${badges['/notifikasi']} belum dibaca` : 'Notifikasi'}>
-              <Bell className="size-5" />
-              {badges['/notifikasi'] ? <span className="absolute top-1 right-1 min-w-4 rounded-full bg-count px-1 text-center text-[0.65rem] leading-4 font-semibold text-count-foreground">{badges['/notifikasi']}</span> : null}
-            </Link>
+            <NotificationBell initialUnread={badges['/notifikasi'] || 0} />
             <HeaderAvatar user={user} />
           </div>
         </header>

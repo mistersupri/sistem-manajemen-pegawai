@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getActor } from '@/lib/auth/session';
 import { getSettings } from '@/lib/settings';
 import { LoginForm } from './login-form';
+import { captchaEnabled, newCaptcha } from '@/lib/captcha';
 import { LiveClock } from '@/components/app/live-clock';
 
 export const metadata = { title: 'Masuk' };
@@ -12,6 +13,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const next = sp.next && /^\/(?![/\\])[\w\-/?=&.%]*$/.test(sp.next) ? sp.next : '/dashboard';
   if (await getActor()) redirect(next);
   const s = await getSettings();
+  const captcha = captchaEnabled() ? newCaptcha() : null;
   return (
     <div className="grid min-h-dvh lg:grid-cols-[6fr_5fr]">
       <aside className="hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex xl:p-14">
@@ -31,7 +33,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             {s['org.logo'] && <img className="max-h-12 max-w-28 object-contain" src={`/api/v1/logo?v=${encodeURIComponent(s['org.logo'])}`} alt={`Logo ${s['org.name']}`} />}
             <div><p className="font-bold">{s['org.name']}</p><p className="text-sm text-muted-foreground">Sistem informasi manajemen pegawai</p></div>
           </div>
-          <LoginForm initialError={sp.galat ? sp.galat.slice(0, 200) : null} initialStep={sp.mfa ? 'mfa' : 'password'} next={next} />
+          <LoginForm initialError={sp.galat ? sp.galat.slice(0, 200) : null} initialStep={sp.mfa ? 'mfa' : 'password'} next={next} initialCaptcha={captcha} />
         </div>
       </main>
     </div>

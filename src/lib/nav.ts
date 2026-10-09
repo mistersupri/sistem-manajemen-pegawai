@@ -33,6 +33,15 @@ export const NAV: NavItem[] = [
       { href: '/perangkat/titik-absen', label: 'Titik Absen Wajah', icon: 'scan-face', perms: ['device.read'] },
     ],
   },
+  {
+    href: '/kinerja', label: 'Kinerja', icon: 'clipboard-list', perms: ['report.self', 'report.review', 'report.manage', 'assess.self', 'assess.manage'],
+    children: [
+      { href: '/kinerja/laporan', label: 'Laporan Kinerja', icon: 'file-pen', perms: ['report.self'], hideForAdmin: true },
+      { href: '/kinerja/tinjau', label: 'Penilaian Laporan', icon: 'shield-check', perms: ['report.review', 'report.manage'] },
+      { href: '/kinerja/penilaian', label: 'Penilaian Kinerja', icon: 'clipboard-list', perms: ['assess.self'], hideForAdmin: true },
+      { href: '/kinerja/periode', label: 'Kelola Penilaian', icon: 'sliders-horizontal', perms: ['assess.manage'] },
+    ],
+  },
   { href: '/cuti', label: 'Cuti & Izin', icon: 'plane', perms: ['leave.request', 'leave.approve', 'leave.manage'] },
   {
     href: '/pengaturan', label: 'Pengaturan', icon: 'settings', perms: ['unit.manage', 'unit.read', 'user.manage', 'role.manage', 'settings.manage', 'audit.read', 'schedule.read', 'schedule.manage', 'leave.manage'],
@@ -49,4 +58,4 @@ export const NAV: NavItem[] = [
   },
 ];
 
-export const ADMIN_ROLE_CODES = ['SUPER_ADMIN', 'ADMIN_KEPEGAWAIAN', 'ADMIN_IT'];
+export { ADMIN_ROLE_CODES } from './auth/catalog';

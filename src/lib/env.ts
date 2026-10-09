@@ -11,6 +11,8 @@ const schema = z.object({
   COOKIE_SECURE: z.enum(['0', '1']).optional(),
   TRUST_PROXY: z.enum(['0', '1']).optional(),
   DISABLE_SCHEDULER: z.enum(['0', '1']).optional(),
+  // Captcha di halaman masuk aktif bawaan. Isi 0 hanya untuk pengujian otomatis.
+  LOGIN_CAPTCHA: z.enum(['0', '1']).optional(),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 

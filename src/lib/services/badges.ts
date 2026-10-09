@@ -1,6 +1,8 @@
 import { prisma } from '../db';
 import { can, employeeScopeWhere, type Actor } from '../auth/actor';
 import { pendingLeaveApprovalWhere } from './leave';
+import { pendingReviewCount } from './performance';
+import { pendingAssessmentCount } from './assessment';
 
 /** Jumlah hal yang menunggu tindakan, untuk lencana di sidebar. */
 export async function navBadges(actor: Actor): Promise<Record<string, number>> {
@@ -15,5 +17,9 @@ export async function navBadges(actor: Actor): Promise<Record<string, number>> {
   if (can(actor, 'leave.approve') || can(actor, 'leave.manage')) {
     out['/cuti'] = await prisma.leaveApproval.count({ where: await pendingLeaveApprovalWhere(actor) });
   }
+  const reports = await pendingReviewCount(actor);
+  if (reports) out['/kinerja/tinjau'] = reports;
+  const assess = await pendingAssessmentCount(actor);
+  if (assess) out['/kinerja/penilaian'] = assess;
   return out;
 }

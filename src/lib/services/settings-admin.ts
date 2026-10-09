@@ -40,6 +40,8 @@ const SCHEMAS: Partial<Record<SettingKey, z.ZodType>> = {
   'security.mfaRequiredForAdmins': z.boolean(),
   'security.sessionHours': num(1, 72),
   'modules.leave': z.boolean(),
+  'notify.reminders': z.boolean(),
+  'notify.reminderLeadMin': num(0, 120),
   'holidays.autoSync': z.boolean(),
   'holidays.includeCutiBersama': z.boolean(),
 };

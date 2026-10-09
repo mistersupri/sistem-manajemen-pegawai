@@ -48,6 +48,10 @@ export const SETTING_DEFAULTS = {
   // Status tarik terakhir (diisi sistem, tidak diubah dari form).
   'holidays.lastSync': null as null | { at: string; ok: boolean; source: string | null; message: string },
   'modules.leave': true,
+  // Pengingat absensi dan laporan lewat notifikasi.
+  'notify.reminders': true,
+  // Menit sebelum jam masuk pengingat masuk dikirim; pengingat pulang dikirim tepat jam pulang.
+  'notify.reminderLeadMin': 15,
 };
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

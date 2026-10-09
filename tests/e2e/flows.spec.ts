@@ -10,11 +10,22 @@ async function open(page: Page, url: string) {
   await page.waitForLoadState('networkidle');
 }
 
+/** Kode captcha dibaca dari huruf pada gambar SVG di halaman masuk, seperti yang dibaca pengguna. */
+async function solveCaptcha(page: Page) {
+  const img = page.locator('img[alt="Gambar kode keamanan"]');
+  if (!(await img.count())) return; // captcha dimatikan (LOGIN_CAPTCHA=0)
+  const src = (await img.first().getAttribute('src')) ?? '';
+  const svg = Buffer.from(src.split(',')[1] ?? '', 'base64').toString();
+  const code = [...svg.matchAll(/>([A-Z0-9])<\/text>/g)].map((m) => m[1]).join('');
+  await page.getByLabel('Kode keamanan').fill(code);
+}
+
 async function login(page: Page, username: string) {
   await page.context().clearCookies();
   await open(page, '/login');
   await page.getByLabel('Username').fill(username);
   await page.getByLabel('Password').fill(PASSWORD);
+  await solveCaptcha(page);
   await page.getByRole('button', { name: 'Masuk' }).click();
   await page.waitForURL((u) => !u.pathname.startsWith('/login'));
 }
@@ -38,6 +49,7 @@ test('login: password salah ditolak, password benar masuk ke dashboard', async (
   await open(page, '/login');
   await page.getByLabel('Username').fill('superadmin');
   await page.getByLabel('Password').fill('salah-sekali');
+  await solveCaptcha(page);
   await page.getByRole('button', { name: 'Masuk' }).click();
   await expect(page.getByText('Username atau password salah.')).toBeVisible();
   await login(page, 'superadmin');
