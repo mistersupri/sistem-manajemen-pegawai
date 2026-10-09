@@ -7,7 +7,9 @@ const stamp = Date.now().toString().slice(-7);
 /** Buka halaman dan tunggu hidrasi selesai agar isian form terkendali tidak tertimpa. */
 async function open(page: Page, url: string) {
   await page.goto(url);
-  await page.waitForLoadState('networkidle');
+  // Halaman masuk memakai networkidle; halaman aplikasi menjaga koneksi SSE terbuka sehingga jaringan tidak pernah diam.
+  await page.waitForLoadState('load');
+  await page.waitForTimeout(800);
 }
 
 /** Kode captcha dibaca dari huruf pada gambar SVG di halaman masuk, seperti yang dibaca pengguna. */
