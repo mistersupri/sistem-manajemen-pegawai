@@ -201,3 +201,21 @@ Pegawai mengisi uraian pekerjaan per hari (teks, hingga 5 lampiran PDF, gambar, 
 ## Penilaian kinerja pegawai
 
 Indikator mengikuti formulir "Rincian Penilaian Prestasi Kinerja" (PJLP diganti Pegawai): 3 indikator disiplin kehadiran, 14 tanggung jawab penyelesaian pekerjaan, 2 kepatuhan pada kewajiban dan larangan; nilai 1 sampai 100 tiap indikator, 75 ke atas Baik dan di bawah 75 Buruk (formulir asli menulis "<74" dan "75-100", celahnya ditutup di 75). Pengelola membuka periode bulanan; sistem membagi atasan langsung dan N rekan acak (bawaan 3), mendahulukan rekan satu unit lalu satu induk unit, dengan beban menilai dibuat merata. Identitas rekan penilai tidak ditampilkan kepada yang dinilai. Nilai akhir tiap indikator adalah rata-rata nilai atasan dan rata-rata rekan; kesimpulan kompetensi dan tindak lanjut hanya diisi atasan. Hasil terbuka bagi pegawai setelah periode ditutup dan bisa dicetak sebagai lembar bergaya formulir asli atau diunduh sebagai Excel.
+
+## Mapping penilai kinerja
+
+Di Kelola Penilaian > periode > Penilai, admin mengatur siapa menilai siapa:
+
+- **Acak penilai**: rekan dipilih acak (satu unit lebih dulu, lalu satu induk unit, lalu siapa pun) dengan beban merata. Bisa untuk semua pegawai atau satu unit. "Acak ulang dari awal" hanya menghapus rekan yang belum menilai; atasan dan penilaian yang sudah terkirim tetap.
+- **Pemetaan unit**: unit penilai menilai unit yang dinilai (opsional termasuk sub-unit). Cara membagi: semua menilai semua, atau acak per pegawai (tiap pegawai yang dinilai mendapat N penilai acak dari unit penilai, beban merata). Hasilnya langsung diurai menjadi penugasan per pegawai dan tercatat di Riwayat pemetaan unit.
+- **Manual per pegawai**: tambah penilai, ganti penilai, atau hapus penilai pada baris pegawai. Penugasan yang sudah menilai terkunci. Setiap penugasan membawa asal-usulnya (acak, unit, manual) dan penilai baru mendapat notifikasi.
+- **Keseimbangan**: bagian Beban tiap penilai menampilkan jumlah tugas dan yang selesai per penilai agar admin bisa memeratakan lewat ganti penilai.
+- **Pemantauan**: admin melihat nama penilai tiap pegawai beserta status selesai atau belum, bisa menyaring "ada yang belum menilai" atau "belum ada penilai", dan menekan Ingatkan untuk mengirim notifikasi ke semua penilai yang belum selesai. Pegawai yang dinilai tidak pernah melihat identitas penilai rekan.
+
+## Absensi wajah di Raspberry Pi
+
+Lihat `docs/RASPBERRY-PI.md`: kamera dibuka bersamaan dengan pemuatan model, model diunduh paralel dan di-cache, jaringan dipanaskan sekali, per bingkai hanya detektor ringan yang berjalan (descriptor dihitung sekali saat absen dikirim), ukuran masukan menyesuaikan kecepatan perangkat, dan jeda lebih lega saat tidak ada wajah.
+
+## Ganti password pertama
+
+Saat pengguna dipaksa mengganti password awal (atau mengaktifkan MFA), setelah berhasil halaman langsung membawa ke dashboard tanpa menunggu klik. Bila masih ada langkah wajib lain, layout aplikasi mengarahkan kembali ke langkah itu.

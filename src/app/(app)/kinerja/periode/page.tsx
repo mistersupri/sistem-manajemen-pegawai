@@ -26,7 +26,7 @@ export default async function PeriodsPage() {
               <TableBody>
                 {periods.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="stack-head pl-4 lg:pl-6"><Link href={`/kinerja/periode/${p.id}`} className="font-medium text-primary hover:underline">{monthText(p.month)}</Link></TableCell>
+                    <TableCell className="stack-head pl-4 lg:pl-6"><Link href={`/kinerja/periode/${p.id}`} className="font-medium text-primary hover:underline">{monthText(p.month)}</Link><Link href={`/kinerja/periode/${p.id}/penilai`} className="ml-3 text-sm text-primary hover:underline">Atur penilai</Link></TableCell>
                     <TableCell data-label="Rekan per pegawai" className="tabular">{p.peerCount}</TableCell>
                     <TableCell data-label="Selesai" className="tabular">{p.done} dari {p.total}{p.total ? ` (${Math.round((p.done / p.total) * 100)}%)` : ''}</TableCell>
                     <TableCell data-label="Status" className="pr-4 lg:pr-6"><StatusBadge status={p.isClosed ? 'CANCELLED' : 'APPROVED'} label={p.isClosed ? 'Ditutup' : 'Dibuka'} /></TableCell>

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageBody, PageHeader } from '@/components/app/page-header';
@@ -23,7 +23,7 @@ export default async function PeriodResultsPage({ params }: { params: Promise<{ 
         title={`Hasil penilaian ${monthText(period.month)}`}
         description={`${results.length} pegawai. Nilai akhir adalah rata-rata nilai atasan dan rata-rata rekan; kesimpulan diambil dari atasan langsung.`}
         crumbs={[{ href: '/kinerja/periode', label: 'Kelola Penilaian' }, { label: monthText(period.month) }]}
-        actions={<><Button asChild variant="outline"><a href={`/api/v1/assessments/periods/${id}/export`}><Download />Unduh Excel</a></Button><PeriodActions id={id} closed={period.isClosed} /></>}
+        actions={<><Button asChild variant="outline"><Link href={`/kinerja/periode/${id}/penilai`}><Users />Penilai</Link></Button><Button asChild variant="outline"><a href={`/api/v1/assessments/periods/${id}/export`}><Download />Unduh Excel</a></Button><PeriodActions id={id} closed={period.isClosed} /></>}
       />
       <PageBody>
         <div className="rounded-xl border bg-card">

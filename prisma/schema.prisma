@@ -854,6 +854,7 @@ model AssessmentPeriod {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   assignments AssessmentAssignment[]
+  unitMaps    AssessmentUnitMap[]
 
   @@map("assessment_periods")
 }
@@ -865,6 +866,7 @@ model AssessmentAssignment {
   targetEmployeeId   String           @map("target_employee_id") @db.Uuid
   assessorEmployeeId String           @map("assessor_employee_id") @db.Uuid
   role               String // ATASAN | REKAN
+  source             String           @default("AUTO") // AUTO (diacak sistem) | MANUAL (diatur admin) | UNIT (dari pemetaan unit)
   status             AssessmentStatus @default(PENDING)
   scores             Json? // { kode_indikator: nilai 1-100 }
   average            Float?
@@ -883,4 +885,24 @@ model AssessmentAssignment {
   @@index([assessorEmployeeId, status])
   @@index([periodId, targetEmployeeId])
   @@map("assessment_assignments")
+}
+
+// Catatan pemetaan unit: pegawai di unit penilai menilai pegawai di unit yang dinilai. Hasilnya diurai
+// menjadi AssessmentAssignment (semua menilai semua, atau acak per pegawai); tabel ini hanya riwayatnya.
+model AssessmentUnitMap {
+  id              String   @id @default(uuid()) @db.Uuid
+  periodId        String   @map("period_id") @db.Uuid
+  assessorUnitId  String   @map("assessor_unit_id") @db.Uuid
+  targetUnitId    String   @map("target_unit_id") @db.Uuid
+  mode            String // SEMUA | ACAK
+  perTarget       Int?     @map("per_target") // jumlah penilai per pegawai bila ACAK
+  includeSubunits Boolean  @default(false) @map("include_subunits")
+  created         Int      @default(0) // penugasan baru yang dibuat
+  createdById     String?  @map("created_by_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  period AssessmentPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@index([periodId])
+  @@map("assessment_unit_maps")
 }

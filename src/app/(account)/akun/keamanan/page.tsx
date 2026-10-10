@@ -20,8 +20,8 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
           <Alert variant="warning"><AlertTitle>Aktifkan verifikasi dua langkah</AlertTitle><AlertDescription>Kebijakan instansi mewajibkan MFA untuk akun administrator.</AlertDescription></Alert>
         )}
         {!step && wajib && <Alert variant="success"><AlertDescription>Akun sudah memenuhi syarat. Anda bisa kembali ke dashboard.</AlertDescription></Alert>}
-        <PasswordForm />
-        <MfaPanel enabled={actor.mfaEnabled} />
+        <PasswordForm forced={!!step} />
+        <MfaPanel enabled={actor.mfaEnabled} forced={!!step} />
       </PageBody>
     </>
   );

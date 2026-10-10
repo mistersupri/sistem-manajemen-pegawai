@@ -6,7 +6,7 @@ import { Briefcase, CircleCheck, CircleX, MapPin, Maximize } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { api, newKey } from './api-client';
-import { blinkDetector, detect, draw, fmtClock, fmtDateLong, loadFaceApi, qualityOf, serverClock, startCamera, stopCamera, toArray, type Detection } from '@/lib/face-client';
+import { adaptiveSize, blinkDetector, detect, draw, fmtClock, fmtDateLong, frameDelay, loadFaceApi, qualityOf, serverClock, startCamera, stopCamera, toArray, track } from '@/lib/face-client';
 import { cn } from '@/lib/utils';
 
 interface Res { at?: number; outcome: string; message: string; time?: string; status?: string; lateMinutes?: number; similarity?: number | null; schedule?: string | null; employee?: { name: string; employeeNumber: string | null; position: string | null } }
@@ -58,13 +58,20 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled, endpoint 
       if (hour >= 12) pick('OUT');
       timer = setInterval(() => { const n = c.now(); setClock(`${fmtClock(n, c.tz)} ${c.label}`); setDate(fmtDateLong(n, c.tz)); }, 500);
       try {
-        const f = await loadFaceApi();
-        await startCamera(video.current!);
+        // Kamera dibuka bersamaan dengan pemuatan model: pratinjau langsung tampil, model menyusul di latar belakang.
+        const cam = startCamera(video.current!).then(() => setStatus('Kamera aktif. Menyiapkan pengenalan wajah...'));
+        const [f] = await Promise.all([loadFaceApi(), cam]);
+        if (stop) { stopCamera(video.current); return; }
         setStatus('Siap. Silakan hadapkan wajah ke kamera.');
+        const sizer = adaptiveSize(224, 320);
         const loop = async () => {
           if (stop || !video.current) return;
+          let hasFace = false;
           if (!busy && video.current.readyState >= 2 && Date.now() > pauseUntil) {
-            const { detection, count } = await detect(f, video.current, 320);
+            const t0 = performance.now();
+            const { detection, count } = await track(f, video.current, sizer.size, requireLiveness);
+            sizer.record(performance.now() - t0);
+            hasFace = !!detection;
             draw(overlay.current!, video.current, detection, detection && count === 1 ? '#00e676' : '#ffc107');
             if (!detection) { stable = 0; blink.reset(); setStatus('Silakan hadapkan wajah ke kamera.'); }
             else if (count > 1) { stable = 0; setStatus('Terdeteksi lebih dari satu wajah. Satu per satu.'); }
@@ -75,19 +82,24 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled, endpoint 
               else if (stable >= 3) {
                 busy = true;
                 setStatus('Mencocokkan wajah...');
-                const d = detection as Detection;
                 try {
-                  const g = gps.current;
-                  const r = await api<Res>('POST', endpoint, {
-                    ...(g ? { latitude: g.lat, longitude: g.lng, accuracyM: g.accuracy } : {}),
-                    direction: modeRef.current, descriptor: toArray(d.descriptor), quality: qualityOf(video.current, d),
-                    liveness: requireLiveness ? { method: 'kedip', passed: true } : undefined, idempotencyKey: newKey(), clientTime: new Date().toISOString(),
-                  });
-                  setResult({ ...r, at: Date.now() });
-                  const ok = r.outcome === 'SUCCESS';
-                  setLog((l) => [{ t: fmtClock(c.now(), c.tz).slice(0, 5), text: ok ? `${r.employee?.name}, ${modeRef.current === 'IN' ? 'masuk' : 'pulang'} ${r.time}` : r.message.split('.')[0], ok }, ...l].slice(0, 30));
-                  setStatus(ok ? `Terima kasih, ${r.employee?.name}.` : r.message);
-                  pauseUntil = Date.now() + (ok ? 4000 : 3500);
+                  // Descriptor baru dihitung sekarang, sekali per percobaan absen, bukan di setiap bingkai.
+                  const full = await detect(f, video.current, sizer.size);
+                  const d = full.detection;
+                  if (!d || full.count !== 1) { stable = 0; setStatus('Wajah belum terbaca jelas. Coba lagi.'); }
+                  else {
+                    const g = gps.current;
+                    const r = await api<Res>('POST', endpoint, {
+                      ...(g ? { latitude: g.lat, longitude: g.lng, accuracyM: g.accuracy } : {}),
+                      direction: modeRef.current, descriptor: toArray(d.descriptor), quality: qualityOf(video.current, d),
+                      liveness: requireLiveness ? { method: 'kedip', passed: true } : undefined, idempotencyKey: newKey(), clientTime: new Date().toISOString(),
+                    });
+                    setResult({ ...r, at: Date.now() });
+                    const ok = r.outcome === 'SUCCESS';
+                    setLog((l) => [{ t: fmtClock(c.now(), c.tz).slice(0, 5), text: ok ? `${r.employee?.name}, ${modeRef.current === 'IN' ? 'masuk' : 'pulang'} ${r.time}` : r.message.split('.')[0], ok }, ...l].slice(0, 30));
+                    setStatus(ok ? `Terima kasih, ${r.employee?.name}.` : r.message);
+                    pauseUntil = Date.now() + (ok ? 4000 : 3500);
+                  }
                 } catch (e) {
                   setResult({ at: Date.now(), outcome: 'ERROR', message: (e as Error).message });
                   pauseUntil = Date.now() + 3500;
@@ -100,7 +112,7 @@ export function Kiosk({ org, logo, enabled, requireLiveness, enrolled, endpoint 
           } else if (Date.now() <= pauseUntil) {
             overlay.current?.getContext('2d')?.clearRect(0, 0, overlay.current.width, overlay.current.height);
           }
-          requestAnimationFrame(loop);
+          setTimeout(loop, frameDelay(hasFace));
         };
         loop();
       } catch (e) {

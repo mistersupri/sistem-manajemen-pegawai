@@ -26,7 +26,7 @@ export const periodInput = z.object({
  * Bagi penilai untuk semua pegawai aktif yang berakun dalam cakupan: atasan langsung (bila ada) dan N rekan acak.
  * Aman dijalankan ulang: penugasan yang sudah ada dipertahankan, hanya kekurangannya yang dilengkapi.
  */
-async function generateAssignments(actor: Actor, periodId: string, peerCount: number) {
+export async function generateAssignments(actor: Actor, periodId: string, peerCount: number, opts: { targetUnitIds?: string[] } = {}) {
   const emps = await prisma.employee.findMany({
     where: { AND: [{ deletedAt: null, isActive: true, user: { isActive: true, deletedAt: null } }, employeeScopeWhere(actor, 'assess.manage')] },
     select: { id: true, unitId: true, supervisorId: true, unit: { select: { parentId: true } } },
@@ -37,25 +37,26 @@ async function generateAssignments(actor: Actor, periodId: string, peerCount: nu
   for (const a of have) load.set(a.assessorEmployeeId, (load.get(a.assessorEmployeeId) ?? 0) + 1);
   const active = new Set(emps.map((e) => e.id));
 
-  const rows: { periodId: string; targetEmployeeId: string; assessorEmployeeId: string; role: string }[] = [];
+  const rows: { periodId: string; targetEmployeeId: string; assessorEmployeeId: string; role: string; source: string }[] = [];
   for (const t of emps) {
+    if (opts.targetUnitIds && !(t.unitId && opts.targetUnitIds.includes(t.unitId))) continue;
     const mine = have.filter((a) => a.targetEmployeeId === t.id);
     if (t.supervisorId && active.has(t.supervisorId) && !mine.some((a) => a.role === 'ATASAN')) {
-      rows.push({ periodId, targetEmployeeId: t.id, assessorEmployeeId: t.supervisorId, role: 'ATASAN' });
+      rows.push({ periodId, targetEmployeeId: t.id, assessorEmployeeId: t.supervisorId, role: 'ATASAN', source: 'AUTO' });
       load.set(t.supervisorId, (load.get(t.supervisorId) ?? 0) + 1);
     }
     const peers = mine.filter((a) => a.role === 'REKAN').length;
     if (peers < peerCount) {
       const exclude = new Set([...mine.map((a) => a.assessorEmployeeId), ...(t.supervisorId ? [t.supervisorId] : [])]);
       const target = pool.find((c) => c.id === t.id)!;
-      for (const id of pickPeers(target, pool, peerCount - peers, load, exclude)) rows.push({ periodId, targetEmployeeId: t.id, assessorEmployeeId: id, role: 'REKAN' });
+      for (const id of pickPeers(target, pool, peerCount - peers, load, exclude)) rows.push({ periodId, targetEmployeeId: t.id, assessorEmployeeId: id, role: 'REKAN', source: 'AUTO' });
     }
   }
   if (rows.length) await prisma.assessmentAssignment.createMany({ data: rows, skipDuplicates: true });
   return rows;
 }
 
-async function notifyAssessors(rows: { assessorEmployeeId: string }[], month: string) {
+export async function notifyAssessors(rows: { assessorEmployeeId: string }[], month: string) {
   const counts = new Map<string, number>();
   for (const r of rows) counts.set(r.assessorEmployeeId, (counts.get(r.assessorEmployeeId) ?? 0) + 1);
   const users = await prisma.user.findMany({ where: { employeeId: { in: [...counts.keys()] }, isActive: true, deletedAt: null }, select: { id: true, employeeId: true } });
