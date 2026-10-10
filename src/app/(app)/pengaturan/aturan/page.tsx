@@ -27,6 +27,11 @@ const RULES: SettingField[] = [
   { key: 'holidays.includeCutiBersama', label: 'Cuti bersama dihitung hari libur', type: 'bool', hint: 'Matikan bila instansi tetap masuk pada cuti bersama. Berlaku pada pembaruan libur berikutnya.' },
 ];
 
+const REMINDERS: SettingField[] = [
+  { key: 'notify.reminders', label: 'Kirim pengingat absen masuk dan pulang', type: 'bool', hint: 'Pegawai yang berakun, dijadwalkan bekerja, dan belum absen mendapat notifikasi realtime. Pengingat pulang dikirim bila sudah absen masuk tetapi belum absen pulang.' },
+  { key: 'notify.reminderLeadMin', label: 'Pengingat masuk dikirim', type: 'number', min: 0, max: 120, suffix: 'menit sebelum jam masuk' },
+];
+
 export default async function RulesPage() {
   const actor = await requirePage(['settings.manage', 'schedule.manage', 'leave.manage']);
   const settingsOk = can(actor, 'settings.manage') && !!scopeOf(actor, 'settings.manage')?.all;
@@ -36,6 +41,7 @@ export default async function RulesPage() {
       <PageHeader title="Aturan Absensi" description="Aturan umum, jenis cuti/izin, dan tautan ke jadwal kerja. Semua perubahan tercatat di audit log." crumbs={[{ label: 'Pengaturan' }, { label: 'Aturan Absensi' }]} />
       <PageBody className="grid max-w-5xl gap-6">
         {settingsOk && <SettingsCard title="Aturan perhitungan" description="Perubahan berlaku untuk perhitungan berikutnya. Rekap lama tidak berubah sampai dihitung ulang." fields={RULES} values={s} />}
+        {settingsOk && <SettingsCard title="Pengingat" description="Notifikasi tampil langsung di aplikasi tanpa memuat ulang halaman." fields={REMINDERS} values={s} />}
         {can(actor, 'schedule.manage') && (
           <Card>
             <CardHeader><CardTitle>Jam kerja, toleransi, dan hari libur</CardTitle><CardDescription>Diatur per jenis jadwal dengan riwayat versi.</CardDescription></CardHeader>

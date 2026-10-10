@@ -14,10 +14,37 @@ export interface Detection {
   descriptor: Float32Array;
 }
 
+/** Hasil deteksi ringan: kotak wajah dan skor; landmark hanya bila diminta; descriptor tidak dihitung. */
+export interface Tracked {
+  detection: Detection['detection'];
+  landmarks?: Detection['landmarks'];
+}
+
 let loading: Promise<FaceApi> | null = null;
+
+const MODEL_FILES = ['tiny_face_detector_model', 'face_landmark_68_model', 'face_recognition_model'].flatMap((m) => [`${m}-weights_manifest.json`, `${m}.bin`]);
+
+/** Unduh skrip dan semua berkas model sekaligus; yang masuk cache peramban dipakai saat model dimuat. */
+function prefetchModels() {
+  for (const f of MODEL_FILES) void fetch(`/face-assets/${f}`).catch(() => undefined);
+}
+
+/**
+ * Inferensi pertama jaringan saraf lambat (kompilasi shader/kernel), terutama di Raspberry Pi. Jalankan sekali
+ * dengan gambar kosong saat model selesai dimuat, agar bingkai pertama pengguna sudah cepat.
+ */
+async function warmUp(f: FaceApi) {
+  try {
+    const mk = (n: number) => { const c = document.createElement('canvas'); c.width = n; c.height = n; c.getContext('2d')!.fillStyle = '#808080'; c.getContext('2d')!.fillRect(0, 0, n, n); return c; };
+    await f.nets.tinyFaceDetector.locateFaces(mk(160), new f.TinyFaceDetectorOptions({ inputSize: 160 }));
+    await f.nets.faceLandmark68Net.detectLandmarks(mk(112));
+    await f.nets.faceRecognitionNet.computeFaceDescriptor(mk(150));
+  } catch { /* pemanasan hanya optimasi */ }
+}
 
 export function loadFaceApi(): Promise<FaceApi> {
   if (loading) return loading;
+  prefetchModels();
   loading = new Promise((resolve, reject) => {
     const done = async () => {
       try {
@@ -27,6 +54,7 @@ export function loadFaceApi(): Promise<FaceApi> {
           f.nets.faceLandmark68Net.loadFromUri('/face-assets'),
           f.nets.faceRecognitionNet.loadFromUri('/face-assets'),
         ]);
+        await warmUp(f);
         resolve(f);
       } catch (e) {
         loading = null;
@@ -49,7 +77,7 @@ export async function startCamera(video: HTMLVideoElement, facingMode: 'user' | 
   stopCamera(video);
   let stream: MediaStream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15, max: 30 } }, audio: false });
   } catch (e) {
     const name = (e as DOMException).name;
     throw new Error(name === 'NotAllowedError' ? 'Izin kamera ditolak. Izinkan akses kamera pada browser.' : name === 'NotFoundError' ? 'Kamera tidak ditemukan.' : 'Kamera tidak dapat dibuka.');
@@ -68,6 +96,44 @@ export function stopCamera(video: HTMLVideoElement | null) {
   if (video) video.srcObject = null;
 }
 
+/**
+ * Deteksi ringan untuk setiap bingkai: hanya detektor wajah kecil (landmark bila `landmarks`, mis. untuk kedip).
+ * Descriptor 128 angka ditunda sampai benar-benar dibutuhkan lewat `detect`, karena jaringan pengenalnya jauh
+ * lebih berat daripada detektor dan tidak perlu dijalankan di setiap bingkai.
+ */
+export async function track(f: FaceApi, input: HTMLVideoElement | HTMLCanvasElement, size: number, landmarks = false): Promise<{ detection: Tracked | null; count: number }> {
+  const opts = new f.TinyFaceDetectorOptions({ inputSize: size, scoreThreshold: 0.45 });
+  const found: Tracked[] = landmarks
+    ? (await f.detectAllFaces(input, opts).withFaceLandmarks()).map((r: Detection) => ({ detection: r.detection, landmarks: r.landmarks }))
+    : (await f.detectAllFaces(input, opts)).map((d: Detection['detection']) => ({ detection: d }));
+  if (!found.length) return { detection: null, count: 0 };
+  found.sort((a, b) => b.detection.box.area - a.detection.box.area);
+  return { detection: found[0], count: found.length };
+}
+
+/**
+ * Ukuran masukan detektor yang menyesuaikan kecepatan perangkat: turun bila bingkai lambat (Raspberry Pi),
+ * naik pelan bila perangkat lega, dalam rentang 160 sampai `max`.
+ */
+export function adaptiveSize(start = 224, max = 320) {
+  let size = Math.min(start, max);
+  const recent: number[] = [];
+  return {
+    get size() { return size; },
+    record(ms: number) {
+      recent.push(ms);
+      if (recent.length < 5) return;
+      const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+      recent.length = 0;
+      if (avg > 450 && size > 160) size -= 32;
+      else if (avg < 110 && size < max) size += 32;
+    },
+  };
+}
+
+/** Jeda antar bingkai: lebih lega saat tidak ada wajah agar CPU kecil tidak terus penuh; berhenti saat tab tersembunyi. */
+export const frameDelay = (hasFace: boolean) => (typeof document !== 'undefined' && document.hidden ? 1000 : hasFace ? 40 : 250);
+
 /** Deteksi wajah terbesar beserta descriptor. */
 export async function detect(f: FaceApi, input: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement, inputSize = 320): Promise<{ detection: Detection | null; count: number }> {
   const sizes = [inputSize, ...[224, 416].filter((s) => s !== inputSize)];
@@ -82,7 +148,7 @@ export async function detect(f: FaceApi, input: HTMLVideoElement | HTMLImageElem
 }
 
 /** Rata-rata kecerahan area wajah (0-255) untuk pemeriksaan pencahayaan. */
-export function brightness(video: HTMLVideoElement, d: Detection) {
+export function brightness(video: HTMLVideoElement, d: Tracked) {
   const c = document.createElement('canvas');
   const { x, y, width, height } = d.detection.box;
   c.width = 32; c.height = 32;
@@ -94,11 +160,11 @@ export function brightness(video: HTMLVideoElement, d: Detection) {
   return Math.round(sum / (px.length / 4));
 }
 
-export function qualityOf(video: HTMLVideoElement, d: Detection) {
+export function qualityOf(video: HTMLVideoElement, d: Tracked) {
   return { score: Math.round(d.detection.score * 1000) / 1000, faceWidthPx: Math.round(d.detection.box.width), brightness: brightness(video, d) };
 }
 
-export function draw(canvas: HTMLCanvasElement, video: HTMLVideoElement, d: Detection | null, color = '#00e676') {
+export function draw(canvas: HTMLCanvasElement, video: HTMLVideoElement, d: Tracked | null, color = '#00e676') {
   const w = video.videoWidth;
   const h = video.videoHeight;
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
@@ -136,8 +202,8 @@ export function blinkDetector() {
   let closed = false;
   let blinked = false;
   return {
-    update(d: Detection | null) {
-      if (!d) return blinked;
+    update(d: Tracked | null) {
+      if (!d?.landmarks) return blinked;
       const v = (ear(d.landmarks.getLeftEye()) + ear(d.landmarks.getRightEye())) / 2;
       open = Math.max(open * 0.98, v);
       if (open > 0 && v < open * 0.72) closed = true;

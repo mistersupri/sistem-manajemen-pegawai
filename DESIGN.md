@@ -182,3 +182,40 @@ Per jenis jadwal ada isian **Jam fleksibel (menit)**. Keterlambatan diganti deng
 - **ID mesin dilewati**: di Status Sinkronisasi, ID mesin yang tidak perlu dihubungkan ke pegawai bisa dilewati satu per satu, semuanya, atau langsung dari hasil impor USB. Scan-nya tidak menunggu pemetaan dan ID bisa dipulihkan dari bagian "ID mesin dilewati".
 - **Ikon tab** mengikuti logo instansi bila logo diunggah.
 - **Akun admin** tidak menampilkan menu Absen Sekarang dan Rekap Presensi Saya.
+
+## Captcha masuk
+
+Form masuk meminta kode keamanan 5 karakter dari gambar SVG buatan sendiri (tanpa layanan luar, tanpa I, O, 0, 1 agar tidak tertukar). Tantangan dipegang klien sebagai token bertanda tangan HMAC berisi hash jawaban dan masa berlaku 3 menit; server tidak menyimpan apa pun selain daftar token yang sudah dipakai. Token sekali pakai, benar atau salah, jadi setiap kegagalan memuat gambar baru otomatis. Captcha diperiksa sebelum password. Pengujian otomatis yang tidak membaca gambar bisa mematikannya dengan `LOGIN_CAPTCHA=0`.
+
+## Notifikasi realtime
+
+- Lonceng di header terhubung ke `/api/v1/notifications/stream` (Server-Sent Events). Notifikasi baru muncul sebagai toast dengan tombol Buka, lencana ikut berubah, dan halaman yang sedang dibuka dimuat ulang datanya. Jika izin notifikasi peramban sudah diberikan dan tab sedang tidak terlihat, notifikasi sistem ikut tampil.
+- Penyiar peristiwa ada di dalam proses (`lib/realtime.ts`), cocok untuk satu instance. Untuk beberapa instance, ganti dengan LISTEN/NOTIFY PostgreSQL atau Redis. Proxy terbalik tidak boleh menyangga respons ini (`X-Accel-Buffering: no` sudah dikirim).
+- Pengingat dijalankan penjadwal tiap menit: absen masuk (bawaan 15 menit sebelum jam masuk), absen pulang (saat jam pulang, hanya bagi yang sudah absen masuk), laporan harian belum diisi (satu jam setelah jam pulang), kirim laporan bulan lalu (tanggal 1 sampai 5), dan penilaian kinerja yang belum selesai (jam kerja). Kunci anti-ganda membuat tiap pengingat terkirim sekali per hari per orang. Pengingat bisa dimatikan di Pengaturan > Aturan Absensi.
+- Pemberitahuan "Absen masuk/pulang tercatat" hanya untuk scan yang baru terjadi (kurang dari 3 jam), bukan hasil hitung ulang data lama.
+
+## Laporan kinerja
+
+Pegawai mengisi uraian pekerjaan per hari (teks, hingga 5 lampiran PDF, gambar, Office, TXT, atau CSV, masing-masing maks. 5 MB; jenis berkas diperiksa dari isinya). Di akhir bulan laporan dikirim ke atasan langsung dan terkunci. Atasan memberi nilai 1 sampai 100 atau mengembalikan dengan catatan; pegawai mendapat notifikasi di tiap langkah. Pengelola (`report.manage`) dapat menilai pegawai tanpa atasan langsung. Akun admin tidak memiliki menu laporan sendiri.
+
+## Penilaian kinerja pegawai
+
+Indikator mengikuti formulir "Rincian Penilaian Prestasi Kinerja" (PJLP diganti Pegawai): 3 indikator disiplin kehadiran, 14 tanggung jawab penyelesaian pekerjaan, 2 kepatuhan pada kewajiban dan larangan; nilai 1 sampai 100 tiap indikator, 75 ke atas Baik dan di bawah 75 Buruk (formulir asli menulis "<74" dan "75-100", celahnya ditutup di 75). Pengelola membuka periode bulanan; sistem membagi atasan langsung dan N rekan acak (bawaan 3), mendahulukan rekan satu unit lalu satu induk unit, dengan beban menilai dibuat merata. Identitas rekan penilai tidak ditampilkan kepada yang dinilai. Nilai akhir tiap indikator adalah rata-rata nilai atasan dan rata-rata rekan; kesimpulan kompetensi dan tindak lanjut hanya diisi atasan. Hasil terbuka bagi pegawai setelah periode ditutup dan bisa dicetak sebagai lembar bergaya formulir asli atau diunduh sebagai Excel.
+
+## Mapping penilai kinerja
+
+Di Kelola Penilaian > periode > Penilai, admin mengatur siapa menilai siapa:
+
+- **Acak penilai**: rekan dipilih acak (satu unit lebih dulu, lalu satu induk unit, lalu siapa pun) dengan beban merata. Bisa untuk semua pegawai atau satu unit. "Acak ulang dari awal" hanya menghapus rekan yang belum menilai; atasan dan penilaian yang sudah terkirim tetap.
+- **Pemetaan unit**: unit penilai menilai unit yang dinilai (opsional termasuk sub-unit). Cara membagi: semua menilai semua, atau acak per pegawai (tiap pegawai yang dinilai mendapat N penilai acak dari unit penilai, beban merata). Hasilnya langsung diurai menjadi penugasan per pegawai dan tercatat di Riwayat pemetaan unit.
+- **Manual per pegawai**: tambah penilai, ganti penilai, atau hapus penilai pada baris pegawai. Penugasan yang sudah menilai terkunci. Setiap penugasan membawa asal-usulnya (acak, unit, manual) dan penilai baru mendapat notifikasi.
+- **Keseimbangan**: bagian Beban tiap penilai menampilkan jumlah tugas dan yang selesai per penilai agar admin bisa memeratakan lewat ganti penilai.
+- **Pemantauan**: admin melihat nama penilai tiap pegawai beserta status selesai atau belum, bisa menyaring "ada yang belum menilai" atau "belum ada penilai", dan menekan Ingatkan untuk mengirim notifikasi ke semua penilai yang belum selesai. Pegawai yang dinilai tidak pernah melihat identitas penilai rekan.
+
+## Absensi wajah di Raspberry Pi
+
+Lihat `docs/RASPBERRY-PI.md`: kamera dibuka bersamaan dengan pemuatan model, model diunduh paralel dan di-cache, jaringan dipanaskan sekali, per bingkai hanya detektor ringan yang berjalan (descriptor dihitung sekali saat absen dikirim), ukuran masukan menyesuaikan kecepatan perangkat, dan jeda lebih lega saat tidak ada wajah.
+
+## Ganti password pertama
+
+Saat pengguna dipaksa mengganti password awal (atau mengaktifkan MFA), setelah berhasil halaman langsung membawa ke dashboard tanpa menunggu klik. Bila masih ada langkah wajib lain, layout aplikasi mengarahkan kembali ke langkah itu.

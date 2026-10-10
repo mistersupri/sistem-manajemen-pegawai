@@ -40,14 +40,14 @@ model User {
 }
 
 model Session {
-  id          String   @id // hash SHA-256 dari token; token mentah hanya ada di cookie
-  userId      String   @map("user_id") @db.Uuid
-  mfaPending  Boolean  @default(false) @map("mfa_pending")
-  expiresAt   DateTime @map("expires_at") @db.Timestamptz(3)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  lastSeenAt  DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
-  ip          String?
-  userAgent   String?  @map("user_agent")
+  id         String   @id // hash SHA-256 dari token; token mentah hanya ada di cookie
+  userId     String   @map("user_id") @db.Uuid
+  mfaPending Boolean  @default(false) @map("mfa_pending")
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  ip         String?
+  userAgent  String?  @map("user_agent")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -71,10 +71,10 @@ model Role {
 }
 
 model Permission {
-  id          String  @id @default(uuid()) @db.Uuid
-  code        String  @unique
-  name        String
-  group       String
+  id    String @id @default(uuid()) @db.Uuid
+  code  String @unique
+  name  String
+  group String
 
   roles RolePermission[]
 
@@ -179,6 +179,10 @@ model Employee {
   leaveBalances   LeaveBalance[]
   leaveRequests   LeaveRequest[]
   rawEvents       DeviceRawEvent[]
+  dailyReports    DailyReport[]
+  monthlyReports  MonthlyReport[]
+  assessmentsOf   AssessmentAssignment[]       @relation("AssessmentTarget")
+  assessmentsBy   AssessmentAssignment[]       @relation("AssessmentAssessor")
 
   @@index([fullName])
   @@index([unitId])
@@ -229,24 +233,24 @@ enum BiometricStatus {
 
 // Template wajah terenkripsi (AES-256-GCM). Tidak pernah dikirim ke browser.
 model EmployeeBiometric {
-  id               String          @id @default(uuid()) @db.Uuid
-  employeeId       String          @map("employee_id") @db.Uuid
-  modality         String          @default("FACE")
-  model            String // nama model pembuat embedding
-  templateEnc      String          @map("template_enc")
-  sampleCount      Int             @map("sample_count")
-  status           BiometricStatus
-  consentVersion   String          @map("consent_version")
-  consentAt        DateTime        @map("consent_at") @db.Timestamptz(3)
-  consentById      String?         @map("consent_by_id") @db.Uuid // pengguna yang merekam persetujuan
-  enrolledById     String?         @map("enrolled_by_id") @db.Uuid
-  verifiedById     String?         @map("verified_by_id") @db.Uuid
-  verifiedAt       DateTime?       @map("verified_at") @db.Timestamptz(3)
-  revokedAt        DateTime?       @map("revoked_at") @db.Timestamptz(3)
-  revokedById      String?         @map("revoked_by_id") @db.Uuid
-  revokedReason    String?         @map("revoked_reason")
-  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id             String          @id @default(uuid()) @db.Uuid
+  employeeId     String          @map("employee_id") @db.Uuid
+  modality       String          @default("FACE")
+  model          String // nama model pembuat embedding
+  templateEnc    String          @map("template_enc")
+  sampleCount    Int             @map("sample_count")
+  status         BiometricStatus
+  consentVersion String          @map("consent_version")
+  consentAt      DateTime        @map("consent_at") @db.Timestamptz(3)
+  consentById    String?         @map("consent_by_id") @db.Uuid // pengguna yang merekam persetujuan
+  enrolledById   String?         @map("enrolled_by_id") @db.Uuid
+  verifiedById   String?         @map("verified_by_id") @db.Uuid
+  verifiedAt     DateTime?       @map("verified_at") @db.Timestamptz(3)
+  revokedAt      DateTime?       @map("revoked_at") @db.Timestamptz(3)
+  revokedById    String?         @map("revoked_by_id") @db.Uuid
+  revokedReason  String?         @map("revoked_reason")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
@@ -335,22 +339,22 @@ model DeviceSyncRun {
 
 // Transaksi mentah dari perangkat. Kolom inti dikunci oleh trigger database (immutable).
 model DeviceRawEvent {
-  id                String    @id @default(uuid()) @db.Uuid
-  deviceId          String?   @map("device_id") @db.Uuid
-  syncRunId         String?   @map("sync_run_id") @db.Uuid
-  devicePin         String    @map("device_pin")
-  deviceTime        DateTime  @map("device_time") @db.Timestamptz(3) // waktu menurut jam perangkat
-  receivedAt        DateTime  @default(now()) @map("received_at") @db.Timestamptz(3) // waktu diterima server
-  verifyMode        String?   @map("verify_mode")
-  statusCode        String?   @map("status_code")
-  payload           Json?
-  idempotencyKey    String    @unique @map("idempotency_key")
-  clockSkewSuspect  Boolean   @default(false) @map("clock_skew_suspect")
+  id               String    @id @default(uuid()) @db.Uuid
+  deviceId         String?   @map("device_id") @db.Uuid
+  syncRunId        String?   @map("sync_run_id") @db.Uuid
+  devicePin        String    @map("device_pin")
+  deviceTime       DateTime  @map("device_time") @db.Timestamptz(3) // waktu menurut jam perangkat
+  receivedAt       DateTime  @default(now()) @map("received_at") @db.Timestamptz(3) // waktu diterima server
+  verifyMode       String?   @map("verify_mode")
+  statusCode       String?   @map("status_code")
+  payload          Json?
+  idempotencyKey   String    @unique @map("idempotency_key")
+  clockSkewSuspect Boolean   @default(false) @map("clock_skew_suspect")
   // Kolom hasil pemrosesan (boleh diisi ulang saat pemetaan PIN atau proses ulang)
-  employeeId        String?   @map("employee_id") @db.Uuid
-  workDate          DateTime? @map("work_date") @db.Date
-  processedAt       DateTime? @map("processed_at") @db.Timestamptz(3)
-  processingNote    String?   @map("processing_note")
+  employeeId       String?   @map("employee_id") @db.Uuid
+  workDate         DateTime? @map("work_date") @db.Date
+  processedAt      DateTime? @map("processed_at") @db.Timestamptz(3)
+  processingNote   String?   @map("processing_note")
 
   device   AttendanceDevice? @relation(fields: [deviceId], references: [id])
   syncRun  DeviceSyncRun?    @relation(fields: [syncRunId], references: [id])
@@ -366,14 +370,14 @@ model DeviceRawEvent {
 
 // Daftar pengguna yang terbaca dari mesin, untuk memetakan ID mesin ke pegawai.
 model DeviceUser {
-  id         String   @id @default(uuid()) @db.Uuid
-  deviceId   String?  @map("device_id") @db.Uuid
-  pin        String   @unique
+  id         String    @id @default(uuid()) @db.Uuid
+  deviceId   String?   @map("device_id") @db.Uuid
+  pin        String    @unique
   name       String?
   department String?
   // Diisi saat admin memutuskan ID ini tidak perlu dihubungkan ke pegawai; scan-nya dilewati.
   ignoredAt  DateTime? @map("ignored_at") @db.Timestamptz(3)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   device AttendanceDevice? @relation(fields: [deviceId], references: [id])
 
@@ -421,17 +425,17 @@ model AttendanceEvent {
 
 // Hasil verifikasi untuk satu transaksi, disimpan terpisah dari transaksi mentah.
 model AttendanceVerification {
-  id               String   @id @default(uuid()) @db.Uuid
-  eventId          String   @unique @map("event_id") @db.Uuid
-  outcome          String // SUCCESS | NOT_RECOGNIZED | LOW_QUALITY | LIVENESS_FAILED | OUTSIDE_SCHEDULE | LOCATION_MISMATCH | DEVICE_NOT_ALLOWED | SERVICE_UNAVAILABLE | DUPLICATE | ALREADY_RECORDED | NOT_ENROLLED | INACTIVE
-  matcher          String?
-  distance         Float?
-  threshold        Float?
-  quality          Json?
-  livenessPassed   Boolean? @map("liveness_passed")
-  distanceToOfficeM Float?  @map("distance_to_office_m")
-  message          String?
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  id                String   @id @default(uuid()) @db.Uuid
+  eventId           String   @unique @map("event_id") @db.Uuid
+  outcome           String // SUCCESS | NOT_RECOGNIZED | LOW_QUALITY | LIVENESS_FAILED | OUTSIDE_SCHEDULE | LOCATION_MISMATCH | DEVICE_NOT_ALLOWED | SERVICE_UNAVAILABLE | DUPLICATE | ALREADY_RECORDED | NOT_ENROLLED | INACTIVE
+  matcher           String?
+  distance          Float?
+  threshold         Float?
+  quality           Json?
+  livenessPassed    Boolean? @map("liveness_passed")
+  distanceToOfficeM Float?   @map("distance_to_office_m")
+  message           String?
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   event AttendanceEvent @relation(fields: [eventId], references: [id])
 
@@ -482,26 +486,26 @@ enum RequestStatus {
 
 // Koreksi absensi: menyimpan nilai awal dan nilai usulan; data mentah tidak pernah dihapus.
 model AttendanceCorrection {
-  id                  String        @id @default(uuid()) @db.Uuid
-  employeeId          String        @map("employee_id") @db.Uuid
-  attendanceRecordId  String?       @map("attendance_record_id") @db.Uuid
-  workDate            DateTime      @map("work_date") @db.Date
-  kind                String // LUPA_MASUK | LUPA_PULANG | LUPA_KEDUANYA | TERLAMBAT | PULANG_CEPAT | LAINNYA | KOREKSI_ADMIN
-  originalValues      Json?         @map("original_values")
-  proposedCheckIn     String?       @map("proposed_check_in") // HH:MM
-  proposedCheckOut    String?       @map("proposed_check_out")
-  proposedStatus      String?       @map("proposed_status")
-  dispensation        Boolean       @default(false)
-  reason              String
-  attachmentPath      String?       @map("attachment_path")
-  status              RequestStatus @default(PENDING)
-  requestedById       String        @map("requested_by_id") @db.Uuid
-  reviewedById        String?       @map("reviewed_by_id") @db.Uuid
-  reviewedAt          DateTime?     @map("reviewed_at") @db.Timestamptz(3)
-  reviewNote          String?       @map("review_note")
-  appliedValues       Json?         @map("applied_values")
-  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                 String        @id @default(uuid()) @db.Uuid
+  employeeId         String        @map("employee_id") @db.Uuid
+  attendanceRecordId String?       @map("attendance_record_id") @db.Uuid
+  workDate           DateTime      @map("work_date") @db.Date
+  kind               String // LUPA_MASUK | LUPA_PULANG | LUPA_KEDUANYA | TERLAMBAT | PULANG_CEPAT | LAINNYA | KOREKSI_ADMIN
+  originalValues     Json?         @map("original_values")
+  proposedCheckIn    String?       @map("proposed_check_in") // HH:MM
+  proposedCheckOut   String?       @map("proposed_check_out")
+  proposedStatus     String?       @map("proposed_status")
+  dispensation       Boolean       @default(false)
+  reason             String
+  attachmentPath     String?       @map("attachment_path")
+  status             RequestStatus @default(PENDING)
+  requestedById      String        @map("requested_by_id") @db.Uuid
+  reviewedById       String?       @map("reviewed_by_id") @db.Uuid
+  reviewedAt         DateTime?     @map("reviewed_at") @db.Timestamptz(3)
+  reviewNote         String?       @map("review_note")
+  appliedValues      Json?         @map("applied_values")
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   employee Employee          @relation(fields: [employeeId], references: [id])
   record   AttendanceRecord? @relation(fields: [attendanceRecordId], references: [id])
@@ -517,24 +521,24 @@ model AttendanceCorrection {
 // ---------------------------------------------------------------------------
 
 model WorkSchedule {
-  id                  String    @id @default(uuid()) @db.Uuid
-  code                String    @unique
-  name                String
-  kind                String // REGULER | SHIFT
-  checkIn             String    @map("check_in") // HH:MM
-  checkOut            String    @map("check_out")
-  breakStart          String?   @map("break_start")
-  breakEnd            String?   @map("break_end")
-  lateToleranceMin    Int       @default(0) @map("late_tolerance_min")
-  earlyLeaveToleranceMin Int    @default(0) @map("early_leave_tolerance_min")
-  flexMinutes         Int       @default(0) @map("flex_minutes") // jam fleksibel: terlambat diganti pulang lebih akhir
-  workdays            Int[]     @default([1, 2, 3, 4, 5]) // 0 = Minggu
-  color               String    @default("#1a3a8f")
-  isActive            Boolean   @default(true) @map("is_active")
-  version             Int       @default(1)
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
+  id                     String    @id @default(uuid()) @db.Uuid
+  code                   String    @unique
+  name                   String
+  kind                   String // REGULER | SHIFT
+  checkIn                String    @map("check_in") // HH:MM
+  checkOut               String    @map("check_out")
+  breakStart             String?   @map("break_start")
+  breakEnd               String?   @map("break_end")
+  lateToleranceMin       Int       @default(0) @map("late_tolerance_min")
+  earlyLeaveToleranceMin Int       @default(0) @map("early_leave_tolerance_min")
+  flexMinutes            Int       @default(0) @map("flex_minutes") // jam fleksibel: terlambat diganti pulang lebih akhir
+  workdays               Int[]     @default([1, 2, 3, 4, 5]) // 0 = Minggu
+  color                  String    @default("#1a3a8f")
+  isActive               Boolean   @default(true) @map("is_active")
+  version                Int       @default(1)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt              DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   revisions   WorkScheduleRevision[]
   assignments EmployeeScheduleAssignment[]
@@ -610,22 +614,22 @@ model Holiday {
 // ---------------------------------------------------------------------------
 
 model LeaveType {
-  id                        String   @id @default(uuid()) @db.Uuid
-  code                      String   @unique
-  name                      String
-  attendanceStatus          String   @map("attendance_status") // CUTI | IZIN | SAKIT | DINAS_LUAR
-  usesBalance               Boolean  @default(false) @map("uses_balance")
-  defaultAnnualQuota        Int?     @map("default_annual_quota")
-  maxCarryOver              Int      @default(0) @map("max_carry_over") // batas sisa tahun lalu yang dibawa; 0 = tidak dibawa
+  id                         String   @id @default(uuid()) @db.Uuid
+  code                       String   @unique
+  name                       String
+  attendanceStatus           String   @map("attendance_status") // CUTI | IZIN | SAKIT | DINAS_LUAR
+  usesBalance                Boolean  @default(false) @map("uses_balance")
+  defaultAnnualQuota         Int?     @map("default_annual_quota")
+  maxCarryOver               Int      @default(0) @map("max_carry_over") // batas sisa tahun lalu yang dibawa; 0 = tidak dibawa
   eligibleEmploymentStatuses String[] @default([]) @map("eligible_employment_statuses") // kosong = semua
-  maxDaysPerRequest         Int?     @map("max_days_per_request")
-  minNoticeDays             Int      @default(0) @map("min_notice_days")
-  approvalLevels            Int      @default(1) @map("approval_levels") // 1 = atasan, 2 = atasan lalu admin kepegawaian
-  countWorkdaysOnly         Boolean  @default(true) @map("count_workdays_only")
-  allowAttachment           Boolean  @default(true) @map("allow_attachment")
-  isActive                  Boolean  @default(true) @map("is_active")
-  createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  maxDaysPerRequest          Int?     @map("max_days_per_request")
+  minNoticeDays              Int      @default(0) @map("min_notice_days")
+  approvalLevels             Int      @default(1) @map("approval_levels") // 1 = atasan, 2 = atasan lalu admin kepegawaian
+  countWorkdaysOnly          Boolean  @default(true) @map("count_workdays_only")
+  allowAttachment            Boolean  @default(true) @map("allow_attachment")
+  isActive                   Boolean  @default(true) @map("is_active")
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   balances LeaveBalance[]
   requests LeaveRequest[]
@@ -706,6 +710,8 @@ model Notification {
   title     String
   body      String?
   link      String?
+  // Mencegah pengingat yang sama terkirim dua kali (mis. "masuk:2026-10-09:<pegawai>").
+  dedupeKey String?   @unique @map("dedupe_key")
   readAt    DateTime? @map("read_at") @db.Timestamptz(3)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
@@ -767,4 +773,136 @@ model AttendanceStation {
   events AttendanceEvent[]
 
   @@map("attendance_stations")
+}
+
+// ---------------------------------------------------------------------------
+// Laporan kinerja harian dan penilaian kinerja
+// ---------------------------------------------------------------------------
+
+enum ReportStatus {
+  DRAFT // pegawai masih mengisi
+  SUBMITTED // dikirim ke atasan langsung
+  APPROVED // sudah dinilai atasan
+  RETURNED // dikembalikan untuk diperbaiki
+}
+
+// Laporan satu bulan: kumpulan laporan harian yang dikirim ke atasan langsung untuk dinilai.
+model MonthlyReport {
+  id          String       @id @default(uuid()) @db.Uuid
+  employeeId  String       @map("employee_id") @db.Uuid
+  month       String // YYYY-MM
+  status      ReportStatus @default(DRAFT)
+  summary     String? // ringkasan bulan itu dari pegawai
+  submittedAt DateTime?    @map("submitted_at") @db.Timestamptz(3)
+  reviewerId  String?      @map("reviewer_id") @db.Uuid // pengguna yang menilai
+  reviewedAt  DateTime?    @map("reviewed_at") @db.Timestamptz(3)
+  score       Int? // nilai atasan 1-100
+  reviewNote  String?      @map("review_note")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month])
+  @@index([status, month])
+  @@map("monthly_reports")
+}
+
+model DailyReport {
+  id         String   @id @default(uuid()) @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  workDate   DateTime @map("work_date") @db.Date
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  employee    Employee                @relation(fields: [employeeId], references: [id])
+  attachments DailyReportAttachment[]
+
+  @@unique([employeeId, workDate])
+  @@index([workDate])
+  @@map("daily_reports")
+}
+
+model DailyReportAttachment {
+  id            String   @id @default(uuid()) @db.Uuid
+  dailyReportId String   @map("daily_report_id") @db.Uuid
+  fileName      String   @map("file_name")
+  path          String
+  mime          String
+  size          Int
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  report DailyReport @relation(fields: [dailyReportId], references: [id], onDelete: Cascade)
+
+  @@index([dailyReportId])
+  @@map("daily_report_attachments")
+}
+
+enum AssessmentStatus {
+  PENDING
+  SUBMITTED
+}
+
+// Periode penilaian kinerja (satu bulan). Admin membuka periode, sistem membagi penilai.
+model AssessmentPeriod {
+  id          String   @id @default(uuid()) @db.Uuid
+  month       String   @unique // YYYY-MM
+  peerCount   Int      @default(3) @map("peer_count") // jumlah rekan penilai per pegawai
+  isClosed    Boolean  @default(false) @map("is_closed")
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  assignments AssessmentAssignment[]
+  unitMaps    AssessmentUnitMap[]
+
+  @@map("assessment_periods")
+}
+
+// Satu penilai menilai satu pegawai pada satu periode. role: ATASAN (atasan langsung) atau REKAN (dipilih acak).
+model AssessmentAssignment {
+  id                 String           @id @default(uuid()) @db.Uuid
+  periodId           String           @map("period_id") @db.Uuid
+  targetEmployeeId   String           @map("target_employee_id") @db.Uuid
+  assessorEmployeeId String           @map("assessor_employee_id") @db.Uuid
+  role               String // ATASAN | REKAN
+  source             String           @default("AUTO") // AUTO (diacak sistem) | MANUAL (diatur admin) | UNIT (dari pemetaan unit)
+  status             AssessmentStatus @default(PENDING)
+  scores             Json? // { kode_indikator: nilai 1-100 }
+  average            Float?
+  predicate          String? // Baik | Buruk
+  competence         String? // SESUAI | TIDAK_SESUAI (hanya atasan)
+  followUp           String?          @map("follow_up") // DIREKOMENDASIKAN | PEMBIMBINGAN | MUTASI | DIBERHENTIKAN (hanya atasan)
+  note               String?
+  submittedAt        DateTime?        @map("submitted_at") @db.Timestamptz(3)
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  period   AssessmentPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  target   Employee         @relation("AssessmentTarget", fields: [targetEmployeeId], references: [id])
+  assessor Employee         @relation("AssessmentAssessor", fields: [assessorEmployeeId], references: [id])
+
+  @@unique([periodId, targetEmployeeId, assessorEmployeeId])
+  @@index([assessorEmployeeId, status])
+  @@index([periodId, targetEmployeeId])
+  @@map("assessment_assignments")
+}
+
+// Catatan pemetaan unit: pegawai di unit penilai menilai pegawai di unit yang dinilai. Hasilnya diurai
+// menjadi AssessmentAssignment (semua menilai semua, atau acak per pegawai); tabel ini hanya riwayatnya.
+model AssessmentUnitMap {
+  id              String   @id @default(uuid()) @db.Uuid
+  periodId        String   @map("period_id") @db.Uuid
+  assessorUnitId  String   @map("assessor_unit_id") @db.Uuid
+  targetUnitId    String   @map("target_unit_id") @db.Uuid
+  mode            String // SEMUA | ACAK
+  perTarget       Int?     @map("per_target") // jumlah penilai per pegawai bila ACAK
+  includeSubunits Boolean  @default(false) @map("include_subunits")
+  created         Int      @default(0) // penugasan baru yang dibuat
+  createdById     String?  @map("created_by_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  period AssessmentPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@index([periodId])
+  @@map("assessment_unit_maps")
 }

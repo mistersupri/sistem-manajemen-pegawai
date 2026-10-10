@@ -2,14 +2,27 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Field, fieldProps } from '@/components/app/field';
 import { api, useAction } from '@/components/app/api-client';
 
-export function PasswordForm() {
+/** `forced`: pengguna dialihkan ke sini karena wajib (password awal atau MFA); setelah selesai langsung masuk ke dashboard. */
+function useFinishRedirect(forced: boolean) {
+  const router = useRouter();
+  return () => {
+    if (!forced) return;
+    // Layout aplikasi akan mengarahkan kembali ke sini bila masih ada langkah wajib lain (mis. MFA setelah password).
+    router.replace('/dashboard');
+    router.refresh();
+  };
+}
+
+export function PasswordForm({ forced = false }: { forced?: boolean }) {
   const { pending, fields, run } = useAction();
+  const finish = useFinishRedirect(forced);
   return (
     <Card>
       <CardHeader>
@@ -22,7 +35,7 @@ export function PasswordForm() {
           const form = e.currentTarget;
           const fd = new FormData(form);
           const r = await run(() => api('POST', '/api/v1/me/password', Object.fromEntries(fd)), { success: 'Password berhasil diganti.' });
-          if (r !== undefined) form.reset();
+          if (r !== undefined) { form.reset(); finish(); }
         }}
       >
         <CardContent className="grid gap-4 sm:max-w-sm">
@@ -32,15 +45,16 @@ export function PasswordForm() {
         </CardContent>
         <CardFooter className="mt-6 gap-2">
           <Button type="submit" disabled={pending}>{pending ? 'Menyimpan...' : 'Simpan password'}</Button>
-          <Button asChild variant="ghost"><Link href="/dashboard">Ke dashboard</Link></Button>
+          {!forced && <Button asChild variant="ghost"><Link href="/dashboard">Ke dashboard</Link></Button>}
         </CardFooter>
       </form>
     </Card>
   );
 }
 
-export function MfaPanel({ enabled }: { enabled: boolean }) {
+export function MfaPanel({ enabled, forced = false }: { enabled: boolean; forced?: boolean }) {
   const { pending, fields, run } = useAction();
+  const finish = useFinishRedirect(forced);
   const [setup, setSetup] = useState<{ qr: string; secret: string } | null>(null);
   return (
     <Card>
@@ -57,7 +71,7 @@ export function MfaPanel({ enabled }: { enabled: boolean }) {
           </Button>
         )}
         {!enabled && setup && (
-          <form className="grid gap-4 sm:max-w-sm" onSubmit={async (e) => { e.preventDefault(); const code = new FormData(e.currentTarget).get('code'); const r = await run(() => api('POST', '/api/v1/me/mfa', { step: 'confirm', code }), { success: 'MFA aktif.' }); if (r !== undefined) setSetup(null); }}>
+          <form className="grid gap-4 sm:max-w-sm" onSubmit={async (e) => { e.preventDefault(); const code = new FormData(e.currentTarget).get('code'); const r = await run(() => api('POST', '/api/v1/me/mfa', { step: 'confirm', code }), { success: 'MFA aktif.' }); if (r !== undefined) { setSetup(null); finish(); } }}>
             <ol className="grid list-decimal gap-1 pl-4 text-sm text-muted-foreground">
               <li>Pindai kode QR berikut dengan aplikasi autentikator.</li>
               <li>Masukkan 6 angka yang muncul di aplikasi.</li>

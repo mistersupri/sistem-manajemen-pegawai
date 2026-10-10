@@ -6,6 +6,7 @@ import { PERMISSIONS, ROLES, type Permission } from './catalog';
  * pertama kali dibuat, agar penyesuaian admin di halaman Pengguna & Peran tidak tertimpa.
  */
 export async function syncRbac(db: Db = prisma) {
+  const known = new Set((await db.permission.findMany({ select: { code: true } })).map((p) => p.code));
   for (const [code, [group, name]] of Object.entries(PERMISSIONS)) {
     await db.permission.upsert({ where: { code }, update: { name, group }, create: { code, name, group } });
   }
@@ -16,6 +17,12 @@ export async function syncRbac(db: Db = prisma) {
       await db.role.update({ where: { id: existing.id }, data: { name: def.name, description: def.description, isSystem: true } });
       // Super Admin selalu memiliki semua izin, termasuk izin baru.
       if (code === 'SUPER_ADMIN') await setRolePermissions(existing.id, def.permissions, perms, db);
+      // Izin yang baru diperkenalkan versi ini ikut diberikan ke peran bawaan yang sudah ada. Izin lama tidak disentuh,
+      // jadi penyesuaian admin tetap aman, dan izin yang sengaja dicabut admin tidak dikembalikan pada sync berikutnya.
+      else {
+        const fresh = def.permissions.filter((p) => !known.has(p));
+        if (fresh.length) await db.rolePermission.createMany({ data: fresh.map((p) => ({ roleId: existing.id, permissionId: perms.get(p)! })), skipDuplicates: true });
+      }
       continue;
     }
     const role = await db.role.create({ data: { code, name: def.name, description: def.description, isSystem: true } });

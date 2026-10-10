@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Activity, Bell, Building2, CalendarDays, ChevronDown, Clock, FilePen, Fingerprint, HardDrive, LayoutDashboard,
+  Activity, Bell, Building2, CalendarDays, ChevronDown, ClipboardList, Clock, FilePen, Fingerprint, HardDrive, LayoutDashboard,
   List, Lock, Plane, RefreshCw, ScanFace, ScanLine, ScrollText, Settings, ShieldCheck, SlidersHorizontal, Table, Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -19,7 +19,7 @@ const ICONS: Record<string, LucideIcon> = {
   'layout-dashboard': LayoutDashboard, users: Users, clock: Clock, 'scan-face': ScanFace, activity: Activity, table: Table,
   'file-pen': FilePen, fingerprint: Fingerprint, 'hard-drive': HardDrive, 'refresh-cw': RefreshCw, list: List,
   'calendar-days': CalendarDays, plane: Plane, bell: Bell, settings: Settings, 'building-2': Building2, 'shield-check': ShieldCheck,
-  'sliders-horizontal': SlidersHorizontal, 'scan-line': ScanLine, lock: Lock, 'scroll-text': ScrollText,
+  'sliders-horizontal': SlidersHorizontal, 'scan-line': ScanLine, lock: Lock, 'scroll-text': ScrollText, 'clipboard-list': ClipboardList,
 };
 
 export interface SidebarItem {

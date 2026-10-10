@@ -12,6 +12,11 @@ export const PERMISSIONS = {
   'employee.delete': ['Pegawai', 'Hapus data pegawai'],
   'employee.import': ['Pegawai', 'Impor data pegawai'],
   'employee.export': ['Pegawai', 'Ekspor data pegawai'],
+  'report.self': ['Kinerja', 'Isi laporan kinerja harian dan kirim laporan bulanan'],
+  'report.review': ['Kinerja', 'Menilai laporan kinerja bawahan langsung'],
+  'report.manage': ['Kinerja', 'Melihat dan menilai laporan kinerja semua pegawai dalam cakupan'],
+  'assess.self': ['Kinerja', 'Menilai pegawai yang ditugaskan dan melihat hasil penilaian diri sendiri'],
+  'assess.manage': ['Kinerja', 'Membuka periode penilaian kinerja dan melihat hasilnya'],
   'biometric.enroll_self': ['Biometrik', 'Daftarkan wajah sendiri'],
   'biometric.manage': ['Biometrik', 'Daftarkan, verifikasi, dan cabut template wajah pegawai'],
   'attendance.self': ['Absensi', 'Absen dan lihat absensi sendiri'],
@@ -41,7 +46,7 @@ export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
 // Izin pegawai hanya berlaku untuk datanya sendiri; jadwal sendiri dibaca lewat attendance.self.
-const self: Permission[] = ['attendance.self', 'correction.request', 'leave.request', 'biometric.enroll_self'];
+const self: Permission[] = ['attendance.self', 'correction.request', 'leave.request', 'biometric.enroll_self', 'report.self', 'assess.self'];
 
 export const ROLES: Record<string, { name: string; description: string; permissions: Permission[] }> = {
   SUPER_ADMIN: {
@@ -55,7 +60,7 @@ export const ROLES: Record<string, { name: string; description: string; permissi
     permissions: ['dashboard.view', 'unit.read', 'employee.read', 'employee.read_sensitive', 'employee.write', 'employee.deactivate', 'employee.delete',
       'employee.import', 'employee.export', 'biometric.manage', 'attendance.monitor', 'attendance.report', 'attendance.export',
       'attendance.manual_entry', 'attendance.recalculate', 'correction.review', 'schedule.read', 'schedule.manage',
-      'leave.approve', 'leave.manage', 'kiosk.operate', 'device.read'],
+      'leave.approve', 'leave.manage', 'kiosk.operate', 'device.read', 'report.review', 'report.manage', 'assess.manage'],
   },
   ADMIN_IT: {
     name: 'Admin IT/Perangkat',
@@ -66,7 +71,7 @@ export const ROLES: Record<string, { name: string; description: string; permissi
     name: 'Pimpinan/Approver',
     description: 'Melihat data dalam kewenangannya dan menyetujui pengajuan.',
     permissions: ['dashboard.view', 'unit.read', 'employee.read', 'attendance.monitor', 'attendance.report', 'attendance.export',
-      'correction.review', 'leave.approve', 'schedule.read'],
+      'correction.review', 'leave.approve', 'schedule.read', 'report.review'],
   },
   OPERATOR_UNIT: {
     name: 'Operator Unit',

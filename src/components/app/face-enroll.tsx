@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { api } from './api-client';
-import { blinkDetector, detect, draw, loadFaceApi, qualityOf, startCamera, stopCamera, toArray, type Detection } from '@/lib/face-client';
+import { adaptiveSize, blinkDetector, detect, draw, frameDelay, loadFaceApi, qualityOf, startCamera, stopCamera, toArray, track } from '@/lib/face-client';
 
 const TARGET = 5;
 
@@ -65,15 +65,22 @@ export function FaceEnroll({ employeeId, employeeName, consentText, consentVersi
     const blink = blinkDetector();
     (async () => {
       try {
-        const f = await loadFaceApi();
-        await startCamera(video.current!);
+        // Kamera dibuka bersamaan dengan pemuatan model agar pratinjau langsung tampil.
+        const cam = startCamera(video.current!).then(() => setStatus('Kamera aktif. Menyiapkan pengenalan wajah...'));
+        const [f] = await Promise.all([loadFaceApi(), cam]);
+        if (stop) { stopCamera(video.current); return; }
         setReady(true);
         setStatus('Kamera siap. Posisikan wajah di dalam bingkai lalu tekan Mulai rekam.');
+        const sizer = adaptiveSize(288, 416);
         const loop = async () => {
           if (stop || !video.current) return;
+          let hasFace = false;
           if (video.current.readyState >= 2) {
-            const { detection, count } = await detect(f, video.current, 416);
-            const q = detection ? qualityOf(video.current, detection as Detection) : null;
+            const t0 = performance.now();
+            const { detection, count } = await track(f, video.current, sizer.size, true);
+            sizer.record(performance.now() - t0);
+            hasFace = !!detection;
+            const q = detection ? qualityOf(video.current, detection) : null;
             const problem = !detection ? 'Wajah belum terdeteksi.' : count > 1 ? 'Hanya satu wajah yang boleh terlihat.'
               : q!.score < minScore ? 'Wajah kurang jelas, hadapkan lurus ke kamera.' : q!.faceWidthPx < minSize ? 'Dekatkan wajah ke kamera.'
                 : q!.brightness < 40 ? 'Pencahayaan terlalu gelap.' : q!.brightness > 225 ? 'Pencahayaan terlalu terang.' : null;
@@ -83,18 +90,22 @@ export function FaceEnroll({ employeeId, employeeName, consentText, consentVersi
             else if (problem) setStatus(problem);
             else if (Date.now() - last > 700) {
               last = Date.now();
-              buf.current.push(toArray(detection!.descriptor));
-              setSamples(buf.current.length);
-              setStatus(`Merekam sampel ${buf.current.length} dari ${TARGET}. Gerakkan kepala sedikit ke kiri, kanan, dan atas.`);
-              if (buf.current.length >= TARGET) {
-                rec.current = false;
-                setRecording(false);
-                await submit();
-                return;
+              // Descriptor hanya dihitung untuk sampel yang benar-benar direkam.
+              const full = await detect(f, video.current, sizer.size);
+              if (full.detection && full.count === 1) {
+                buf.current.push(toArray(full.detection.descriptor));
+                setSamples(buf.current.length);
+                setStatus(`Merekam sampel ${buf.current.length} dari ${TARGET}. Gerakkan kepala sedikit ke kiri, kanan, dan atas.`);
+                if (buf.current.length >= TARGET) {
+                  rec.current = false;
+                  setRecording(false);
+                  await submit();
+                  return;
+                }
               }
             }
           }
-          requestAnimationFrame(loop);
+          setTimeout(loop, frameDelay(hasFace));
         };
         loop();
       } catch (e) {

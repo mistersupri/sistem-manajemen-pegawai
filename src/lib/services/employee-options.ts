@@ -14,10 +14,12 @@ const PURPOSE: Record<string, { perms: Permission[]; where?: Prisma.EmployeeWher
   manual: { perms: ['attendance.manual_entry'] },
   akun: { perms: ['user.manage'], where: { user: null } },
   pin: { perms: ['employee.write', 'device.manage'], where: { machinePin: null } },
+  // Penilai kinerja harus punya akun aktif untuk bisa mengisi penilaian.
+  nilai: { perms: ['assess.manage'], where: { user: { isActive: true, deletedAt: null } } },
 };
 
 export const optionsQuery = z.object({
-  for: z.enum(['jadwal', 'manual', 'akun', 'pin']),
+  for: z.enum(['jadwal', 'manual', 'akun', 'pin', 'nilai']),
   q: z.string().trim().max(100).optional().or(z.literal('')).transform((v) => v || undefined),
   unitId: z.string().uuid().optional().or(z.literal('')).catch(undefined).transform((v) => v || undefined),
   limit: z.coerce.number().int().min(1).max(5000).catch(50).default(50),

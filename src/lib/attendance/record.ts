@@ -5,6 +5,7 @@ import { addDays, dateRange, fromDbDate, toDbDate, zonedToUtc } from '../time';
 import { getSettings } from '../settings';
 import { buildRecord, isOvernight, type ApprovedCorrection, type DayPlan, type SourceEvent } from './engine';
 import { loadPlanContext, type PlanContext } from './plan';
+import { notifyEmployee } from '../services/notifications';
 
 /** HH:MM usulan koreksi menjadi instan; jam pulang shift malam jatuh di hari berikutnya. */
 export function correctionInstant(plan: DayPlan, hhmm: string | null, isOut: boolean, tz: string) {
@@ -78,9 +79,33 @@ async function rebuildOne(employeeId: string, date: string, ctx: PlanContext, tz
     leaveRequestId: built.leaveRequestId,
     note: built.notes.join('; ') || null,
   };
-  return existing
-    ? db.attendanceRecord.update({ where: { id: existing.id }, data })
-    : db.attendanceRecord.create({ data: { employeeId, workDate: wd, ...data } });
+  const saved = existing
+    ? await db.attendanceRecord.update({ where: { id: existing.id }, data })
+    : await db.attendanceRecord.create({ data: { employeeId, workDate: wd, ...data } });
+  await announceNewScans(employeeId, date, existing, saved, tz, db);
+  return saved;
+}
+
+// Pemberitahuan "absen tercatat" hanya untuk scan baru yang baru saja terjadi, bukan hasil hitung ulang data lama.
+const FRESH_MS = 3 * 3600_000;
+async function announceNewScans(
+  employeeId: string, date: string,
+  before: { checkInAt: Date | null; checkOutAt: Date | null } | null,
+  after: { checkInAt: Date | null; checkOutAt: Date | null },
+  tz: string, db: Db,
+) {
+  const now = Date.now();
+  const fresh = (d: Date | null) => !!d && now - d.getTime() < FRESH_MS && d.getTime() <= now + 5 * 60_000;
+  const items: { kind: 'masuk' | 'pulang'; at: Date }[] = [];
+  if (after.checkInAt && !before?.checkInAt && fresh(after.checkInAt)) items.push({ kind: 'masuk', at: after.checkInAt });
+  if (after.checkOutAt && !before?.checkOutAt && fresh(after.checkOutAt)) items.push({ kind: 'pulang', at: after.checkOutAt });
+  for (const it of items) {
+    await notifyEmployee(employeeId, {
+      type: 'attendance', title: it.kind === 'masuk' ? 'Absen masuk tercatat' : 'Absen pulang tercatat',
+      body: `Pukul ${new Intl.DateTimeFormat('id-ID', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(it.at).replace('.', ':')}`,
+      link: `/absensi/rekap/${employeeId}/${date}`, dedupeKey: `scan-${it.kind}:${date}:${employeeId}`,
+    }, db).catch(() => undefined);
+  }
 }
 
 /** Susun ulang rekap satu pegawai pada satu tanggal kerja. */

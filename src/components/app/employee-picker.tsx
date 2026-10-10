@@ -7,7 +7,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { api } from './api-client';
 
 export type EmployeeOption = { id: string; name: string; nip: string | null; unitId: string | null; unit: string | null };
-export type OptionsFor = 'jadwal' | 'manual' | 'akun' | 'pin';
+export type OptionsFor = 'jadwal' | 'manual' | 'akun' | 'pin' | 'nilai';
 
 /** Ambil pilihan pegawai dari server. Dipanggil dari event handler atau saat komponen pertama tampil. */
 export async function fetchEmployeeOptions(purpose: OptionsFor, opts: { q?: string; limit?: number } = {}) {
