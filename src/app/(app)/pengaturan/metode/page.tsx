@@ -10,7 +10,8 @@ export const metadata = { title: 'Metode Absensi' };
 
 const METHODS: SettingField[] = [
   { key: 'methods.faceSelf', label: 'Absen wajah mandiri', type: 'bool', hint: 'Pegawai absen dari perangkatnya sendiri lewat menu Absen Sekarang.' },
-  { key: 'methods.faceKiosk', label: 'Kiosk wajah', type: 'bool', hint: 'Satu perangkat bersama di kantor, dibuka petugas lewat halaman /kiosk.' },
+  { key: 'methods.faceKiosk', label: 'Kiosk wajah', type: 'bool', hint: 'Satu perangkat bersama di kantor, dibuka lewat halaman /kiosk.' },
+  { key: 'kiosk.openAccess', label: 'Kiosk bisa dibuka tanpa login', type: 'bool', hint: 'Siapa pun yang bisa menjangkau alamat /kiosk dapat mengabsen lewat wajah, tanpa akun. Aktifkan hanya bila server hanya bisa dijangkau dari jaringan kantor, dan sebaiknya bersama kedip (liveness). Untuk akses dari luar jaringan kantor, pakai Titik Absen Wajah yang bertoken.' },
   { key: 'methods.fieldDuty', label: 'Dinas luar (foto, waktu, dan GPS)', type: 'bool' },
   { key: 'methods.manual', label: 'Input manual oleh petugas', type: 'bool', hint: 'Untuk gangguan alat. Wajib alasan dan tercatat di audit log.' },
 ];
