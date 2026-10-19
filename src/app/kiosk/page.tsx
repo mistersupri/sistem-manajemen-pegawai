@@ -7,8 +7,12 @@ import { Kiosk } from '@/components/app/kiosk';
 
 export const metadata = { title: 'Kiosk absensi' };
 
+// Isi halaman bergantung pada pengaturan dan sesi, jadi tidak boleh dirender saat build (basis data belum ada).
+export const dynamic = 'force-dynamic';
+
 export default async function KioskPage() {
-  const [actor, s] = await Promise.all([getActor(), getSettings()]);
+  const actor = await getActor();
+  const s = await getSettings();
   const open = !!s['kiosk.openAccess'];
   // Tanpa mode terbuka, kiosk hanya untuk petugas yang login.
   if (!open) {
