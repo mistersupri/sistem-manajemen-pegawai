@@ -219,3 +219,7 @@ Lihat `docs/RASPBERRY-PI.md`: kamera dibuka bersamaan dengan pemuatan model, mod
 ## Ganti password pertama
 
 Saat pengguna dipaksa mengganti password awal (atau mengaktifkan MFA), setelah berhasil halaman langsung membawa ke dashboard tanpa menunggu klik. Bila masih ada langkah wajib lain, layout aplikasi mengarahkan kembali ke langkah itu.
+
+## Kiosk tanpa login
+
+Pengaturan > Metode Absensi > "Kiosk bisa dibuka tanpa login" (mati bawaan). Bila aktif, `/kiosk` terbuka tanpa akun dan rekam wajahnya diterima dari siapa pun yang menjangkau alamat itu (dibatasi 120 percobaan per menit per alamat IP, wajah dicocokkan 1:N dengan semua pegawai aktif, dan dicatat atas nama "kiosk-terbuka"). Petugas yang login tetap memakai izin `kiosk.operate` dan melihat tombol Keluar kiosk; tamu tidak. Karena tidak ada kredensial, aktifkan hanya bila server hanya terjangkau dari jaringan kantor dan sebaiknya bersama kedip (liveness). Untuk perangkat yang harus bisa dijangkau dari luar jaringan kantor, pakai Titik Absen Wajah (`/absen/<token>`) yang bertoken, dibatasi per unit, dan bisa dicabut.

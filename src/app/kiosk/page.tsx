@@ -8,14 +8,19 @@ import { Kiosk } from '@/components/app/kiosk';
 export const metadata = { title: 'Kiosk absensi' };
 
 export default async function KioskPage() {
-  const actor = await getActor();
-  if (!actor) redirect('/login');
-  if (!can(actor, 'kiosk.operate')) redirect('/dashboard');
-  const s = await getSettings();
+  const [actor, s] = await Promise.all([getActor(), getSettings()]);
+  const open = !!s['kiosk.openAccess'];
+  // Tanpa mode terbuka, kiosk hanya untuk petugas yang login.
+  if (!open) {
+    if (!actor) redirect('/login');
+    if (!can(actor, 'kiosk.operate')) redirect('/dashboard');
+  }
+  // Tamu (tanpa login) tidak punya tujuan "keluar kiosk".
+  const staff = !!actor && can(actor, 'kiosk.operate');
   const enrolled = await prisma.employeeBiometric.count({ where: { status: 'ACTIVE', employee: { isActive: true, deletedAt: null } } });
   return (
     <div className="dark min-h-dvh bg-background text-foreground">
-      <Kiosk org={s['org.name']} logo={s['org.logo'] ? `/api/v1/logo?v=${encodeURIComponent(s['org.logo'])}` : null} enabled={!!s['methods.faceKiosk']} requireLiveness={!!s['face.requireLiveness']} enrolled={enrolled} />
+      <Kiosk org={s['org.name']} logo={s['org.logo'] ? `/api/v1/logo?v=${encodeURIComponent(s['org.logo'])}` : null} enabled={!!s['methods.faceKiosk']} requireLiveness={!!s['face.requireLiveness']} enrolled={enrolled} exitHref={staff ? '/dashboard' : null} />
     </div>
   );
 }

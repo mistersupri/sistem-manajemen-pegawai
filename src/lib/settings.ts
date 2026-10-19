@@ -11,6 +11,8 @@ export const SETTING_DEFAULTS = {
   // Metode absensi yang aktif.
   'methods.faceSelf': true,
   'methods.faceKiosk': true,
+  // Halaman /kiosk dan rekam wajahnya bisa dipakai tanpa login (perangkat bersama di kantor). Bawaan: mati.
+  'kiosk.openAccess': false,
   'methods.fieldDuty': true,
   'methods.manual': true,
   // Wajah: ambang jarak Euclidean face-api.js. Harus dikalibrasi (lihat docs/BIOMETRIK.md).

@@ -17,6 +17,7 @@ const SCHEMAS: Partial<Record<SettingKey, z.ZodType>> = {
   'org.timezoneLabel': z.string().trim().min(1).max(10),
   'methods.faceSelf': z.boolean(),
   'methods.faceKiosk': z.boolean(),
+  'kiosk.openAccess': z.boolean(),
   'methods.fieldDuty': z.boolean(),
   'methods.manual': z.boolean(),
   'face.matchThreshold': num(0.2, 0.8),
