@@ -8,8 +8,8 @@ import { verifyCaptcha } from '@/lib/captcha';
 const schema = z.object({
   username: z.string().trim().min(1, 'Wajib diisi'),
   password: z.string().min(1, 'Wajib diisi'),
-  captchaToken: z.string().optional(),
-  captchaAnswer: z.string().optional(),
+  captchaToken: z.string().nullish(),
+  captchaAnswer: z.string().nullish(),
 });
 
 export const POST = publicRoute(async ({ req }) => {
