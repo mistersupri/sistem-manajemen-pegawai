@@ -19,9 +19,14 @@ async function openPeriodOf(actor: Actor, periodId: string) {
   return p;
 }
 
-/** Pegawai yang boleh dinilai atau menilai: aktif, berakun, dalam cakupan pengelola. */
+/** Penilai: aktif, berakun (supaya bisa mengisi penilaian), dalam cakupan pengelola. */
 function eligibleWhere(actor: Actor): Prisma.EmployeeWhereInput {
   return { AND: [{ deletedAt: null, isActive: true, user: { isActive: true, deletedAt: null } }, employeeScopeWhere(actor, 'assess.manage')] };
+}
+
+/** Yang dinilai: aktif dan dalam cakupan pengelola; tidak perlu punya akun. */
+function targetWhere(actor: Actor): Prisma.EmployeeWhereInput {
+  return { AND: [{ deletedAt: null, isActive: true }, employeeScopeWhere(actor, 'assess.manage')] };
 }
 
 // ---------------------------------------------------------------------------
@@ -51,7 +56,7 @@ export async function periodOverview(actor: Actor, periodId: string, raw: unknow
   const scope = employeeScopeWhere(actor, 'assess.manage');
   const base: Prisma.EmployeeWhereInput = {
     AND: [
-      { deletedAt: null, isActive: true, user: { isActive: true, deletedAt: null } }, scope,
+      { deletedAt: null, isActive: true }, scope,
       q.unitId ? { unitId: q.unitId } : {},
       q.q ? { OR: [{ fullName: { contains: q.q, mode: 'insensitive' } }, { employeeNumber: { contains: q.q } }] } : {},
     ],
@@ -79,7 +84,7 @@ export async function periodOverview(actor: Actor, periodId: string, raw: unknow
   const rows = await prisma.employee.findMany({
     where: { id: { in: keep } }, orderBy: [{ fullName: 'asc' }, { id: 'asc' }], skip: (page - 1) * per, take: per,
     select: {
-      id: true, fullName: true, employeeNumber: true, position: true, unit: { select: { id: true, name: true } },
+      id: true, fullName: true, employeeNumber: true, position: true, unit: { select: { id: true, name: true } }, user: { select: { id: true } },
       assessmentsOf: {
         where: { periodId }, orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
         select: { id: true, role: true, source: true, status: true, submittedAt: true, average: true, assessor: { select: { id: true, fullName: true, unit: { select: { name: true } } } } },
@@ -89,7 +94,7 @@ export async function periodOverview(actor: Actor, periodId: string, raw: unknow
   return {
     period, total, page, pageSize: per,
     rows: rows.map((r) => ({
-      id: r.id, fullName: r.fullName, employeeNumber: r.employeeNumber, position: r.position, unit: r.unit,
+      id: r.id, fullName: r.fullName, employeeNumber: r.employeeNumber, position: r.position, unit: r.unit, hasAccount: !!r.user,
       assessors: r.assessmentsOf.map((a) => ({ id: a.id, role: a.role, source: a.source, status: a.status, submittedAt: a.submittedAt, assessor: a.assessor })),
     })),
   };
@@ -121,9 +126,9 @@ export async function unitMaps(actor: Actor, periodId: string) {
 // Mengubah penugasan
 // ---------------------------------------------------------------------------
 
-async function assertEligible(actor: Actor, employeeId: string, what: string) {
-  const e = await prisma.employee.findFirst({ where: { AND: [{ id: employeeId }, eligibleWhere(actor)] }, select: { id: true, unitId: true } });
-  if (!e) throw unprocessable(`${what} tidak ditemukan, tidak aktif, belum punya akun, atau di luar kewenangan Anda.`);
+async function assertEligible(actor: Actor, employeeId: string, what: string, asTarget = false) {
+  const e = await prisma.employee.findFirst({ where: { AND: [{ id: employeeId }, asTarget ? targetWhere(actor) : eligibleWhere(actor)] }, select: { id: true, unitId: true } });
+  if (!e) throw unprocessable(`${what} tidak ditemukan, tidak aktif, ${asTarget ? '' : 'belum punya akun, '}atau di luar kewenangan Anda.`);
   if (e.unitId && !unitInScope(actor, 'assess.manage', e.unitId)) throw unprocessable(`${what} di luar kewenangan Anda.`);
   return e;
 }
@@ -135,7 +140,7 @@ export async function addAssignment(actor: Actor, periodId: string, raw: unknown
   const p = await openPeriodOf(actor, periodId);
   const v = addInput.parse(raw);
   if (v.targetId === v.assessorId) throw unprocessable('Pegawai tidak bisa menilai dirinya sendiri.', { assessorId: 'Pilih pegawai lain' });
-  await assertEligible(actor, v.targetId, 'Pegawai yang dinilai');
+  await assertEligible(actor, v.targetId, 'Pegawai yang dinilai', true);
   await assertEligible(actor, v.assessorId, 'Penilai');
   if (await prisma.assessmentAssignment.findUnique({ where: { periodId_targetEmployeeId_assessorEmployeeId: { periodId, targetEmployeeId: v.targetId, assessorEmployeeId: v.assessorId } } })) {
     throw conflict('Penilai ini sudah ditugaskan untuk pegawai tersebut.', { assessorId: 'Sudah ditugaskan' });
@@ -182,6 +187,15 @@ export async function reassign(actor: Actor, id: string, assessorId: string) {
 // ---------------------------------------------------------------------------
 // Pembagian massal
 // ---------------------------------------------------------------------------
+
+/** Hapus semua penugasan yang belum dinilai pada periode ini. Penilaian yang sudah dikirim dipertahankan. */
+export async function clearAssignments(actor: Actor, periodId: string) {
+  const p = await openPeriodOf(actor, periodId);
+  const { count } = await prisma.assessmentAssignment.deleteMany({ where: { periodId, status: 'PENDING', target: employeeScopeWhere(actor, 'assess.manage') } });
+  const kept = await prisma.assessmentAssignment.count({ where: { periodId, status: 'SUBMITTED', target: employeeScopeWhere(actor, 'assess.manage') } });
+  await audit(actor, { action: 'assessment.clear', entityType: 'AssessmentPeriod', entityId: periodId, meta: { month: p.month, removed: count, kept } });
+  return { removed: count, kept };
+}
 
 export const autoInput = z.object({
   peerCount: z.coerce.number().int().min(0).max(10).default(3),
@@ -235,10 +249,10 @@ export async function mapUnits(actor: Actor, periodId: string, raw: unknown) {
   const units = (id: string) => (v.includeSubunits ? walk(id) : [id]);
   const [assessors, targets] = await Promise.all([
     prisma.employee.findMany({ where: { AND: [eligibleWhere(actor), { unitId: { in: units(v.assessorUnitId) } }] }, select: { id: true, unitId: true, unit: { select: { parentId: true } } } }),
-    prisma.employee.findMany({ where: { AND: [eligibleWhere(actor), { unitId: { in: units(v.targetUnitId) } }] }, select: { id: true, unitId: true, unit: { select: { parentId: true } } } }),
+    prisma.employee.findMany({ where: { AND: [targetWhere(actor), { unitId: { in: units(v.targetUnitId) } }] }, select: { id: true, unitId: true, unit: { select: { parentId: true } } } }),
   ]);
   if (!assessors.length) throw unprocessable('Unit penilai tidak punya pegawai aktif berakun dalam kewenangan Anda.', { assessorUnitId: 'Tidak ada pegawai' });
-  if (!targets.length) throw unprocessable('Unit yang dinilai tidak punya pegawai aktif berakun dalam kewenangan Anda.', { targetUnitId: 'Tidak ada pegawai' });
+  if (!targets.length) throw unprocessable('Unit yang dinilai tidak punya pegawai aktif dalam kewenangan Anda.', { targetUnitId: 'Tidak ada pegawai' });
   if (assessors.length * targets.length > MAX_ROWS) throw unprocessable('Pemetaan terlalu besar. Pilih mode acak atau unit yang lebih kecil.');
 
   const existing = await prisma.assessmentAssignment.findMany({ where: { periodId }, select: { targetEmployeeId: true, assessorEmployeeId: true } });

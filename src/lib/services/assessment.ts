@@ -23,14 +23,16 @@ export const periodInput = z.object({
 });
 
 /**
- * Bagi penilai untuk semua pegawai aktif yang berakun dalam cakupan: atasan langsung (bila ada) dan N rekan acak.
+ * Bagi penilai untuk semua pegawai aktif dalam cakupan (penilainya harus berakun): atasan langsung (bila ada) dan N rekan acak.
  * Aman dijalankan ulang: penugasan yang sudah ada dipertahankan, hanya kekurangannya yang dilengkapi.
  */
 export async function generateAssignments(actor: Actor, periodId: string, peerCount: number, opts: { targetUnitIds?: string[] } = {}) {
-  const emps = await prisma.employee.findMany({
-    where: { AND: [{ deletedAt: null, isActive: true, user: { isActive: true, deletedAt: null } }, employeeScopeWhere(actor, 'assess.manage')] },
-    select: { id: true, unitId: true, supervisorId: true, unit: { select: { parentId: true } } },
+  // Yang dinilai cukup pegawai aktif; yang menilai harus punya akun aktif agar bisa mengisi penilaian.
+  const everyone = await prisma.employee.findMany({
+    where: { AND: [{ deletedAt: null, isActive: true }, employeeScopeWhere(actor, 'assess.manage')] },
+    select: { id: true, unitId: true, supervisorId: true, unit: { select: { parentId: true } }, user: { select: { isActive: true, deletedAt: true } } },
   });
+  const emps = everyone.filter((e) => e.user?.isActive && !e.user.deletedAt);
   const pool: Candidate[] = emps.map((e) => ({ id: e.id, unitId: e.unitId, parentUnitId: e.unit?.parentId ?? null }));
   const have = await prisma.assessmentAssignment.findMany({ where: { periodId }, select: { targetEmployeeId: true, assessorEmployeeId: true, role: true } });
   const load = new Map<string, number>();
@@ -38,7 +40,7 @@ export async function generateAssignments(actor: Actor, periodId: string, peerCo
   const active = new Set(emps.map((e) => e.id));
 
   const rows: { periodId: string; targetEmployeeId: string; assessorEmployeeId: string; role: string; source: string }[] = [];
-  for (const t of emps) {
+  for (const t of everyone) {
     if (opts.targetUnitIds && !(t.unitId && opts.targetUnitIds.includes(t.unitId))) continue;
     const mine = have.filter((a) => a.targetEmployeeId === t.id);
     if (t.supervisorId && active.has(t.supervisorId) && !mine.some((a) => a.role === 'ATASAN')) {
@@ -48,7 +50,7 @@ export async function generateAssignments(actor: Actor, periodId: string, peerCo
     const peers = mine.filter((a) => a.role === 'REKAN').length;
     if (peers < peerCount) {
       const exclude = new Set([...mine.map((a) => a.assessorEmployeeId), ...(t.supervisorId ? [t.supervisorId] : [])]);
-      const target = pool.find((c) => c.id === t.id)!;
+      const target: Candidate = pool.find((c) => c.id === t.id) ?? { id: t.id, unitId: t.unitId, parentUnitId: t.unit?.parentId ?? null };
       for (const id of pickPeers(target, pool, peerCount - peers, load, exclude)) rows.push({ periodId, targetEmployeeId: t.id, assessorEmployeeId: id, role: 'REKAN', source: 'AUTO' });
     }
   }
