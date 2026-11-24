@@ -14,7 +14,7 @@ import { assessorLoads, periodOverview, unitMaps } from '@/lib/services/assessme
 import { monthText } from '@/lib/services/performance';
 import { unitOptions } from '@/lib/services/units';
 import { qs } from '@/lib/list';
-import { AddAssessor, AssessorChip, AutoAssignCard, RemindButton, UnitMapCard } from './forms';
+import { AddAssessor, AssessorChip, AutoAssignCard, ClearAllButton, RemindButton, UnitMapCard } from './forms';
 
 export const metadata = { title: 'Penilai Kinerja' };
 
@@ -41,10 +41,11 @@ export default async function AssessorsPage({ params, searchParams }: { params: 
         title={`Penilai ${monthText(period.month)}`}
         description={`${doneTotal} dari ${doneTotal + pendingTotal} penilaian selesai. Atur siapa menilai siapa, acak, atau petakan per unit; periksa juga siapa yang belum menilai.`}
         crumbs={[{ href: '/kinerja/periode', label: 'Kelola Penilaian' }, { href: `/kinerja/periode/${id}`, label: monthText(period.month) }, { label: 'Penilai' }]}
-        actions={!period.isClosed ? <RemindButton periodId={id} pendingCount={pendingTotal} /> : undefined}
+        actions={!period.isClosed ? <div className="flex flex-wrap gap-2"><RemindButton periodId={id} pendingCount={pendingTotal} /><ClearAllButton periodId={id} pendingCount={pendingTotal} /></div> : undefined}
       />
       <PageBody className="grid gap-6">
         {period.isClosed && <p className="rounded-lg border bg-muted px-4 py-3 text-sm">Periode ini sudah ditutup. Buka kembali dari halaman hasil untuk mengubah penilai.</p>}
+        {!period.isClosed && <p className="text-sm text-muted-foreground">Pilih salah satu cara untuk membagi penilai, atau pakai keduanya berurutan. Semua hasil muncul di daftar bawah dan bisa diubah per pegawai.</p>}
         {!period.isClosed && (
           <div className="grid items-start gap-6 lg:grid-cols-2">
             <AutoAssignCard periodId={id} units={units} peerCount={period.peerCount} />
@@ -99,7 +100,7 @@ export default async function AssessorsPage({ params, searchParams }: { params: 
                     const done = r.assessors.filter((a) => a.status === 'SUBMITTED').length;
                     return (
                       <TableRow key={r.id}>
-                        <TableCell className="stack-head pl-4 align-top lg:pl-6"><span className="font-medium">{r.fullName}</span><span className="block text-xs text-muted-foreground">{[r.unit?.name, r.position].filter(Boolean).join(', ') || '-'}</span><span className="mt-1 block text-xs tabular-nums text-muted-foreground">{r.assessors.length ? `${done} dari ${r.assessors.length} sudah menilai` : 'Belum ada penilai'}</span></TableCell>
+                        <TableCell className="stack-head pl-4 align-top lg:pl-6"><span className="font-medium">{r.fullName}</span><span className="block text-xs text-muted-foreground">{[r.unit?.name, r.position].filter(Boolean).join(', ') || '-'}{!r.hasAccount && ', belum punya akun (tidak bisa menilai)'}</span><span className="mt-1 block text-xs tabular-nums text-muted-foreground">{r.assessors.length ? `${done} dari ${r.assessors.length} sudah menilai` : 'Belum ada penilai'}</span></TableCell>
                         <TableCell data-label="Penilai" className="whitespace-normal">
                           {r.assessors.length === 0 ? <span className="text-sm text-muted-foreground">Belum ada penilai.</span> : (
                             <ul className="flex flex-wrap gap-1.5">

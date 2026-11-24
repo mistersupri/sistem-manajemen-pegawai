@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BellRing, Check, CircleDashed, Plus, Shuffle, Trash2, UserRoundPen, Workflow } from 'lucide-react';
+import { ArrowRight, BellRing, Check, CircleDashed, Plus, Shuffle, Trash2, UserRoundPen, Workflow } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,77 +18,107 @@ import { cn } from '@/lib/utils';
 type Unit = { id: string; name: string };
 const base = (id: string) => `/api/v1/assessments/periods/${id}`;
 
-/** Acak penilai rekan untuk semua pegawai atau satu unit. */
+/** Cara 1: sistem membagi penilai otomatis untuk semua pegawai, atau satu unit saja. */
 export function AutoAssignCard({ periodId, units, peerCount }: { periodId: string; units: Unit[]; peerCount: number }) {
   const { pending, fields, run } = useAction();
   const [reset, setReset] = useState(false);
   const [sub, setSub] = useState(true);
+  const [count, setCount] = useState(String(peerCount));
+  const [unitId, setUnitId] = useState('');
+  const unit = units.find((u) => u.id === unitId)?.name;
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Shuffle className="size-4 text-primary" aria-hidden />Acak penilai</CardTitle>
-        <CardDescription>Sistem memilih rekan penilai secara acak, mendahulukan rekan satu unit dan menyebar beban merata. Hasilnya bisa diubah satu per satu di daftar bawah.</CardDescription>
+        <p className="text-xs font-medium text-primary">Cara 1, otomatis</p>
+        <CardTitle className="flex items-center gap-2"><Shuffle className="size-4 text-primary" aria-hidden />Acak penilai untuk semua pegawai</CardTitle>
+        <CardDescription>Pegawai dinilai oleh atasan langsungnya dan beberapa rekan yang dipilih acak, mendahulukan rekan satu unit. Hasilnya bisa diubah satu per satu di daftar bawah.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="grid gap-3" onSubmit={async (e) => {
+        <form className="grid gap-4" onSubmit={async (e) => {
           e.preventDefault();
-          const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
           if (reset && !(await confirmDialog({ title: 'Acak ulang penilai rekan?', description: 'Penugasan rekan yang belum dinilai dihapus lalu diacak ulang. Penilai atasan dan penilaian yang sudah dikirim tetap.', confirmLabel: 'Acak ulang', destructive: true }))) return;
-          await run(() => api<{ created: number; removed: number }>('POST', `${base(periodId)}/auto`, { peerCount: Number(d.peerCount), reset, unitId: d.unitId || null, includeSubunits: sub }), { success: (r) => `${r.created} penugasan dibuat${r.removed ? `, ${r.removed} diacak ulang` : ''}.` });
+          await run(() => api<{ created: number; removed: number }>('POST', `${base(periodId)}/auto`, { peerCount: Number(count), reset, unitId: unitId || null, includeSubunits: sub }), { success: (r) => `${r.created} penugasan dibuat${r.removed ? `, ${r.removed} diacak ulang` : ''}.` });
         }}>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field id="peerCount" label="Rekan penilai per pegawai" error={fields.peerCount}><Input {...fieldProps('peerCount', fields.peerCount)} type="number" min={0} max={10} defaultValue={peerCount} className="w-24 tabular" /></Field>
-            <Field id="auto-unit" label="Hanya untuk unit (opsional)" error={fields.unitId}>
-              <NativeSelect {...fieldProps('auto-unit', fields.unitId)} name="unitId" defaultValue=""><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect>
+            <Field id="peerCount" label="Jumlah rekan penilai per pegawai" error={fields.peerCount}><Input {...fieldProps('peerCount', fields.peerCount)} type="number" min={0} max={10} value={count} onChange={(e) => setCount(e.target.value)} className="w-24 tabular" /></Field>
+            <Field id="auto-unit" label="Pegawai yang diacak" error={fields.unitId}>
+              <NativeSelect {...fieldProps('auto-unit', fields.unitId)} value={unitId} onChange={(e) => setUnitId(e.target.value)}><NativeSelectOption value="">Semua unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>Hanya {u.name}</NativeSelectOption>)}</NativeSelect>
             </Field>
           </div>
-          <div className="flex items-start gap-3"><Checkbox id="auto-sub" checked={sub} onCheckedChange={(v) => setSub(!!v)} className="mt-0.5" /><Label htmlFor="auto-sub" className="font-normal">Termasuk sub-unit</Label></div>
-          <div className="flex items-start gap-3"><Checkbox id="auto-reset" checked={reset} onCheckedChange={(v) => setReset(!!v)} className="mt-0.5" /><Label htmlFor="auto-reset" className="leading-snug font-normal">Acak ulang dari awal (hapus rekan yang belum menilai). Tanpa ini hanya yang kurang dilengkapi.</Label></div>
-          <Button type="submit" className="w-fit" disabled={pending}>{pending ? 'Mengacak...' : 'Acak penilai'}</Button>
+          {unitId && <div className="flex items-start gap-3"><Checkbox id="auto-sub" checked={sub} onCheckedChange={(v) => setSub(!!v)} className="mt-0.5" /><Label htmlFor="auto-sub" className="font-normal">Termasuk sub-unit</Label></div>}
+          <fieldset className="grid gap-1">
+            <legend className="mb-1 text-sm font-medium">Penilai yang sudah ada</legend>
+            {([[false, 'Pertahankan, hanya lengkapi pegawai yang penilainya kurang'], [true, 'Acak ulang dari awal (rekan yang belum menilai dihapus)']] as const).map(([k, l]) => (
+              <label key={String(k)} className="flex min-h-9 items-start gap-2 text-sm"><input type="radio" name="reset" checked={reset === k} onChange={() => setReset(k)} className="mt-1 size-4 accent-[var(--primary)]" />{l}</label>
+            ))}
+          </fieldset>
+          <p className="rounded-lg bg-muted px-3 py-2 text-sm">Hasil: {unit ? `pegawai ${unit}` : 'setiap pegawai'} dinilai atasan langsung dan {Number(count) || 0} rekan acak.</p>
+          <Button type="submit" className="w-fit" disabled={pending}>{pending ? 'Mengacak...' : reset ? 'Acak ulang penilai' : 'Acak penilai sekarang'}</Button>
         </form>
       </CardContent>
     </Card>
   );
 }
 
-/** Pemetaan unit: unit penilai menilai unit yang dinilai, semua menilai semua atau diacak per pegawai. */
+/** Cara 2: tentukan unit mana yang menilai unit mana. */
 export function UnitMapCard({ periodId, units }: { periodId: string; units: Unit[] }) {
   const { pending, fields, run } = useAction();
   const [mode, setMode] = useState<'SEMUA' | 'ACAK'>('ACAK');
   const [sub, setSub] = useState(false);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [per, setPer] = useState('3');
+  const name = (id: string) => units.find((u) => u.id === id)?.name;
+  const ready = from && to;
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Workflow className="size-4 text-primary" aria-hidden />Pemetaan unit</CardTitle>
-        <CardDescription>Pegawai di satu unit menilai pegawai di unit lain. Pilih semua menilai semua, atau acak per pegawai: tiap pegawai yang dinilai mendapat sejumlah penilai acak dari unit penilai.</CardDescription>
+        <p className="text-xs font-medium text-primary">Cara 2, per unit</p>
+        <CardTitle className="flex items-center gap-2"><Workflow className="size-4 text-primary" aria-hidden />Tentukan unit mana menilai unit mana</CardTitle>
+        <CardDescription>Contoh: pegawai Unit A menilai pegawai Unit B. Pemetaan ini ditambahkan ke penilai yang sudah ada dan bisa diulang untuk pasangan unit lain.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="grid gap-3" onSubmit={async (e) => {
+        <form className="grid gap-4" onSubmit={async (e) => {
           e.preventDefault();
-          const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
-          await run(() => api<{ created: number; assessors: number; targets: number }>('POST', `${base(periodId)}/map-units`, { assessorUnitId: d.assessorUnitId, targetUnitId: d.targetUnitId, mode, perTarget: Number(d.perTarget || 3), includeSubunits: sub }),
+          await run(() => api<{ created: number; assessors: number; targets: number }>('POST', `${base(periodId)}/map-units`, { assessorUnitId: from, targetUnitId: to, mode, perTarget: Number(per || 3), includeSubunits: sub }),
             { success: (r) => `${r.created} penugasan dibuat dari ${r.assessors} penilai untuk ${r.targets} pegawai.` });
         }}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field id="assessorUnitId" label="Unit penilai" error={fields.assessorUnitId} required>
-              <NativeSelect {...fieldProps('assessorUnitId', fields.assessorUnitId)} required defaultValue=""><NativeSelectOption value="" disabled>Pilih unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect>
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+            <Field id="assessorUnitId" label="Unit yang menilai" error={fields.assessorUnitId} required>
+              <NativeSelect {...fieldProps('assessorUnitId', fields.assessorUnitId)} required value={from} onChange={(e) => setFrom(e.target.value)}><NativeSelectOption value="" disabled>Pilih unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect>
             </Field>
+            <span className="hidden pb-2 text-muted-foreground sm:block" aria-hidden><ArrowRight className="size-4" /></span>
             <Field id="targetUnitId" label="Unit yang dinilai" error={fields.targetUnitId} required>
-              <NativeSelect {...fieldProps('targetUnitId', fields.targetUnitId)} required defaultValue=""><NativeSelectOption value="" disabled>Pilih unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect>
+              <NativeSelect {...fieldProps('targetUnitId', fields.targetUnitId)} required value={to} onChange={(e) => setTo(e.target.value)}><NativeSelectOption value="" disabled>Pilih unit</NativeSelectOption>{units.map((u) => <NativeSelectOption key={u.id} value={u.id}>{u.name}</NativeSelectOption>)}</NativeSelect>
             </Field>
           </div>
-          <fieldset className="grid gap-2">
+          <fieldset className="grid gap-1">
             <legend className="mb-1 text-sm font-medium">Cara membagi</legend>
-            {([['ACAK', 'Acak per pegawai'], ['SEMUA', 'Semua menilai semua']] as const).map(([k, l]) => (
-              <label key={k} className="inline-flex min-h-9 items-center gap-2 text-sm"><input type="radio" name="mode" checked={mode === k} onChange={() => setMode(k)} className="size-4 accent-[var(--primary)]" />{l}</label>
+            {([['ACAK', 'Acak per pegawai', 'Setiap pegawai yang dinilai mendapat beberapa penilai acak dari unit penilai.'], ['SEMUA', 'Semua menilai semua', 'Setiap pegawai di unit penilai menilai setiap pegawai di unit yang dinilai.']] as const).map(([k, l, d]) => (
+              <label key={k} className="flex min-h-9 items-start gap-2 text-sm"><input type="radio" name="mode" checked={mode === k} onChange={() => setMode(k)} className="mt-1 size-4 accent-[var(--primary)]" /><span><span className="font-medium">{l}</span><span className="block text-muted-foreground">{d}</span></span></label>
             ))}
           </fieldset>
-          {mode === 'ACAK' && <Field id="perTarget" label="Penilai per pegawai yang dinilai" error={fields.perTarget}><Input {...fieldProps('perTarget', fields.perTarget)} type="number" min={1} max={20} defaultValue={3} className="w-24 tabular" /></Field>}
-          <div className="flex items-start gap-3"><Checkbox id="map-sub" checked={sub} onCheckedChange={(v) => setSub(!!v)} className="mt-0.5" /><Label htmlFor="map-sub" className="font-normal">Termasuk sub-unit dari kedua unit</Label></div>
-          <Button type="submit" className="w-fit" disabled={pending}>{pending ? 'Memetakan...' : 'Petakan unit'}</Button>
+          {mode === 'ACAK' && <Field id="perTarget" label="Jumlah penilai per pegawai yang dinilai" error={fields.perTarget}><Input {...fieldProps('perTarget', fields.perTarget)} type="number" min={1} max={20} value={per} onChange={(e) => setPer(e.target.value)} className="w-24 tabular" /></Field>}
+          <div className="flex items-start gap-3"><Checkbox id="map-sub" checked={sub} onCheckedChange={(v) => setSub(!!v)} className="mt-0.5" /><Label htmlFor="map-sub" className="font-normal">Sertakan pegawai di sub-unit kedua unit</Label></div>
+          <p className="rounded-lg bg-muted px-3 py-2 text-sm">{ready ? <>Hasil: pegawai <b>{name(from)}</b> menilai pegawai <b>{name(to)}</b>, {mode === 'ACAK' ? `${Number(per) || 0} penilai acak untuk tiap pegawai` : 'semua menilai semua'}.</> : 'Pilih unit penilai dan unit yang dinilai untuk melihat hasilnya.'}</p>
+          <Button type="submit" className="w-fit" disabled={pending || !ready}>{pending ? 'Memetakan...' : 'Terapkan pemetaan'}</Button>
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+/** Hapus semua penugasan yang belum dinilai pada periode. */
+export function ClearAllButton({ periodId, pendingCount }: { periodId: string; pendingCount: number }) {
+  const { pending, run } = useAction();
+  return (
+    <Button variant="outline" className="text-destructive hover:text-destructive" disabled={pending || pendingCount === 0}
+      onClick={async () => {
+        if (!(await confirmDialog({ title: 'Hapus semua penilai?', description: `${pendingCount} penugasan yang belum dinilai dihapus, termasuk atasan dan rekan. Penilaian yang sudah dikirim tetap tersimpan. Setelah itu Anda bisa mengacak atau memetakan ulang.`, confirmLabel: 'Hapus semua', destructive: true }))) return;
+        await run(() => api<{ removed: number; kept: number }>('POST', `${base(periodId)}/clear`), { success: (r) => `${r.removed} penugasan dihapus${r.kept ? `, ${r.kept} yang sudah dinilai dipertahankan` : ''}.` });
+      }}>
+      <Trash2 />Hapus semua penilai
+    </Button>
   );
 }
 
