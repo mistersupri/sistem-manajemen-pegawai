@@ -68,6 +68,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
               <CardContent>
                 <dl className="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-[11rem_1fr]">
                   <dt className="text-muted-foreground">NIP</dt><dd className="tabular">{e.employeeNumber ?? '-'}</dd>
+                  <dt className="text-muted-foreground">NRK</dt><dd className="tabular">{e.nrk ?? '-'}</dd>
                   <dt className="text-muted-foreground">NIK</dt><dd className="tabular">{e.canSeeNik ? e.nik ?? '-' : e.hasNik ? 'Tersimpan (perlu izin data sensitif)' : '-'}</dd>
                   <dt className="text-muted-foreground">Tempat, tanggal lahir</dt><dd>{[e.birthPlace, e.birthDate ? fmtTanggal(fromDbDate(e.birthDate)) : null].filter(Boolean).join(', ') || '-'}</dd>
                   <dt className="text-muted-foreground">Jenis kelamin</dt><dd>{e.gender === 'L' ? 'Laki-laki' : e.gender === 'P' ? 'Perempuan' : '-'}</dd>
