@@ -19,10 +19,10 @@ export async function login(username: string, password: string) {
   // password satu akun dibatasi per username dan oleh penguncian akun di bawah.
   rateLimit(`login-ip:${meta.ip ?? 'unknown'}`, 300, 5 * 60_000);
   rateLimit(`login-user:${uname}`, 10, 5 * 60_000);
-  const user = await prisma.user.findFirst({
-    where: { username: uname, deletedAt: null },
-    include: { roles: { include: { role: true } } },
-  });
+  // Username dicari lebih dulu; bila tidak ada, dicoba sebagai NRK pegawai yang punya akun.
+  const include = { roles: { include: { role: true } } };
+  const user = (await prisma.user.findFirst({ where: { username: uname, deletedAt: null }, include }))
+    ?? (await prisma.user.findFirst({ where: { employee: { nrk: { equals: username.trim(), mode: 'insensitive' }, deletedAt: null }, deletedAt: null }, include }));
   const fail = async (reason: string, userId?: string) => {
     await audit(userId ? { userId, username: uname } : null, { action: 'auth.login', entityType: 'User', entityId: userId, result: 'FAILURE', meta: { username: uname, reason } });
   };

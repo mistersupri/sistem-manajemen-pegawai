@@ -57,7 +57,7 @@ export function LoginForm({ initialError, initialStep, next = '/dashboard', init
       <div className="mb-6">
         <h1 className="text-2xl font-bold">{step === 'password' ? 'Masuk' : 'Verifikasi dua langkah'}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {step === 'password' ? 'Pegawai masuk dengan NIP. Password awal sama dengan NIP dan wajib diganti saat masuk pertama.' : 'Masukkan 6 angka dari aplikasi autentikator di ponsel Anda.'}
+          {step === 'password' ? 'Pegawai masuk dengan NIP atau NRK. Password awal sama dengan NIP dan wajib diganti saat masuk pertama.' : 'Masukkan 6 angka dari aplikasi autentikator di ponsel Anda.'}
         </p>
       </div>
       <div>
@@ -65,7 +65,7 @@ export function LoginForm({ initialError, initialStep, next = '/dashboard', init
         <form onSubmit={submit} method="post" action={step === 'password' ? '/api/v1/auth/login' : '/api/v1/auth/mfa'} className="grid gap-5" noValidate>
           {step === 'password' ? (
             <>
-              <Field id="username" label="Username atau NIP" error={fields.username}>
+              <Field id="username" label="Username, NIP, atau NRK" error={fields.username}>
                 <Input {...fieldProps('username', fields.username)} autoComplete="username" required autoFocus className="h-10" />
               </Field>
               <Field id="password" label="Password" error={fields.password}>

@@ -17,6 +17,7 @@ import { api, useAction } from '@/components/app/api-client';
 export interface EmployeeFormValues {
   id?: string;
   employeeNumber?: string | null;
+  nrk?: string | null;
   nik?: string | null;
   fullName?: string;
   frontTitle?: string | null;
@@ -94,6 +95,7 @@ export function EmployeeForm({ initial, units, supervisors, statuses, canSeeNik,
           {f('fullName', 'Nama lengkap', { required: true, className: 'md:col-span-3', max: 150 })}
           {f('backTitle', 'Gelar belakang', { className: 'md:col-span-2', max: 50 })}
           {f('employeeNumber', 'NIP / nomor pegawai', { className: 'md:col-span-3', inputMode: 'numeric', hint: 'Opsional, harus unik. Dipakai sebagai username akun.', max: 30 })}
+          {f('nrk', 'NRK', { className: 'md:col-span-3', hint: 'Nomor Registrasi Kepegawaian. Opsional, harus unik. Bisa dipakai untuk masuk, sama seperti NIP.', max: 20 })}
           {canSeeNik ? (
             <Field id="nik" label="NIK" error={fields.nik} hint={editing && hasNik ? 'Sudah tersimpan terenkripsi. Kosongkan bila tidak diubah.' : 'Data sensitif, disimpan terenkripsi.'} className="md:col-span-3">
               <Input {...fieldProps('nik', fields.nik, true)} inputMode="numeric" maxLength={16} defaultValue="" autoComplete="off" />

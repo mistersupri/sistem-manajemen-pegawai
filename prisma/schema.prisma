@@ -141,6 +141,7 @@ model OrganizationUnit {
 model Employee {
   id                  String    @id @default(uuid()) @db.Uuid
   employeeNumber      String?   @unique @map("employee_number") // NIP / nomor pegawai
+  nrk                 String?   @unique // Nomor Registrasi Kepegawaian; boleh dipakai untuk login
   nikEnc              String?   @map("nik_enc") // NIK terenkripsi (data sensitif)
   fullName            String    @map("full_name")
   frontTitle          String?   @map("front_title")

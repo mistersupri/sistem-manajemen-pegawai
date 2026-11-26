@@ -17,6 +17,7 @@ const optDate = z.string().optional().nullable().transform((v) => (v ? v : null)
 
 export const employeeInput = z.object({
   employeeNumber: z.string().trim().max(30).regex(/^[0-9A-Za-z.-]*$/, 'NIP hanya boleh huruf/angka').optional().nullable().transform((v) => (v ? v : null)),
+  nrk: z.string().trim().max(20).regex(/^[0-9A-Za-z.-]*$/, 'NRK hanya boleh huruf/angka').optional().nullable().transform((v) => (v ? v : null)),
   nik: z.string().trim().optional().nullable().transform((v) => (v ? v : null)).refine((v) => v === null || /^\d{16}$/.test(v), 'NIK terdiri dari 16 angka'),
   fullName: z.string().trim().min(2, 'Nama minimal 2 karakter').max(150),
   frontTitle: optText(30),
@@ -67,7 +68,7 @@ export function employeeWhere(actor: Actor, q: Partial<ListQuery>, perm: 'employ
   if (q.face === 'belum') and.push({ biometrics: { none: { status: { in: ['ACTIVE', 'PENDING_VERIFICATION'] } } } });
   if (q.q) {
     const t = q.q;
-    and.push({ OR: [{ fullName: { contains: t, mode: 'insensitive' } }, { employeeNumber: { contains: t } }, { position: { contains: t, mode: 'insensitive' } }, { machinePin: t }] });
+    and.push({ OR: [{ fullName: { contains: t, mode: 'insensitive' } }, { employeeNumber: { contains: t } }, { nrk: { contains: t } }, { position: { contains: t, mode: 'insensitive' } }, { machinePin: t }] });
   }
   return { AND: and };
 }
@@ -133,6 +134,12 @@ async function assertUnique(input: EmployeeInput, exceptId: string | null, db: D
     const x = await db.employee.findFirst({ where: { employeeNumber: input.employeeNumber, NOT: exceptId ? { id: exceptId } : undefined } });
     if (x) fields.employeeNumber = 'NIP sudah dipakai pegawai lain.';
   }
+  if (input.nrk) {
+    const x = await db.employee.findFirst({ where: { nrk: input.nrk, NOT: exceptId ? { id: exceptId } : undefined } });
+    if (x) fields.nrk = 'NRK sudah dipakai pegawai lain.';
+    // Login memeriksa username lebih dulu, jadi NRK yang sama dengan username akun orang lain tidak akan pernah terpakai.
+    else if (await db.user.findFirst({ where: { username: input.nrk.toLowerCase(), deletedAt: null, ...(exceptId ? { NOT: { employeeId: exceptId } } : {}) } })) fields.nrk = 'NRK ini sama dengan username akun lain.';
+  }
   if (input.machinePin) {
     const x = await db.employee.findFirst({ where: { machinePin: input.machinePin, NOT: exceptId ? { id: exceptId } : undefined } });
     if (x) fields.machinePin = `ID mesin sudah dipakai ${x.fullName}.`;
@@ -143,6 +150,7 @@ async function assertUnique(input: EmployeeInput, exceptId: string | null, db: D
 function data(input: EmployeeInput) {
   return {
     employeeNumber: input.employeeNumber,
+    nrk: input.nrk,
     nikEnc: encryptOptional(input.nik),
     fullName: input.fullName,
     frontTitle: input.frontTitle,

@@ -134,7 +134,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                       {!e.isActive && <StatusBadge status="CANCELLED" label="Nonaktif" className="mt-1" />}
                     </span>
                   </TableCell>
-                  <TableCell data-label="NIP" className="max-md:hidden! tabular">{e.employeeNumber ?? '-'}{e.machinePin && <span className="block text-xs text-muted-foreground">ID mesin {e.machinePin}</span>}</TableCell>
+                  <TableCell data-label="NIP" className="max-md:hidden! tabular">{e.employeeNumber ?? '-'}{e.nrk && <span className="block text-xs text-muted-foreground">NRK {e.nrk}</span>}{e.machinePin && <span className="block text-xs text-muted-foreground">ID mesin {e.machinePin}</span>}</TableCell>
                   <TableCell data-label="Jabatan" className="max-md:hidden! whitespace-normal">{e.position ?? '-'}{e.rank && <span className="block text-xs text-muted-foreground">{e.rank}</span>}</TableCell>
                   <TableCell data-label="Unit" className="max-md:hidden! whitespace-normal">{e.unit?.name ?? '-'}</TableCell>
                   <TableCell data-label="Status kepegawaian" className="max-md:hidden!">{e.employmentStatus ?? '-'}</TableCell>

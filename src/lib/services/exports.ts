@@ -181,7 +181,7 @@ export async function exportCalendar(actor: Actor, raw: Record<string, unknown>)
 }
 
 export const EMPLOYEE_COLUMNS = [
-  ['nip', 'NIP'], ['nik', 'NIK'], ['nama', 'Nama lengkap'], ['gelar_depan', 'Gelar depan'], ['gelar_belakang', 'Gelar belakang'],
+  ['nip', 'NIP'], ['nrk', 'NRK'], ['nik', 'NIK'], ['nama', 'Nama lengkap'], ['gelar_depan', 'Gelar depan'], ['gelar_belakang', 'Gelar belakang'],
   ['tempat_lahir', 'Tempat lahir'], ['tanggal_lahir', 'Tanggal lahir (YYYY-MM-DD)'], ['jenis_kelamin', 'Jenis kelamin (L/P)'], ['alamat', 'Alamat'],
   ['telepon', 'Telepon'], ['email', 'Email'], ['status_kepegawaian', 'Status kepegawaian'], ['jabatan', 'Jabatan'], ['pangkat_golongan', 'Pangkat/golongan'],
   ['kode_unit', 'Kode unit kerja'], ['nip_atasan', 'NIP atasan langsung'], ['tanggal_mulai', 'Tanggal mulai bekerja (YYYY-MM-DD)'], ['id_mesin', 'ID mesin absensi'],
@@ -199,7 +199,7 @@ export async function exportEmployees(actor: Actor, raw: unknown, format: 'xlsx'
   const cols = EMPLOYEE_COLUMNS.filter(([k]) => k !== 'nik' || withNik);
   const data = rows.map((e) => {
     const m: Record<string, unknown> = {
-      nip: e.employeeNumber ?? '', nik: withNik ? decryptOptional(e.nikEnc) ?? '' : '', nama: e.fullName, gelar_depan: e.frontTitle ?? '', gelar_belakang: e.backTitle ?? '',
+      nip: e.employeeNumber ?? '', nrk: e.nrk ?? '', nik: withNik ? decryptOptional(e.nikEnc) ?? '' : '', nama: e.fullName, gelar_depan: e.frontTitle ?? '', gelar_belakang: e.backTitle ?? '',
       tempat_lahir: e.birthPlace ?? '', tanggal_lahir: e.birthDate ? fromDbDate(e.birthDate) : '', jenis_kelamin: e.gender ?? '', alamat: e.address ?? '', telepon: e.phone ?? '',
       email: e.email ?? '', status_kepegawaian: e.employmentStatus ?? '', jabatan: e.position ?? '', pangkat_golongan: e.rank ?? '', kode_unit: e.unit?.code ?? '',
       nip_atasan: e.supervisor?.employeeNumber ?? '', tanggal_mulai: e.startDate ? fromDbDate(e.startDate) : '', id_mesin: e.machinePin ?? '',

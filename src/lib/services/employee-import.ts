@@ -46,13 +46,13 @@ HEADER_MAP.set('unit_kerja', 'kode_unit');
 const LABEL = new Map<string, string>(EMPLOYEE_COLUMNS.map(([k, label]) => [k, label]));
 // Nama isian di skema pegawai -> kolom berkas, agar pesan galat memakai judul kolom yang dilihat pengguna.
 const FIELD_COLUMN: Record<string, string> = {
-  employeeNumber: 'nip', nik: 'nik', fullName: 'nama', frontTitle: 'gelar_depan', backTitle: 'gelar_belakang', birthPlace: 'tempat_lahir',
+  employeeNumber: 'nip', nrk: 'nrk', nik: 'nik', fullName: 'nama', frontTitle: 'gelar_depan', backTitle: 'gelar_belakang', birthPlace: 'tempat_lahir',
   birthDate: 'tanggal_lahir', gender: 'jenis_kelamin', address: 'alamat', phone: 'telepon', email: 'email', employmentStatus: 'status_kepegawaian',
   position: 'jabatan', rank: 'pangkat_golongan', unitId: 'kode_unit', supervisorId: 'nip_atasan', startDate: 'tanggal_mulai', machinePin: 'id_mesin',
 };
 // Kolom nomor identitas. Excel menyimpan angka hanya sampai 15 digit, jadi NIP 18 digit yang diketik di kolom
 // berformat General sudah berubah sebelum sampai ke sini; tolak alih-alih menyimpan nomor yang salah.
-const ID_COLUMNS = new Set(['nip', 'nik', 'nip_atasan', 'id_mesin']);
+const ID_COLUMNS = new Set(['nip', 'nrk', 'nik', 'nip_atasan', 'id_mesin']);
 
 function text(v: unknown) {
   if (v instanceof Date) return normDateTime(v)?.slice(0, 10) ?? '';
@@ -130,7 +130,7 @@ export async function previewImport(actor: Actor, buffer: Buffer, fileName: stri
     const gender = values.jenis_kelamin ? (/^l/i.test(values.jenis_kelamin) ? 'L' : /^p/i.test(values.jenis_kelamin) ? 'P' : '?') : null;
     if (gender === '?') messages.push('Jenis kelamin harus L atau P');
     const data = {
-      employeeNumber: nip || null, nik: values.nik || null, fullName: values.nama || '', frontTitle: values.gelar_depan || null, backTitle: values.gelar_belakang || null,
+      employeeNumber: nip || null, nrk: values.nrk || null, nik: values.nik || null, fullName: values.nama || '', frontTitle: values.gelar_depan || null, backTitle: values.gelar_belakang || null,
       birthPlace: values.tempat_lahir || null, birthDate: values.tanggal_lahir || null, gender: gender === '?' ? null : gender, address: values.alamat || null,
       phone: values.telepon || null, email: values.email || null, employmentStatus: values.status_kepegawaian || null, position: values.jabatan || null,
       rank: values.pangkat_golongan || null, unitId, supervisorId, startDate: values.tanggal_mulai || null, machinePin: values.id_mesin || null,
@@ -142,6 +142,10 @@ export async function previewImport(actor: Actor, buffer: Buffer, fileName: stri
     }
     const ex = nip ? byNip.get(nip) : undefined;
     if (ex && !unitInScope(actor, 'employee.write', ex.unitId)) messages.push('NIP ini milik pegawai di luar kewenangan Anda');
+    if (data.nrk) {
+      const other = await prisma.employee.findFirst({ where: { nrk: data.nrk, NOT: ex ? { id: ex.id } : undefined }, select: { fullName: true } });
+      if (other) messages.push(`NRK sudah dipakai ${other.fullName}`);
+    }
     if (data.machinePin) {
       const other = await prisma.employee.findFirst({ where: { machinePin: data.machinePin, NOT: ex ? { id: ex.id } : undefined }, select: { fullName: true } });
       if (other) messages.push(`ID mesin sudah dipakai ${other.fullName}`);
